@@ -9,6 +9,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include <Runtime/Engine/Classes/Kismet/KismetSystemLibrary.h>
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -61,6 +62,8 @@ APrimitiveCharacter::APrimitiveCharacter()
 	CurrentZoomLevel = 5;
 	check(CurrentZoomLevel < ZoomTransforms.Num());
 	CameraBoom->TargetArmLength = ZoomTransforms[CurrentZoomLevel];
+
+	CurrentTarget = nullptr;
 }
 
 void APrimitiveCharacter::BeginPlay()
@@ -75,6 +78,70 @@ void APrimitiveCharacter::BeginPlay()
 		{
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
+	}
+}
+
+void APrimitiveCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	FHitResult hits;
+	ECollisionChannel channel = ECollisionChannel::ECC_Visibility;
+	FVector start = GetActorLocation();
+	FVector end = start + FollowCamera->GetForwardVector().GetSafeNormal() * 500.0f;
+
+	FCollisionQueryParams params;
+	GetWorld()->LineTraceSingleByChannel(hits, start, end, channel, params);
+
+	if (hits.bBlockingHit)
+	{
+		UKismetSystemLibrary::DrawDebugLine(GetWorld(), start, hits.Location, FColor(100, 0, 0));
+		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), hits.Location, 5, 5, FLinearColor::White);
+
+		auto hit = hits.GetActor();
+		if (hit->IsRootComponentMovable())
+			SetCurrentTarget(hit);
+		else
+			SetCurrentTarget(nullptr);
+	}
+	else
+	{
+		UKismetSystemLibrary::DrawDebugLine(GetWorld(), start, end, FLinearColor::Red);
+		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), end, 5, 5, FLinearColor::Red);
+		SetCurrentTarget(nullptr);
+	}
+
+}
+
+void APrimitiveCharacter::SetCurrentTarget(AActor* target)
+{
+	if (CurrentTarget != target)
+	{
+		if (target)
+		{
+			auto name = target->GetActorNameOrLabel();
+			//target->SetActorLocation(target->GetActorLocation() + FVector(0, 0, 10));
+			auto primos = target->GetComponentByClass<UPrimitiveComponent>();
+			if (primos)
+				primos->SetRenderCustomDepth(true);
+			UE_LOG(LogTemp, Warning, TEXT("Target %s"), *name);
+		}
+		else
+		{
+			if (CurrentTarget != nullptr)
+			{
+				auto primos = CurrentTarget->GetComponentByClass<UPrimitiveComponent>();
+				if (primos)
+					primos->SetRenderCustomDepth(false);
+				auto name = CurrentTarget->GetActorNameOrLabel();
+				UE_LOG(LogTemp, Warning, TEXT("Target REMOVED %s"), *name);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Target NULL"));
+			}
+		}
+		CurrentTarget = target;
 	}
 }
 
@@ -101,6 +168,18 @@ void APrimitiveCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 		EnhancedInputComponent->BindAction(ZoomOutAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::ZoomOut);
 
 		EnhancedInputComponent->BindAction(FreeLookAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::FreeLook);
+
+		// Interactions
+		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::Interact);
+		EnhancedInputComponent->BindAction(PickAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::Pick);
+		EnhancedInputComponent->BindAction(DropAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::Drop);
+		EnhancedInputComponent->BindAction(ConsumeAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::Consume);
+		EnhancedInputComponent->BindAction(CombineAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::Combine);
+		EnhancedInputComponent->BindAction(HitAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::Hit);
+
+		EnhancedInputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::ToggleInventory);
+		EnhancedInputComponent->BindAction(BackAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::Back);
+		EnhancedInputComponent->BindAction(TransferAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::Transfer);
 	}
 
 }
@@ -180,12 +259,32 @@ void APrimitiveCharacter::Consume(const FInputActionValue& Value)
 	// ???? TODO:
 }
 
+void APrimitiveCharacter::Combine(const FInputActionValue& Value)
+{
+	// ???? TODO:
+}
+
 void APrimitiveCharacter::Hit(const FInputActionValue& Value)
 {
 	// ???? TODO:
 }
 
 void APrimitiveCharacter::Interact(const FInputActionValue& Value)
+{
+	// ???? TODO:
+}
+
+void APrimitiveCharacter::ToggleInventory(const FInputActionValue& Value)
+{
+	// ???? TODO:
+}
+
+void APrimitiveCharacter::Back(const FInputActionValue& Value)
+{
+	// ???? TODO:
+}
+
+void APrimitiveCharacter::Transfer(const FInputActionValue& Value)
 {
 	// ???? TODO:
 }

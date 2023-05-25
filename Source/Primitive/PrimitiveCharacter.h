@@ -67,6 +67,15 @@ class APrimitiveCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* CombineAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* ToggleInventoryAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* BackAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* TransferAction;
+
 public:
 	APrimitiveCharacter();
 	
@@ -92,6 +101,10 @@ protected:
 	void Pick(const FInputActionValue& Value);
 	void Drop(const FInputActionValue& Value);
 
+	void ToggleInventory(const FInputActionValue& Value);
+	void Back(const FInputActionValue& Value);
+	void Transfer(const FInputActionValue& Value);
+
 	UPROPERTY(EditAnywhere, Category = "Zoom Transforms", BlueprintReadWrite) TArray<float> ZoomTransforms;
 	uint8 CurrentZoomLevel;
 
@@ -100,7 +113,13 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
 	// To add mapping context
-	virtual void BeginPlay();
+	void BeginPlay() override;
+
+	void Tick(float DeltaSeconds) override;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) AActor* CurrentTarget;
+
+	void SetCurrentTarget(AActor* target);
 
 public:
 	/** Returns CameraBoom subobject **/
