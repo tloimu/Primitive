@@ -119,6 +119,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) AActor* CurrentTarget;
 
+	void CheckTarget();
 	void SetCurrentTarget(AActor* target);
 
 public:

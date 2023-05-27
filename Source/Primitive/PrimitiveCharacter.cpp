@@ -85,6 +85,11 @@ void APrimitiveCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	CheckTarget();
+}
+
+void APrimitiveCharacter::CheckTarget()
+{
 	FHitResult hits;
 	ECollisionChannel channel = ECollisionChannel::ECC_Visibility;
 	FVector start = GetActorLocation();
@@ -110,7 +115,6 @@ void APrimitiveCharacter::Tick(float DeltaSeconds)
 		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), end, 5, 5, FLinearColor::Red);
 		SetCurrentTarget(nullptr);
 	}
-
 }
 
 void APrimitiveCharacter::SetCurrentTarget(AActor* target)
