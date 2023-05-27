@@ -10,6 +10,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include <Runtime/Engine/Classes/Kismet/KismetSystemLibrary.h>
+#include <Primitive/Interactable.h>
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -104,7 +105,8 @@ void APrimitiveCharacter::CheckTarget()
 		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), hits.Location, 5, 5, FLinearColor::White);
 
 		auto hit = hits.GetActor();
-		if (hit->IsRootComponentMovable())
+		//if (hit->IsRootComponentMovable())
+		if (hit->Implements<UInteractable>())
 			SetCurrentTarget(hit);
 		else
 			SetCurrentTarget(nullptr);
