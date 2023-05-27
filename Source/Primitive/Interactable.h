@@ -14,9 +14,9 @@ class IInteractable
 
 public:
 
-    UFUNCTION(BlueprintCallable, BlueprintNativeEvent) void Interact();
-    UFUNCTION(BlueprintCallable, BlueprintNativeEvent) void Hit();
-    UFUNCTION(BlueprintCallable, BlueprintNativeEvent) void Consume();
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void Interact();
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void Hit();
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void Consume();
     //UFUNCTION(BlueprintCallable, BlueprintNativeEvent) void CombineWith(IInteractable* CombineWith);
 
     /*

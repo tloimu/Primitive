@@ -118,6 +118,7 @@ protected:
 	void Tick(float DeltaSeconds) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) AActor* CurrentTarget;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) AActor* CurrentInteractable;
 
 	void CheckTarget();
 	void SetCurrentTarget(AActor* target);

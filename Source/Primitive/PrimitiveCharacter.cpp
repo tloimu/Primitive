@@ -148,6 +148,11 @@ void APrimitiveCharacter::SetCurrentTarget(AActor* target)
 			}
 		}
 		CurrentTarget = target;
+
+		if (target != nullptr && UKismetSystemLibrary::DoesImplementInterface(target, UInteractable::StaticClass()))
+			CurrentInteractable = target;
+		else
+			CurrentInteractable = nullptr;
 	}
 }
 
@@ -262,7 +267,10 @@ void APrimitiveCharacter::Drop(const FInputActionValue& Value)
 
 void APrimitiveCharacter::Consume(const FInputActionValue& Value)
 {
-	// ???? TODO:
+	if (CurrentInteractable)
+	{
+		IInteractable::Execute_Consume(CurrentInteractable);
+	}
 }
 
 void APrimitiveCharacter::Combine(const FInputActionValue& Value)
@@ -272,12 +280,18 @@ void APrimitiveCharacter::Combine(const FInputActionValue& Value)
 
 void APrimitiveCharacter::Hit(const FInputActionValue& Value)
 {
-	// ???? TODO:
+	if (CurrentInteractable)
+	{
+		IInteractable::Execute_Hit(CurrentInteractable);
+	}
 }
 
 void APrimitiveCharacter::Interact(const FInputActionValue& Value)
 {
-	// ???? TODO:
+	if (CurrentInteractable)
+	{
+		IInteractable::Execute_Interact(CurrentInteractable);
+	}
 }
 
 void APrimitiveCharacter::ToggleInventory(const FInputActionValue& Value)
