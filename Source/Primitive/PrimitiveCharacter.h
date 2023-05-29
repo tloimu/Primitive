@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
+#include "InventoryWidget.h"
+#include "HUDWidget.h"
 #include "PrimitiveCharacter.generated.h"
 
 
@@ -114,6 +116,7 @@ protected:
 	
 	// To add mapping context
 	void BeginPlay() override;
+	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	void Tick(float DeltaSeconds) override;
 
@@ -122,6 +125,15 @@ protected:
 
 	void CheckTarget();
 	void SetCurrentTarget(AActor* target);
+	void SetHighlightIfInteractableTarget(AActor* target, bool value);
+
+	bool ShowingInventory;
+
+	UPROPERTY(EditAnywhere) TSubclassOf<UInventoryWidget> InventoryWidgetClass;
+	UPROPERTY() UInventoryWidget* InventoryWidget;
+
+	UPROPERTY(EditAnywhere) TSubclassOf<UHUDWidget> HUDWidgetClass;
+	UPROPERTY() UHUDWidget* HUDWidget;
 
 public:
 	/** Returns CameraBoom subobject **/

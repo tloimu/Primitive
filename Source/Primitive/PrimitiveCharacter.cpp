@@ -9,6 +9,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Blueprint/UserWidget.h"
 #include <Runtime/Engine/Classes/Kismet/KismetSystemLibrary.h>
 #include <Primitive/Interactable.h>
 
@@ -65,6 +66,13 @@ APrimitiveCharacter::APrimitiveCharacter()
 	CameraBoom->TargetArmLength = ZoomTransforms[CurrentZoomLevel];
 
 	CurrentTarget = nullptr;
+	ShowingInventory = false;
+
+	InventoryWidgetClass = nullptr;
+	InventoryWidget = nullptr;
+
+	HUDWidgetClass = nullptr;
+	HUDWidget = nullptr;
 }
 
 void APrimitiveCharacter::BeginPlay()
@@ -73,14 +81,43 @@ void APrimitiveCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	//Add Input Mapping Context
-	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
+	auto pc = GetController<APlayerController>();
+	if (pc)
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(pc->GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
+
+		if (IsLocallyControlled() && InventoryWidgetClass)
+		{
+			InventoryWidget = CreateWidget<UInventoryWidget>(pc, InventoryWidgetClass);
+			check(InventoryWidget);
+
+			HUDWidget = CreateWidget<UHUDWidget>(pc, HUDWidgetClass);
+			check(HUDWidget);
+			HUDWidget->AddToPlayerScreen();
+		}
 	}
 }
+
+void APrimitiveCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (InventoryWidget)
+	{
+		InventoryWidget->RemoveFromParent();
+		InventoryWidget = nullptr;
+	}
+
+	if (HUDWidget)
+	{
+		HUDWidget->RemoveFromParent();
+		HUDWidget = nullptr;
+	}
+
+	Super::EndPlay(EndPlayReason);
+}
+
 
 void APrimitiveCharacter::Tick(float DeltaSeconds)
 {
@@ -126,19 +163,14 @@ void APrimitiveCharacter::SetCurrentTarget(AActor* target)
 		if (target)
 		{
 			auto name = target->GetActorNameOrLabel();
-			//target->SetActorLocation(target->GetActorLocation() + FVector(0, 0, 10));
-			auto primos = target->GetComponentByClass<UPrimitiveComponent>();
-			if (primos)
-				primos->SetRenderCustomDepth(true);
+			SetHighlightIfInteractableTarget(target, true);
 			UE_LOG(LogTemp, Warning, TEXT("Target %s"), *name);
 		}
 		else
 		{
 			if (CurrentTarget != nullptr)
 			{
-				auto primos = CurrentTarget->GetComponentByClass<UPrimitiveComponent>();
-				if (primos)
-					primos->SetRenderCustomDepth(false);
+				SetHighlightIfInteractableTarget(CurrentTarget, false);
 				auto name = CurrentTarget->GetActorNameOrLabel();
 				UE_LOG(LogTemp, Warning, TEXT("Target REMOVED %s"), *name);
 			}
@@ -154,6 +186,13 @@ void APrimitiveCharacter::SetCurrentTarget(AActor* target)
 		else
 			CurrentInteractable = nullptr;
 	}
+}
+
+void APrimitiveCharacter::SetHighlightIfInteractableTarget(AActor* target, bool value)
+{
+	auto primos = target->GetComponentByClass<UPrimitiveComponent>();
+	if (primos)
+		primos->SetRenderCustomDepth(value);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -296,7 +335,25 @@ void APrimitiveCharacter::Interact(const FInputActionValue& Value)
 
 void APrimitiveCharacter::ToggleInventory(const FInputActionValue& Value)
 {
-	// ???? TODO:
+	UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory"));
+	ShowingInventory = !ShowingInventory;
+	if (InventoryWidget != nullptr)
+	{	
+		if (ShowingInventory)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory ON"));
+			InventoryWidget->AddToPlayerScreen();
+			// ???? TODO: GetWorld()->GetGameViewport()->AddViewportWidgetContent(InventoryWidget);
+			// ???? TODO: ShowMouseCursor(true);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory OFF"));
+			InventoryWidget->RemoveFromParent();
+			// ???? TODO: ShowMouseCursor(false);
+			// ???? TODO: GetWorld()->GetGameViewport()->RemoveFromViewportWidgetContent(InventoryWidget);
+		}
+	}
 }
 
 void APrimitiveCharacter::Back(const FInputActionValue& Value)

@@ -8,8 +8,10 @@ UCLASS(Blueprintable)
 class AInteractableActor : public AActor, public IInteractable
 {
     GENERATED_BODY()
+
 public:
-    void Interact_Implementation() override { };
-    void Hit_Implementation() override { };
-    void Consume_Implementation() override { };
+
+    void Interact_Implementation() override;
+    void Hit_Implementation() override;
+    void Consume_Implementation() override;
 };
