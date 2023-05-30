@@ -6,6 +6,7 @@
 #include "Components/InputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
+#include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -182,7 +183,7 @@ void APrimitiveCharacter::SetCurrentTarget(AActor* target)
 		CurrentTarget = target;
 
 		if (target != nullptr && UKismetSystemLibrary::DoesImplementInterface(target, UInteractable::StaticClass()))
-			CurrentInteractable = target;
+			CurrentInteractable = Cast<AInteractableActor>(target);
 		else
 			CurrentInteractable = nullptr;
 	}
@@ -296,7 +297,13 @@ void APrimitiveCharacter::FreeLook(const FInputActionValue& Value)
 
 void APrimitiveCharacter::Pick(const FInputActionValue& Value)
 {
-	// ???? TODO:
+	if (CurrentInteractable)
+	{
+		if (InventoryWidget)
+		{
+			InventoryWidget->AddItem(CurrentInteractable);
+		}
+	}
 }
 
 void APrimitiveCharacter::Drop(const FInputActionValue& Value)
@@ -335,30 +342,45 @@ void APrimitiveCharacter::Interact(const FInputActionValue& Value)
 
 void APrimitiveCharacter::ToggleInventory(const FInputActionValue& Value)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory"));
-	ShowingInventory = !ShowingInventory;
+	UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory %d"), Value.Get<bool>());
+	if (ShowingInventory)
+		return;
+
+	auto pc = GetController<APlayerController>();
+	ShowingInventory = true;
 	if (InventoryWidget != nullptr)
 	{	
-		if (ShowingInventory)
+		UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory ON"));
+		InventoryWidget->AddToPlayerScreen();
+		if (pc)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory ON"));
-			InventoryWidget->AddToPlayerScreen();
-			// ???? TODO: GetWorld()->GetGameViewport()->AddViewportWidgetContent(InventoryWidget);
-			// ???? TODO: ShowMouseCursor(true);
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory OFF"));
-			InventoryWidget->RemoveFromParent();
-			// ???? TODO: ShowMouseCursor(false);
-			// ???? TODO: GetWorld()->GetGameViewport()->RemoveFromViewportWidgetContent(InventoryWidget);
+			FInputModeGameAndUI mode;
+			//auto w = TSharedPtr<UUserWidget>(InventoryWidget);
+			//SWidget;
+			//mode.SetWidgetToFocus(w);
+			mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+			mode.SetHideCursorDuringCapture(false);
+			InventoryWidget->SetFocus();// SetUserFocus(pc);
+
+			pc->SetInputMode(mode);
 		}
 	}
 }
 
 void APrimitiveCharacter::Back(const FInputActionValue& Value)
 {
-	// ???? TODO:
+	auto pc = GetController<APlayerController>();
+	if (ShowingInventory)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory OFF"));
+		ShowingInventory = false;
+		InventoryWidget->RemoveFromParent();
+		if (pc)
+		{
+			FInputModeGameOnly mode;
+			pc->SetInputMode(mode);
+		}
+	}
 }
 
 void APrimitiveCharacter::Transfer(const FInputActionValue& Value)

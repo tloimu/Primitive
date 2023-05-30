@@ -6,7 +6,7 @@
 #include "InteractableActor.h"
 #include "InventoryWidget.generated.h"
 
-UCLASS()
+UCLASS(MinimalAPI, Blueprintable)
 class UInventoryWidget : public UUserWidget
 {
 	GENERATED_BODY()
@@ -18,6 +18,9 @@ public:
 	UFUNCTION(BlueprintCallable) bool AddItem(AInteractableActor* item);
 	UFUNCTION(BlueprintCallable) bool RemoveItem(AInteractableActor* item);
 	UFUNCTION(BlueprintCallable) const TArray<AInteractableActor*> GetItems() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void ItemAdded(AInteractableActor* item);
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void ItemRemoved(AInteractableActor* item);
 
 protected:
 
