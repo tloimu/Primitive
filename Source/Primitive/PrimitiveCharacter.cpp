@@ -11,6 +11,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Blueprint/UserWidget.h"
+#include "InventoryComponent.h"
 #include <Runtime/Engine/Classes/Kismet/KismetSystemLibrary.h>
 #include <Primitive/Interactable.h>
 
@@ -74,6 +75,8 @@ APrimitiveCharacter::APrimitiveCharacter()
 
 	HUDWidgetClass = nullptr;
 	HUDWidget = nullptr;
+
+	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 }
 
 void APrimitiveCharacter::BeginPlay()
@@ -143,7 +146,6 @@ void APrimitiveCharacter::CheckTarget()
 		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), hits.Location, 5, 5, FLinearColor::White);
 
 		auto hit = hits.GetActor();
-		//if (hit->IsRootComponentMovable())
 		if (hit->Implements<UInteractable>())
 			SetCurrentTarget(hit);
 		else
@@ -161,24 +163,18 @@ void APrimitiveCharacter::SetCurrentTarget(AActor* target)
 {
 	if (CurrentTarget != target)
 	{
+		if (CurrentTarget != nullptr)
+		{
+			SetHighlightIfInteractableTarget(CurrentTarget, false);
+			auto name = CurrentTarget->GetActorNameOrLabel();
+			UE_LOG(LogTemp, Warning, TEXT("Target REMOVED %s"), *name);
+		}
+
 		if (target)
 		{
 			auto name = target->GetActorNameOrLabel();
 			SetHighlightIfInteractableTarget(target, true);
 			UE_LOG(LogTemp, Warning, TEXT("Target %s"), *name);
-		}
-		else
-		{
-			if (CurrentTarget != nullptr)
-			{
-				SetHighlightIfInteractableTarget(CurrentTarget, false);
-				auto name = CurrentTarget->GetActorNameOrLabel();
-				UE_LOG(LogTemp, Warning, TEXT("Target REMOVED %s"), *name);
-			}
-			else
-			{
-				UE_LOG(LogTemp, Warning, TEXT("Target NULL"));
-			}
 		}
 		CurrentTarget = target;
 
@@ -186,6 +182,9 @@ void APrimitiveCharacter::SetCurrentTarget(AActor* target)
 			CurrentInteractable = Cast<AInteractableActor>(target);
 		else
 			CurrentInteractable = nullptr;
+
+		if (CurrentInteractable)
+			UE_LOG(LogTemp, Warning, TEXT("Target Interactable [%s]"), *CurrentInteractable->GetItem().Name);
 	}
 }
 
@@ -297,11 +296,18 @@ void APrimitiveCharacter::FreeLook(const FInputActionValue& Value)
 
 void APrimitiveCharacter::Pick(const FInputActionValue& Value)
 {
-	if (CurrentInteractable)
+	if (CurrentInteractable != nullptr)
 	{
-		if (InventoryWidget)
+		if (InventoryWidget != nullptr)
 		{
-			InventoryWidget->AddItem(CurrentInteractable);
+			auto const& item = CurrentInteractable->GetItem();
+			UE_LOG(LogTemp, Warning, TEXT("Adding item to inventory %s"), *item.Name);
+			if (InventoryWidget->AddItem(item))
+			{
+				auto actor = CurrentInteractable;
+				SetCurrentTarget(nullptr);
+				actor->Destroy();
+			}
 		}
 	}
 }

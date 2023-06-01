@@ -3,43 +3,116 @@
 UInventoryWidget::UInventoryWidget(const FObjectInitializer& ObjectInitializer): UUserWidget(ObjectInitializer)
 {
 	bIsFocusable = true;
-	Capacity = 30;
+	Capacity = 60;
+	MaxSlots = 30;
+	InventorySlotClass = StaticClass();
 }
 
-bool UInventoryWidget::AddItem(AInteractableActor* item)
+void UInventoryWidget::SetMaxSlots(int Count)
+{
+	MaxSlots = Count;
+	InventorySlotsChanged();
+}
+
+bool UInventoryWidget::AddItem(const FItemStruct& inItem)
 {
 	if (Items.Num() >= Capacity)
 		return false;
 
-	Items.Add(item);
-	ItemAdded(item);
-	return true;
+	if (AddToExistingSlot(inItem))
+	{
+		return true;
+	}
+
+	if (Slots.Num() < MaxSlots)
+	{
+		auto slot = CreateWidget<UInventorySlot>(this, InventorySlotClass);
+		if (slot)
+		{
+			slot->SetItem(inItem);
+			slot->SetItemCount(1);
+			Slots.Add(slot);
+			Items.Add(inItem);
+			InventorySlotAdded(slot);
+			return true;
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Unable to create inventory slot due missing InventorySlotClass"));
+			return false;
+		}
+		return false;
+	}
+
+	return false;
 }
 
-bool UInventoryWidget::RemoveItem(AInteractableActor* item)
+bool UInventoryWidget::RemoveItem(const FItemStruct& inItem)
 {
-	if (Items.RemoveSingle(item) == 1)
+	if (Items.RemoveSingle(inItem) == 1)
 	{
-		ItemRemoved(item);
+		RemoveFromSlot(inItem);
 		return true;
 	}
 	else
 		return false;
 }
 
-const TArray<AInteractableActor*> UInventoryWidget::GetItems() const
+bool UInventoryWidget::AddToExistingSlot(const FItemStruct& inItem)
 {
-	return Items;
+	for (auto slot : Slots)
+	{
+		auto slotItem = slot->GetItem();
+		if (slotItem.Id == inItem.Id)
+		{
+			auto slotItemCount = slot->GetItemCount();
+			if (slotItemCount >= 0 && slotItemCount < slotItem.MaxStackSize)
+			{
+				slot->SetItemCount(slotItemCount + 1);
+				if (slotItemCount == 0)
+					slot->Clear();
+				InventorySlotsChanged();
+				return true;
+			}
+		}
+	}
+
+	return false;
 }
 
-void UInventoryWidget::ItemAdded_Implementation(AInteractableActor* item)
+bool UInventoryWidget::RemoveFromSlot(const FItemStruct& inItem)
 {
-	auto name = item->GetActorNameOrLabel();
-	UE_LOG(LogTemp, Warning, TEXT("Added Item to Inventory %s"), *name);
+	for (auto slot : Slots)
+	{
+		auto slotItem = slot->GetItem();
+		auto slotItemCount = slot->GetItemCount();
+		if (slotItem.Id == inItem.Id)
+		{
+			if (slotItemCount > 1)
+				slot->SetItemCount(slotItemCount - 1);
+			else
+			{
+				slot->Clear();
+				InventorySlotRemoved(slot);
+			}
+			return true;
+		}
+	}
+	return false;
 }
 
-void UInventoryWidget::ItemRemoved_Implementation(AInteractableActor* item)
+
+void UInventoryWidget::InventorySlotAdded_Implementation(UInventorySlot* inSlot)
 {
-	auto name = item->GetActorNameOrLabel();
-	UE_LOG(LogTemp, Warning, TEXT("Removed Item from Inventory %s"), *name);
+	UE_LOG(LogTemp, Warning, TEXT("Added slot to Inventory"));
+}
+
+void UInventoryWidget::InventorySlotRemoved_Implementation(UInventorySlot* inSlot)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Removed slot from Inventory"));
+}
+
+void UInventoryWidget::InventorySlotsChanged_Implementation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("SlotsChanged count %d"), Slots.Num());
 }

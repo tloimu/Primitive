@@ -4,9 +4,7 @@
 #include "InteractableActor.h"
 #include "ItemContainer.generated.h"
 
-/**
- * 
- */
+/*
 UCLASS()
 class PRIMITIVE_API AItemContainer : public AInteractableActor
 {
@@ -16,11 +14,15 @@ class PRIMITIVE_API AItemContainer : public AInteractableActor
 
 public:
 
-	UFUNCTION(BlueprintCallable) bool AddItem(AInteractableActor* item);
-	UFUNCTION(BlueprintCallable) bool RemoveItem(AInteractableActor* item);
-	UFUNCTION(BlueprintCallable) const TArray<AInteractableActor*> GetItems() const;
+	UFUNCTION(BlueprintCallable) bool AddItem(UItemSpecs* item);
+	UFUNCTION(BlueprintCallable) bool RemoveItem(UItemSpecs* item);
+	UFUNCTION(BlueprintCallable) const TArray<UItemSpecs*> GetItems() const;
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void ItemAdded(UItemSpecs* item);
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void ItemRemoved(UItemSpecs* item);
 
 protected:
-	UPROPERTY(EditAnywhere) TArray<AInteractableActor*> Items;
+	UPROPERTY(EditAnywhere) TArray<UItemSpecs*> Items;
 	UPROPERTY(EditAnywhere) int32 Capacity;
 };
+*/

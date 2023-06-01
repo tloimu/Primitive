@@ -135,6 +135,9 @@ protected:
 	UPROPERTY(EditAnywhere) TSubclassOf<UHUDWidget> HUDWidgetClass;
 	UPROPERTY() UHUDWidget* HUDWidget;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	class UInventoryComponent* InventoryComponent;
+
 public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }

@@ -3,7 +3,8 @@
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "ItemContainer.h"
-#include "InteractableActor.h"
+#include "ItemStruct.h"
+#include "InventorySlot.h"
 #include "InventoryWidget.generated.h"
 
 UCLASS(MinimalAPI, Blueprintable)
@@ -15,15 +16,26 @@ public:
 
 	UInventoryWidget(const FObjectInitializer& ObjectInitializer);
 
-	UFUNCTION(BlueprintCallable) bool AddItem(AInteractableActor* item);
-	UFUNCTION(BlueprintCallable) bool RemoveItem(AInteractableActor* item);
-	UFUNCTION(BlueprintCallable) const TArray<AInteractableActor*> GetItems() const;
+	UFUNCTION(BlueprintCallable) bool AddItem(const FItemStruct& item);
+	UFUNCTION(BlueprintCallable) bool RemoveItem(const FItemStruct& item);
+	UFUNCTION(BlueprintCallable) void SetMaxSlots(int Count);
 
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void ItemAdded(AInteractableActor* item);
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void ItemRemoved(AInteractableActor* item);
+	// UFUNCTION(BlueprintCallable) bool MergeSlots(int SlotIndexA, int SlotIndexB);
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void InventorySlotAdded(UInventorySlot *inSlot);
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void InventorySlotRemoved(UInventorySlot* inSlot);
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void InventorySlotsChanged();
+
+	UPROPERTY(EditAnywhere) TArray<FItemStruct> Items;
+	UPROPERTY(EditAnywhere) int32 Capacity;
+
+	UPROPERTY(EditAnywhere) TArray<UInventorySlot*> Slots;
+	UPROPERTY(EditAnywhere) int32 MaxSlots;
+
+	UPROPERTY(EditAnywhere) TSubclassOf<UInventorySlot> InventorySlotClass;
 
 protected:
 
-	UPROPERTY(EditAnywhere) TArray<AInteractableActor*> Items;
-	UPROPERTY(EditAnywhere) int32 Capacity;
+	bool AddToExistingSlot(const FItemStruct &inItem);
+	bool RemoveFromSlot(const FItemStruct& inItem);
 };
