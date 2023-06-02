@@ -22,20 +22,11 @@ bool UInventoryWidget::AddItem(const FItemStruct& inItem)
 
 	if (Slots.Num() < MaxSlots)
 	{
-		auto slot = CreateWidget<UInventorySlot>(this, InventorySlotClass);
+		auto slot = AddToNewSlot(inItem, 1);
 		if (slot)
-		{
-			slot->SetItemAndCount(inItem, 1);
-			Slots.Add(slot);
-			InventorySlotAdded(slot);
 			return true;
-		}
 		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Unable to create inventory slot due missing InventorySlotClass"));
 			return false;
-		}
-		return false;
 	}
 
 	return false;
@@ -44,6 +35,25 @@ bool UInventoryWidget::AddItem(const FItemStruct& inItem)
 bool UInventoryWidget::RemoveItem(const FItemStruct& inItem)
 {
 	return RemoveFromSlot(inItem);
+}
+
+UInventorySlot*
+UInventoryWidget::AddToNewSlot(const FItemStruct& inItem, int inItemCount)
+{
+	auto slot = CreateWidget<UInventorySlot>(this, InventorySlotClass);
+	if (slot)
+	{
+		slot->Inventory = this;
+		slot->SetItemAndCount(inItem, inItemCount);
+		Slots.Add(slot);
+		InventorySlotAdded(slot);
+		return slot;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Unable to create inventory slot due missing InventorySlotClass"));
+		return nullptr;
+	}
 }
 
 bool UInventoryWidget::AddToExistingSlot(const FItemStruct& inItem)

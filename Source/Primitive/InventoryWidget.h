@@ -31,6 +31,8 @@ public:
 
 	UPROPERTY(EditAnywhere) TSubclassOf<UInventorySlot> InventorySlotClass;
 
+	UInventorySlot* AddToNewSlot(const FItemStruct& inItem, int inItemCount);
+
 protected:
 
 	bool AddToExistingSlot(const FItemStruct &inItem);

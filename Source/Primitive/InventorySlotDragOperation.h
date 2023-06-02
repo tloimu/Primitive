@@ -16,6 +16,6 @@ class PRIMITIVE_API UInventorySlotDragOperation : public UDragDropOperation
 	
 public:
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) UUserWidget* WidgetReference;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) class UInventorySlot* WidgetReference;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) FVector2D DragOffset;
 };
