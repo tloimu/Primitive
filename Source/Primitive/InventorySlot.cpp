@@ -4,6 +4,13 @@ UInventorySlot::UInventorySlot(const FObjectInitializer& ObjectInitializer): UUs
 {
 }
 
+void
+UInventorySlot::SetItemAndCount(const FItemStruct& inItem, int inCount)
+{
+	Item = inItem;
+	ItemCount = inCount;
+	ItemSet(Item, ItemCount);
+}
 
 void
 UInventorySlot::SetItem(const FItemStruct& inItem)

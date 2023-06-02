@@ -177,7 +177,7 @@ void APrimitiveCharacter::SetCurrentTarget(AActor* target)
 			UE_LOG(LogTemp, Warning, TEXT("Target %s"), *name);
 		}
 		CurrentTarget = target;
-
+		
 		if (target != nullptr && UKismetSystemLibrary::DoesImplementInterface(target, UInteractable::StaticClass()))
 			CurrentInteractable = Cast<AInteractableActor>(target);
 		else
@@ -302,6 +302,7 @@ void APrimitiveCharacter::Pick(const FInputActionValue& Value)
 		{
 			auto const& item = CurrentInteractable->GetItem();
 			UE_LOG(LogTemp, Warning, TEXT("Adding item to inventory %s"), *item.Name);
+			item.Icon.LoadSynchronous(); // Force resolve lazy loading - not sure if this is the best way but seems to make it work
 			if (InventoryWidget->AddItem(item))
 			{
 				auto actor = CurrentInteractable;

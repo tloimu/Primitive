@@ -13,6 +13,7 @@ class UInventorySlot : public UUserWidget
 public:
     UInventorySlot(const FObjectInitializer& ObjectInitializer);
 
+    UFUNCTION(BlueprintCallable) void SetItemAndCount(const FItemStruct &inItem, int inCount);
     UFUNCTION(BlueprintCallable) void SetItem(const FItemStruct &inItem);
     UFUNCTION(BlueprintCallable) void SetItemCount(int inCount);
     UFUNCTION(BlueprintCallable) void Clear();

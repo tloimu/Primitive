@@ -26,9 +26,6 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void InventorySlotRemoved(UInventorySlot* inSlot);
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void InventorySlotsChanged();
 
-	UPROPERTY(EditAnywhere) TArray<FItemStruct> Items;
-	UPROPERTY(EditAnywhere) int32 Capacity;
-
 	UPROPERTY(EditAnywhere) TArray<UInventorySlot*> Slots;
 	UPROPERTY(EditAnywhere) int32 MaxSlots;
 

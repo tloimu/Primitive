@@ -3,7 +3,6 @@
 UInventoryWidget::UInventoryWidget(const FObjectInitializer& ObjectInitializer): UUserWidget(ObjectInitializer)
 {
 	bIsFocusable = true;
-	Capacity = 60;
 	MaxSlots = 30;
 	InventorySlotClass = StaticClass();
 }
@@ -16,9 +15,6 @@ void UInventoryWidget::SetMaxSlots(int Count)
 
 bool UInventoryWidget::AddItem(const FItemStruct& inItem)
 {
-	if (Items.Num() >= Capacity)
-		return false;
-
 	if (AddToExistingSlot(inItem))
 	{
 		return true;
@@ -29,10 +25,8 @@ bool UInventoryWidget::AddItem(const FItemStruct& inItem)
 		auto slot = CreateWidget<UInventorySlot>(this, InventorySlotClass);
 		if (slot)
 		{
-			slot->SetItem(inItem);
-			slot->SetItemCount(1);
+			slot->SetItemAndCount(inItem, 1);
 			Slots.Add(slot);
-			Items.Add(inItem);
 			InventorySlotAdded(slot);
 			return true;
 		}
@@ -49,13 +43,7 @@ bool UInventoryWidget::AddItem(const FItemStruct& inItem)
 
 bool UInventoryWidget::RemoveItem(const FItemStruct& inItem)
 {
-	if (Items.RemoveSingle(inItem) == 1)
-	{
-		RemoveFromSlot(inItem);
-		return true;
-	}
-	else
-		return false;
+	return RemoveFromSlot(inItem);
 }
 
 bool UInventoryWidget::AddToExistingSlot(const FItemStruct& inItem)
@@ -71,7 +59,6 @@ bool UInventoryWidget::AddToExistingSlot(const FItemStruct& inItem)
 				slot->SetItemCount(slotItemCount + 1);
 				if (slotItemCount == 0)
 					slot->Clear();
-				InventorySlotsChanged();
 				return true;
 			}
 		}
