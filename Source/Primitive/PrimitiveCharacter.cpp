@@ -302,7 +302,7 @@ void APrimitiveCharacter::Pick(const FInputActionValue& Value)
 		{
 			auto const& item = CurrentInteractable->GetItem();
 			UE_LOG(LogTemp, Warning, TEXT("Adding item to inventory %s"), *item.Name);
-			item.Icon.LoadSynchronous(); // Force resolve lazy loading - not sure if this is the best way but seems to make it work
+			item.Icon.LoadSynchronous(); // Force resolve lazy loading - not sure if this is the best way but seems to make it work. Maybe check icon.IsPending() to see the need to load
 			if (InventoryWidget->AddItem(item))
 			{
 				auto actor = CurrentInteractable;
