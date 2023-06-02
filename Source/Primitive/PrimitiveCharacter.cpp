@@ -398,13 +398,11 @@ void APrimitiveCharacter::Transfer(const FInputActionValue& Value)
 
 void APrimitiveCharacter::CreateDroppedItem(const FItemStruct& Item)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Create Dropped Item"));
-
 	FVector start = GetActorLocation();
-	FVector end = start + FollowCamera->GetForwardVector().GetSafeNormal() * 10.0f;
+	FVector end = start + FollowCamera->GetForwardVector().GetSafeNormal() * 50.0f;
 	auto rotation = GetActorRotation();
 	FActorSpawnParameters SpawnInfo;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(Item.ItemClass, start, rotation, SpawnInfo);
+	auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(Item.ItemClass, end, rotation, SpawnInfo);
 }
