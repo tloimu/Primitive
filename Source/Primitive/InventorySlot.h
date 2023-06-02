@@ -39,7 +39,7 @@ public:
     void MoveItemsHereFromSlot(UInventorySlot* Other);
     void Split();
 
-    class UInventoryWidget* Inventory;
+    class UInventoryWidget* Inventory; // ???? TODO: Make sure this gets memory managed correctly
 
 protected:
 

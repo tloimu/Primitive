@@ -25,6 +25,7 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void InventorySlotAdded(UInventorySlot *inSlot);
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void InventorySlotRemoved(UInventorySlot* inSlot);
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void InventorySlotsChanged();
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void InventoryItemDropped(const FItemStruct& item);
 
 	UPROPERTY(EditAnywhere) TArray<UInventorySlot*> Slots;
 	UPROPERTY(EditAnywhere) int32 MaxSlots;
@@ -32,6 +33,16 @@ public:
 	UPROPERTY(EditAnywhere) TSubclassOf<UInventorySlot> InventorySlotClass;
 
 	UInventorySlot* AddToNewSlot(const FItemStruct& inItem, int inItemCount);
+	void DropItemsFromSlot(UInventorySlot* inSlot, int inCount);
+
+	void DropItem(const FItemStruct& inItem);
+
+	void NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+	void NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+	bool NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+	bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+
+	class APrimitiveCharacter* Player;
 
 protected:
 

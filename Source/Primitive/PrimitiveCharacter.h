@@ -9,7 +9,6 @@
 #include "HUDWidget.h"
 #include "PrimitiveCharacter.generated.h"
 
-
 UCLASS(config=Game)
 class APrimitiveCharacter : public ACharacter
 {
@@ -81,6 +80,7 @@ class APrimitiveCharacter : public ACharacter
 public:
 	APrimitiveCharacter();
 	
+	void CreateDroppedItem(const FItemStruct& Item);
 
 protected:
 
