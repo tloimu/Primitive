@@ -1,1 +1,3 @@
-D:\EpicGames\UE_5.2\Engine\Binaries\Win64\UnrealEditor.exe "E:\Unreal Projects\Primitive\Primitive.uproject"
+call build-vars.bat
+
+"%UE_EDITOR%" "%PROJECT_DIR%\%PROJECT_NAME%.uproject"
