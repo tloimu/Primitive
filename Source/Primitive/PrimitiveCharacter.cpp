@@ -12,7 +12,9 @@
 #include "EnhancedInputSubsystems.h"
 #include "Blueprint/UserWidget.h"
 #include "InventoryComponent.h"
+#include "GameSettings.h"
 #include <Runtime/Engine/Classes/Kismet/KismetSystemLibrary.h>
+#include <Runtime/JsonUtilities/Public/JsonObjectConverter.h>
 #include <Primitive/Interactable.h>
 
 
@@ -76,7 +78,7 @@ APrimitiveCharacter::APrimitiveCharacter()
 	HUDWidgetClass = nullptr;
 	HUDWidget = nullptr;
 
-	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
+//	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 }
 
 void APrimitiveCharacter::BeginPlay()
@@ -104,7 +106,149 @@ void APrimitiveCharacter::BeginPlay()
 			HUDWidget->AddToPlayerScreen();
 		}
 	}
+
+	ReadConfigFiles();
+	ReadGameSave();
 }
+
+void
+APrimitiveCharacter::ReadConfigFiles()
+{
+    const FString JsonFilePath = FPaths::ProjectContentDir() + "ConfigFiles/game.json";
+	UE_LOG(LogTemp, Warning, TEXT("ReadConfigFiles: %s"), *JsonFilePath);
+
+	if (!FPlatformFileManager::Get().GetPlatformFile().FileExists(*JsonFilePath))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DID NOT FIND FILE"));
+		return;
+	}
+
+	FString JsonString;
+	FFileHelper::LoadFileToString(JsonString, *JsonFilePath);
+
+	UE_LOG(LogTemp, Warning, TEXT("ConfigFiles/game.json %s"), *JsonString);
+
+    TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+    TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(JsonString);
+
+    if (FJsonSerializer::Deserialize(JsonReader, JsonObject) && JsonObject.IsValid())
+    {
+
+        FGameSettings gameSettings;
+        FJsonObjectConverter::JsonObjectStringToUStruct<FGameSettings>(JsonString, &gameSettings, 0, 0);
+		UE_LOG(LogTemp, Warning, TEXT("Game Settings Name= %s"), *gameSettings.name);
+		for (auto item: gameSettings.items)
+		{
+			if (item.className.IsEmpty())
+				item.className = "/Script/Engine.Blueprint'" + gameSettings.itemsPath + "/" + gameSettings.classNamePrefix + item.id + "." + gameSettings.classNamePrefix + item.id + "_C'";
+			if (item.icon.IsEmpty())
+				item.icon = "/Script/Engine.Blueprint'" + gameSettings.itemsPath + "/" + gameSettings.iconNamePrefix+ item.id + "." + gameSettings.iconNamePrefix + item.id + "_C'";
+			UE_LOG(LogTemp, Warning, TEXT("Game Settings Id= %s, Class= %s, Icon= %s"), *item.id, *item.className, *item.icon);
+			UpdateItemSettingsClass(item);
+			ItemSettings.Add(item.id, item);
+		}
+    }
+    else
+    {
+		UE_LOG(LogTemp, Error, TEXT("Invalid JSON at game settings file %s"), *JsonString);
+    }
+}
+
+void
+APrimitiveCharacter::UpdateItemSettingsClass(FItemSettings& item)
+{
+	TSoftClassPtr<AActor> ActorBpClass = TSoftClassPtr<AActor>(FSoftObjectPath(item.className));
+	UClass* LoadedBpAsset = ActorBpClass.LoadSynchronous();
+	if (LoadedBpAsset)
+		LoadedBpAsset->AddToRoot();
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Cannot find item asset %s"), *item.className);
+	}
+
+	item.ItemClass = LoadedBpAsset;
+}
+
+/*
+// First we need a reference to the BP at all - yes, hardcoded asset paths are not a nice thing,
+// but it has to come from somewhere....
+
+// ....if your blueprint is in a plugin
+TSoftClassPtr<AActor> ActorBpClass = TSoftClassPtr<AActor>(FSoftObjectPath(TEXT("Blueprint'/PluginModuleName/Some/Path/BP_MyAwesomeActor.BP_MyAwesomeActor_C'")));
+
+// ....if your blueprint is in the normal project content
+TSoftClassPtr<AActor> ActorBpClass = TSoftClassPtr<AActor>(FSoftObjectPath(TEXT("Blueprint'/Game/Some/Path/BP_MyAwesomeActor.BP_MyAwesomeActor_C'")));
+
+// The actual loading
+UClass* LoadedBpAsset = ActorBpClass.LoadSynchronous();
+
+// (Optional, depends on how you continue using it)
+// Make sure GC doesn't steal it away from us, again
+LoadedBpAsset->AddToRoot();
+
+// From here on, it's business as usual, common actor spawning, just using the BP asset we loaded above
+FVector Loc = FVector::ZeroVector;
+FRotator Rot = FRotator::ZeroRotator;
+FActorSpawnParameters SpawnParams = FActorSpawnParameters();
+GetWorld()->SpawnActor(LoadedBpAsset, &Loc, &Rot, SpawnParams);
+*/
+
+void
+APrimitiveCharacter::ReadGameSave()
+{
+	const FString JsonFilePath = FPaths::ProjectContentDir() + "ConfigFiles/save-base.json";
+	if (!FPlatformFileManager::Get().GetPlatformFile().FileExists(*JsonFilePath))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No save-file found in %s"), *JsonFilePath);
+		return;
+	}
+
+	FString JsonString;
+	FFileHelper::LoadFileToString(JsonString, *JsonFilePath);
+
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+	TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(JsonString);
+
+	if (FJsonSerializer::Deserialize(JsonReader, JsonObject) && JsonObject.IsValid())
+	{
+		FGameSave game;
+		FJsonObjectConverter::JsonObjectStringToUStruct<FGameSave>(JsonString, &game, 0, 0);
+		UE_LOG(LogTemp, Warning, TEXT("Game Save Name= %s"), *game.name);
+		for (const auto &item : game.items)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Game Settings Id= %s, x= %f, y= %f, z=%f"), *item.id, item.location[0], item.location[1], item.location[2]);
+			SpawnItem(item);
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Invalid JSON at game save file %s"), *JsonString);
+	}
+}
+
+void APrimitiveCharacter::SpawnItem(const FSavedItem& item)
+{
+	FVector location;
+	if (item.location.Num() >= 3)
+		location.Set(item.location[0], item.location[1], item.location[2]);
+	FRotator rotation;
+	if (item.rotation.Num() >= 3)
+		rotation.Add(item.rotation[0], item.rotation[1], item.rotation[2]);
+	FActorSpawnParameters SpawnInfo;
+	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;//  AlwaysSpawn;
+
+	auto itemSetting = ItemSettings.Find(item.id);
+	if (itemSetting)
+	{
+		if (itemSetting->ItemClass->IsValidLowLevel())
+			auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(itemSetting->ItemClass, location, rotation, SpawnInfo);
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Cannot find item class %s"), *itemSetting->className);
+		}
+	}
+}
+
 
 void APrimitiveCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {

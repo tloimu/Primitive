@@ -1,0 +1,45 @@
+{
+    "name": "Default",
+    "items":
+    [
+        {
+            "id": "Box",
+            "location": [1060, 1210, 110],
+            "rotation": [0, 0, 90]
+        },
+        {
+            "id": "ShortStick",
+            "location": [760, 1700, 10],
+            "rotation": [0, 0, 70]
+        },
+        {
+            "id": "ShortStick",
+            "location": [800, 1700, 10],
+            "rotation": [0, 0, 70]
+        },
+        {
+            "id": "SmallRock",
+            "location": [730, 1580, 10]
+        },
+        {
+            "id": "SmallRock",
+            "location": [840, 1570, 10]
+        },
+        {
+            "id": "LongStick",
+            "location": [970, 1500, 30]
+        },
+        {
+            "id": "LongStick",
+            "location": [900, 1670, 30]
+        },
+        {
+            "id": "LongStick",
+            "location": [770, 1420, 60]
+        },
+        {
+            "id": "LongStick",
+            "location": [750, 1410, 30]
+        }
+    ]
+}

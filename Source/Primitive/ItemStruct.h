@@ -16,7 +16,11 @@ enum class BodyPart : uint8
     Torso = 5           UMETA(DisplayName = "Torso"),
     Legs = 6            UMETA(DisplayName = "Legs"),
     Neck = 7            UMETA(DisplayName = "Neck"),
-    Finger = 8          UMETA(DisplayName = "Finger")
+    Finger = 8          UMETA(DisplayName = "Finger"),
+    Back = 9            UMETA(DisplayName = "Back"),
+    Hips = 10           UMETA(DisplayName = "Hips"),
+    Wrist = 11          UMETA(DisplayName = "Wrist"),
+    Arm = 12            UMETA(DisplayName = "Arm")
 };
 
 

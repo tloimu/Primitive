@@ -7,6 +7,7 @@
 #include "InputActionValue.h"
 #include "InventoryWidget.h"
 #include "HUDWidget.h"
+#include "GameSettings.h"
 #include "PrimitiveCharacter.generated.h"
 
 UCLASS(config=Game)
@@ -118,6 +119,13 @@ protected:
 	void BeginPlay() override;
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+	void ReadConfigFiles();
+	void UpdateItemSettingsClass(FItemSettings& item);
+	void ReadGameSave();
+	void SpawnItem(const FSavedItem& item);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) TMap<FString, FItemSettings> ItemSettings;
+
 	void Tick(float DeltaSeconds) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) AActor* CurrentTarget;
@@ -135,8 +143,8 @@ protected:
 	UPROPERTY(EditAnywhere) TSubclassOf<UHUDWidget> HUDWidgetClass;
 	UPROPERTY() UHUDWidget* HUDWidget;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	class UInventoryComponent* InventoryComponent;
+/*	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	class UInventoryComponent* InventoryComponent;*/
 
 public:
 	/** Returns CameraBoom subobject **/
