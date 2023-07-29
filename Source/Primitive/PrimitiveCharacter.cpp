@@ -17,6 +17,10 @@
 #include <Runtime/JsonUtilities/Public/JsonObjectConverter.h>
 #include <Primitive/Interactable.h>
 
+#include <D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelTools/Gen/VoxelSphereTools.h>
+#include "D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelWorldInterface.h"
+#include <D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelWorld.h>
+
 
 //////////////////////////////////////////////////////////////////////////
 // APrimitiveCharacter
@@ -292,9 +296,36 @@ void APrimitiveCharacter::CheckTarget()
 
 		auto hit = hits.GetActor();
 		if (hit->Implements<UInteractable>())
+		{
 			SetCurrentTarget(hit);
+		}
 		else
+		{
+			auto voxels = Cast<AVoxelWorld>(hit);
+
+			if (voxels)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Hit VoxelWorld target %s (%d)"), *hit->GetName(), rand());
+				UVoxelSphereTools::RemoveSphere(voxels,
+					hits.Location,
+					100.0f); /*,
+					TArray<FModifiedVoxelValue>*OutModifiedValues = nullptr,
+					FVoxelIntBox * OutEditedBounds = nullptr,
+					bool bMultiThreaded = true,
+					bool bConvertToVoxelSpace = true,
+					bool bUpdateRender = true)*/
+			}
+
+			if (hit->Implements<AVoxelWorldInterface>())
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Hit voxel world target %s (%d)"), *hit->GetName(), rand());
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Hit non-Interactable target %s (%d)"), *hit->GetName(), rand());
+			}
 			SetCurrentTarget(nullptr);
+		}
 	}
 	else
 	{
