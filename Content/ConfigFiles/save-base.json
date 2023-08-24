@@ -8,6 +8,10 @@
             "rotation": [0, 0, 90]
         },
         {
+            "id": "BackPack",
+            "location": [1030, 1050, 70]
+        },
+        {
             "id": "ShortStick",
             "location": [760, 1700, 10],
             "rotation": [0, 0, 70]

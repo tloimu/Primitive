@@ -10,6 +10,12 @@
 #include "GameSettings.h"
 #include "PrimitiveCharacter.generated.h"
 
+struct ContainedMaterial
+{
+	int32 index;
+	float amount;
+};
+
 UCLASS(config=Game)
 class APrimitiveCharacter : public ACharacter
 {
@@ -111,6 +117,8 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Zoom Transforms", BlueprintReadWrite) TArray<float> ZoomTransforms;
 	uint8 CurrentZoomLevel;
 
+	TArray<ContainedMaterial> CollectMaterialsFrom(const FVector& Location);
+
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -130,6 +138,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) AActor* CurrentTarget;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) AInteractableActor* CurrentInteractable;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) FIntVector CurrentVoxel;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) FVector TargetLocation;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) class AVoxelWorld *TargetVoxelWorld;
 
 	void CheckTarget();
 	void SetCurrentTarget(AActor* target);

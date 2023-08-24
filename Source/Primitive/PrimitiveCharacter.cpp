@@ -20,6 +20,8 @@
 #include <D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelTools/Gen/VoxelSphereTools.h>
 #include "D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelWorldInterface.h"
 #include <D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelWorld.h>
+#include "D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelTools/Gen/VoxelToolsBase.h"
+#include <D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelTools/VoxelDataTools.h>
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -75,6 +77,7 @@ APrimitiveCharacter::APrimitiveCharacter()
 
 	CurrentTarget = nullptr;
 	ShowingInventory = false;
+	TargetVoxelWorld = nullptr;
 
 	InventoryWidgetClass = nullptr;
 	InventoryWidget = nullptr;
@@ -146,7 +149,7 @@ APrimitiveCharacter::ReadConfigFiles()
 			if (item.className.IsEmpty())
 				item.className = "/Script/Engine.Blueprint'" + gameSettings.itemsPath + "/" + gameSettings.classNamePrefix + item.id + "." + gameSettings.classNamePrefix + item.id + "_C'";
 			if (item.icon.IsEmpty())
-				item.icon = "/Script/Engine.Blueprint'" + gameSettings.itemsPath + "/" + gameSettings.iconNamePrefix+ item.id + "." + gameSettings.iconNamePrefix + item.id + "_C'";
+				item.icon = "/Script/Engine.Blueprint'" + gameSettings.itemsPath + "/" + gameSettings.iconNamePrefix + item.id + "." + gameSettings.iconNamePrefix + item.id + "_C'";
 			UE_LOG(LogTemp, Warning, TEXT("Game Settings Id= %s, Class= %s, Icon= %s"), *item.id, *item.className, *item.icon);
 			UpdateItemSettingsClass(item);
 			ItemSettings.Add(item.id, item);
@@ -279,6 +282,66 @@ void APrimitiveCharacter::Tick(float DeltaSeconds)
 	CheckTarget();
 }
 
+
+TArray<ContainedMaterial>
+APrimitiveCharacter::CollectMaterialsFrom(const FVector& Location)
+{
+	TArray<ContainedMaterial> collected;
+	auto pos = TargetVoxelWorld->GlobalToLocal(Location);
+
+	// UE_LOG(LogTemp, Warning, TEXT("Collecting Voxel at [%d, %d, %d]"), pos.X, pos.Y, pos.Z);
+
+	auto& data = TargetVoxelWorld->GetData();
+	TArray<FVoxelValueMaterial> voxels;
+	TArray<FIntVector> poses;
+	poses.Push(pos);
+	UVoxelDataTools::GetVoxelsValueAndMaterial(voxels, TargetVoxelWorld, poses);
+	for (auto& v : voxels)
+	{
+		auto& m = v.Material;
+		if (v.Value >= 0.0f)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Collected Voxel value=%f, material={i0=%d, i1=%d, i2=%d, w=%d, b0=%d, b1=%d, b2=%d}, [%d, %d, %d]"), v.Value, m.GetMultiIndex_Index0(), m.GetMultiIndex_Index1(), m.GetMultiIndex_Index2(), m.GetMultiIndex_Blend0(), m.GetMultiIndex_Blend1(), m.GetMultiIndex_Blend2(), m.GetMultiIndex_Wetness(), pos.X, pos.Y, pos.Z);
+		}
+	}
+	/*
+	FVoxelIntBox b(pos, pos2);
+	// auto lock = data.Lock(EVoxelLockType::Read, b, FName("interact"));
+	auto mats = data.GetMaterials(b);
+//	data.Unlock(lock);
+	for (auto& m : mats)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Collected Voxel material={%d, %d, %d, w=%d}, [%f, %f, %f]: %f"), m.GetMultiIndex_Blend0(), m.GetMultiIndex_Blend1(), m.GetMultiIndex_Blend2(), m.GetMultiIndex_Wetness(), pos.X, pos.Y, pos.Z);
+	}
+*/
+	return collected;
+
+	/*
+	TArray<FIntVector> poses;
+	poses.Push(pos);
+
+	TArray<FVoxelValueMaterial> voxels;
+	UVoxelDataTools::GetVoxelsValueAndMaterial(voxels, TargetVoxelWorld, poses);
+
+	for (int c = 0; c < FVoxelMaterial::NumChannels; c++)
+	{
+		for (auto& v : voxels)
+		{
+			//auto materialIndex = v.Material.GetRaw(c);
+			auto materialIndex = v.Material.GetR();
+			UE_LOG(LogTemp, Warning, TEXT("Collected Voxel material=%d, [%f, %f, %f]: %f"), materialIndex, v.Position.X, v.Position.Y, v.Position.Z, v.Value);
+			collected.Push({ materialIndex, v.Value });
+		}
+	}
+	*/
+
+	TArray<FModifiedVoxelValue> modified;
+	UVoxelSphereTools::RemoveSphere(TargetVoxelWorld, Location, 50.0f, &modified);
+
+	return collected;
+}
+
+
 void APrimitiveCharacter::CheckTarget()
 {
 	FHitResult hits;
@@ -305,24 +368,59 @@ void APrimitiveCharacter::CheckTarget()
 
 			if (voxels)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("Hit VoxelWorld target %s (%d)"), *hit->GetName(), rand());
-				UVoxelSphereTools::RemoveSphere(voxels,
-					hits.Location,
-					100.0f); /*,
-					TArray<FModifiedVoxelValue>*OutModifiedValues = nullptr,
-					FVoxelIntBox * OutEditedBounds = nullptr,
-					bool bMultiThreaded = true,
-					bool bConvertToVoxelSpace = true,
-					bool bUpdateRender = true)*/
+				TArray<FModifiedVoxelValue> OutModifiedValues;
+				// UE_LOG(LogTemp, Warning, TEXT("Hit VoxelWorld target %s (%d)"), *hit->GetName(), rand());
+
+				auto poses = voxels->GetNeighboringPositions(hits.Location);				
+
+				if (poses.Num() > 0)
+				{
+					TargetVoxelWorld = voxels;
+					TargetLocation = hits.Location;
+					/*
+					FVoxelMaterial Material;
+					UVoxelDataTools::GetMaterial(Material, voxels, poses[0]);
+					float Value;
+					UVoxelDataTools::GetValue(Value, voxels, poses[0]);
+					// UE_LOG(LogTemp, Warning, TEXT("Voxel Material n=%d, v=%f, A=%f, index=%d, ei=%d"), poses.Num(), Value, Material.GetA_AsFloat(), Material.GetSingleIndex(), hits.ElementIndex);
+					int i = 0;
+					CurrentVoxel = poses[0];
+					for (auto& p : poses)
+					{
+						UVoxelDataTools::GetMaterial(Material, voxels, p);
+						//UE_LOG(LogTemp, Warning, TEXT(" - Material[%d]:x=%d, y=%d, z=%d, index=%f"), i, p.X, p.Y, p.Z, Material.GetSingleIndex_AsFloat());
+						for (int c = 0; c < FVoxelMaterial::NumChannels; c++)
+						{
+							auto materialIndex = Material.GetRaw(c);
+							if (materialIndex)
+							{
+								// UE_LOG(LogTemp, Warning, TEXT(" - Material[%d]:x=%d, y=%d, z=%d, index=%f, RAW: %d"), i, p.X, p.Y, p.Z, Material.GetSingleIndex_AsFloat(), materialIndex);
+							}
+						}
+						i++;
+					}*/
+				}
+
+/*				UVoxelSphereTools::RemoveSphere(voxels,
+					hits.Location, 100.0f,
+					&OutModifiedValues);
+				for (const auto& mf : OutModifiedValues)
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Modified voxel value %f -> %f"), mf.OldValue, mf.NewValue);
+				}*/
+			}
+			else
+			{
+				TargetVoxelWorld = nullptr;
 			}
 
 			if (hit->Implements<AVoxelWorldInterface>())
 			{
-				UE_LOG(LogTemp, Warning, TEXT("Hit voxel world target %s (%d)"), *hit->GetName(), rand());
+				// UE_LOG(LogTemp, Warning, TEXT("Hit voxel world target %s (%d)"), *hit->GetName(), rand());
 			}
 			else
 			{
-				UE_LOG(LogTemp, Warning, TEXT("Hit non-Interactable target %s (%d)"), *hit->GetName(), rand());
+				// UE_LOG(LogTemp, Warning, TEXT("Hit non-Interactable target %s (%d)"), *hit->GetName(), rand());
 			}
 			SetCurrentTarget(nullptr);
 		}
@@ -520,6 +618,14 @@ void APrimitiveCharacter::Interact(const FInputActionValue& Value)
 	if (CurrentInteractable)
 	{
 		IInteractable::Execute_Interact(CurrentInteractable);
+	}
+	else
+	{
+		if (TargetVoxelWorld)
+		{
+			//UE_LOG(LogTemp, Warning, TEXT("Interact Voxels at [%f, %f, %f]"), TargetLocation.X, TargetLocation.Y, TargetLocation.Z);
+			CollectMaterialsFrom(TargetLocation);
+		}
 	}
 }
 
