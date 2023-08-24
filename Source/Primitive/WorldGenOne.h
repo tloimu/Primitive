@@ -20,10 +20,10 @@ public:
 		int32 Seed = 1337;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Terrain")
-		float TerrainHeight = 500.f;
+		float TerrainHeight = 1000.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Water")
-		float WaterLevel = 10.f;
+		float WaterLevel = 40.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Water")
 		float WaterVariation = 10.f;

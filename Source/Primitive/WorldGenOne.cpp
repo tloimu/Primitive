@@ -63,10 +63,13 @@ void FWorldGenOneInstance::Init(const FVoxelGeneratorInit& InitStruct)
 
 float FWorldGenOneInstance::GetTerrainHeight(v_flt X, v_flt Y, v_flt Z, int32 LOD, const FVoxelItemStack& Items) const
 {
-	float RoughnessFromMoisture = FMath::Clamp(1.0f - GetMoisture(X, Y, Z, LOD, Items), 0.5f, 1.0f);
-	return TerrainHeight * (Noise.GetPerlin_2D(X, Y, 0.001f)
-		+ RoughnessFromMoisture * Noise.GetPerlin_2D(X, Y, 0.01f) / 10.0f
-		+ RoughnessFromMoisture * Noise.GetPerlin_2D(X, Y, 0.003f) * Noise.GetPerlin_2D(X, Y, 0.1f) / 100.0f);
+	float ErosionFromMoisture = FMath::Clamp(1.0f - GetMoisture(X, Y, Z, LOD, Items), 0.4f, 1.0f);
+	float flatness = FMath::Clamp(Noise.GetPerlin_2D(X, Y, 0.0002f), 0.3f, 1.0f);
+	// float lowlandsErosion = FMath::Clamp(Noise.GetPerlin_2D(X, Y, 0.0004f), 0.3f, 1.0f);
+
+	return (TerrainHeight * flatness) * (Noise.GetPerlin_2D(X, Y, 0.001f)
+		+ ErosionFromMoisture * Noise.GetPerlin_2D(X, Y, 0.01f) / 10.0f
+		+ ErosionFromMoisture * Noise.GetPerlin_2D(X, Y, 0.003f) * Noise.GetPerlin_2D(X, Y, 0.1f) / 100.0f);
 }
 
 float FWorldGenOneInstance::GetMoisture(v_flt X, v_flt Y, v_flt Z, int32 LOD, const FVoxelItemStack& Items) const
@@ -117,22 +120,32 @@ FVoxelMaterial FWorldGenOneInstance::GetMaterialImpl(v_flt X, v_flt Y, v_flt Z, 
 	// ???? TODO: Add moisture's effects to snow thickness and vegetation
 
 	float SnowThickness = T < 0.0f ? -T * 1.0f : 0.0f;
+	const int32 snowMaterial = 9;
+	const int32 coldMaterial = 8;
+	const int32 temperateMaterial = 1;
+	const int32 hotMaterial = M < 0.4 ? 7 : 2;
 
 	if (SnowThickness > 0.0f && Z > Height - SnowThickness)
 	{
 		float snowRatio = FMath::Clamp(SnowThickness / 1.0f, 0.0f, 1.0f);
-		Builder.AddMultiIndex(9, snowRatio);
-		Builder.AddMultiIndex(8, 1.0f - snowRatio);
+		Builder.AddMultiIndex(snowMaterial, snowRatio);
+		Builder.AddMultiIndex(coldMaterial, 1.0f - snowRatio);
 	}
 	else if (T < 10.0f)
 	{
 		float grassRatio = FMath::Clamp(T / 10.0f, 0.0f, 1.0f);
-		Builder.AddMultiIndex(1, grassRatio);
-		Builder.AddMultiIndex(8, 1.0f - grassRatio);
+		Builder.AddMultiIndex(temperateMaterial, grassRatio);
+		Builder.AddMultiIndex(coldMaterial, 1.0f - grassRatio);
+	}
+	else if (T < 25.0f)
+	{
+		Builder.AddMultiIndex(temperateMaterial, 1.0f);
 	}
 	else
 	{
-		Builder.AddMultiIndex(1, 1.0f);
+		float desertRatio = FMath::Clamp((T - 25.0f) / 10.0f, 0.0f, 1.0f);
+		Builder.AddMultiIndex(hotMaterial, desertRatio);
+		Builder.AddMultiIndex(temperateMaterial, 1.0f - desertRatio);
 	}
 
 	return Builder.Build();

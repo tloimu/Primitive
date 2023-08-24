@@ -304,36 +304,6 @@ APrimitiveCharacter::CollectMaterialsFrom(const FVector& Location)
 			UE_LOG(LogTemp, Warning, TEXT("Collected Voxel value=%f, material={i0=%d, i1=%d, i2=%d, w=%d, b0=%d, b1=%d, b2=%d}, [%d, %d, %d]"), v.Value, m.GetMultiIndex_Index0(), m.GetMultiIndex_Index1(), m.GetMultiIndex_Index2(), m.GetMultiIndex_Blend0(), m.GetMultiIndex_Blend1(), m.GetMultiIndex_Blend2(), m.GetMultiIndex_Wetness(), pos.X, pos.Y, pos.Z);
 		}
 	}
-	/*
-	FVoxelIntBox b(pos, pos2);
-	// auto lock = data.Lock(EVoxelLockType::Read, b, FName("interact"));
-	auto mats = data.GetMaterials(b);
-//	data.Unlock(lock);
-	for (auto& m : mats)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Collected Voxel material={%d, %d, %d, w=%d}, [%f, %f, %f]: %f"), m.GetMultiIndex_Blend0(), m.GetMultiIndex_Blend1(), m.GetMultiIndex_Blend2(), m.GetMultiIndex_Wetness(), pos.X, pos.Y, pos.Z);
-	}
-*/
-	return collected;
-
-	/*
-	TArray<FIntVector> poses;
-	poses.Push(pos);
-
-	TArray<FVoxelValueMaterial> voxels;
-	UVoxelDataTools::GetVoxelsValueAndMaterial(voxels, TargetVoxelWorld, poses);
-
-	for (int c = 0; c < FVoxelMaterial::NumChannels; c++)
-	{
-		for (auto& v : voxels)
-		{
-			//auto materialIndex = v.Material.GetRaw(c);
-			auto materialIndex = v.Material.GetR();
-			UE_LOG(LogTemp, Warning, TEXT("Collected Voxel material=%d, [%f, %f, %f]: %f"), materialIndex, v.Position.X, v.Position.Y, v.Position.Z, v.Value);
-			collected.Push({ materialIndex, v.Value });
-		}
-	}
-	*/
 
 	TArray<FModifiedVoxelValue> modified;
 	UVoxelSphereTools::RemoveSphere(TargetVoxelWorld, Location, 50.0f, &modified);
