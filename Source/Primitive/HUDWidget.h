@@ -17,9 +17,21 @@ class PRIMITIVE_API UHUDWidget : public UUserWidget
 public:
 	UHUDWidget(const FObjectInitializer& ObjectInitializer);
 
+	UFUNCTION(BlueprintCallable) void SetHealth(float Value);
+	UFUNCTION(BlueprintCallable) void SetEnvironment(float T, float M);
+	UFUNCTION(BlueprintCallable) void SetLocation(const FIntVector &Loc, float Lat);
+	UFUNCTION(BlueprintCallable) void SetClock(float HoursOfDay);
+
+	UFUNCTION(BlueprintCallable) float GetTemperature() const { return Temperature; }
+	UFUNCTION(BlueprintCallable) float GetMoisture() const { return Moisture; }
+	UFUNCTION(BlueprintCallable) FIntVector GetLocation() const { return Location; }
+
 protected:
 
-	UFUNCTION(BlueprintCallable) void SetHealth(float Value);
-
-	UPROPERTY(EditAnywhere) float Health;
+	UPROPERTY(EditAnywhere, Transient) float Health;
+	UPROPERTY(EditAnywhere, Transient) float Temperature;
+	UPROPERTY(EditAnywhere, Transient) float Moisture;
+	UPROPERTY(EditAnywhere, Transient) float Latitude;
+	UPROPERTY(EditAnywhere, Transient) float ClockInHoursOfDay;
+	UPROPERTY(EditAnywhere, Transient) FIntVector Location;
 };

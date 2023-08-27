@@ -14,16 +14,16 @@ class UWorldGenOne : public UVoxelGenerator
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
-		int32 WorldSize = 4096;
+		int32 WorldSize = 32768;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
 		int32 Seed = 1337;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Terrain")
-		float TerrainHeight = 1000.f;
+		float TerrainHeight = 1500.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Water")
-		float WaterLevel = 40.f;
+		float WaterLevel = 30.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Water")
 		float WaterVariation = 10.f;
@@ -81,9 +81,12 @@ public:
 	virtual FVector GetUpVector(v_flt X, v_flt Y, v_flt Z) const override final;
 	//~ End FWorldGenOneInstance Interface
 
-	float GetTerrainHeight(v_flt X, v_flt Y, v_flt Z, int32 LOD, const FVoxelItemStack& Items) const;
-	float GetMoisture(v_flt X, v_flt Y, v_flt Z, int32 LOD, const FVoxelItemStack& Items) const;
+	float GetTerrainHeight(v_flt X, v_flt Y, v_flt Z) const;
+	float GetMoisture(v_flt X, v_flt Y, v_flt Z) const;
+	float GetTemperature(v_flt X, v_flt Y, v_flt Z) const;
 	float GetLatitude(v_flt Y) const;
+
+	static FWorldGenOneInstance* sGeneratorInstance; // ???? DIRTY!
 
 private:
 	const int32 WorldSize;

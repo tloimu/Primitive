@@ -16,6 +16,8 @@ struct ContainedMaterial
 	float amount;
 };
 
+class FWorldGenOneInstance;
+
 UCLASS(config=Game)
 class APrimitiveCharacter : public ACharacter
 {
@@ -153,6 +155,11 @@ protected:
 
 	UPROPERTY(EditAnywhere) TSubclassOf<UHUDWidget> HUDWidgetClass;
 	UPROPERTY() UHUDWidget* HUDWidget;
+
+	UPROPERTY(EditAnywhere) TSubclassOf<class UHUDWidget> WorldGeneratorClass;
+	FWorldGenOneInstance* Environment;
+
+	void CheckEnvironment();
 
 /*	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	class UInventoryComponent* InventoryComponent;*/

@@ -33,11 +33,12 @@ TVoxelSharedRef<FVoxelGeneratorInstance> UWorldGenOne::GetInstance()
 		10- brown mud rocks
 */
 
+FWorldGenOneInstance* FWorldGenOneInstance::sGeneratorInstance = nullptr;
+
 FWorldGenOneInstance::FWorldGenOneInstance(const UWorldGenOne& MyGenerator)
 	: Super(&MyGenerator)
 	, WorldSize(MyGenerator.WorldSize)
 	, TerrainHeight(MyGenerator.TerrainHeight)
-	, Seed(MyGenerator.Seed)
 	, WaterLevel(MyGenerator.WaterLevel)
 	, WaterVariation(MyGenerator.WaterVariation)
 	, WaterVariationFreq(MyGenerator.WaterVariationFreq)
@@ -50,47 +51,69 @@ FWorldGenOneInstance::FWorldGenOneInstance(const UWorldGenOne& MyGenerator)
 	, EquatorMoisture(MyGenerator.EquatorMoisture)
 	, MoistureVariation(MyGenerator.MoistureVariation)
 	, MoistureVariationFreq(MyGenerator.MoistureVariationFreq)
+	, Seed(MyGenerator.Seed)
 {
 }
 
-void FWorldGenOneInstance::Init(const FVoxelGeneratorInit& InitStruct)
+void
+FWorldGenOneInstance::Init(const FVoxelGeneratorInit& InitStruct)
 {
 	Noise.SetSeed(Seed);
 	WaterNoise.SetSeed(Seed + 10);
 	TemperatureNoise.SetSeed(Seed + 100);
 	MoistureNoise.SetSeed(Seed + 500);
+
+	// ???? DIRTY!
+	FWorldGenOneInstance::sGeneratorInstance = this;
 }
 
-float FWorldGenOneInstance::GetTerrainHeight(v_flt X, v_flt Y, v_flt Z, int32 LOD, const FVoxelItemStack& Items) const
+
+float
+FWorldGenOneInstance::GetTerrainHeight(v_flt X, v_flt Y, v_flt Z) const
 {
-	float ErosionFromMoisture = FMath::Clamp(1.0f - GetMoisture(X, Y, Z, LOD, Items), 0.4f, 1.0f);
+	float ErosionFromMoisture = FMath::Clamp(1.0f - GetMoisture(X, Y, Z)/110.0f, 0.4f, 1.0f);
 	float flatness = FMath::Clamp(Noise.GetPerlin_2D(X, Y, 0.0002f), 0.3f, 1.0f);
 	// float lowlandsErosion = FMath::Clamp(Noise.GetPerlin_2D(X, Y, 0.0004f), 0.3f, 1.0f);
 
-	return (TerrainHeight * flatness) * (Noise.GetPerlin_2D(X, Y, 0.001f)
+	return (TerrainHeight * flatness) * (
+		Noise.GetPerlin_2D(X, Y, 0.0001f)
+		+ Noise.GetPerlin_2D(X, Y, 0.001f)
 		+ ErosionFromMoisture * Noise.GetPerlin_2D(X, Y, 0.01f) / 10.0f
 		+ ErosionFromMoisture * Noise.GetPerlin_2D(X, Y, 0.003f) * Noise.GetPerlin_2D(X, Y, 0.1f) / 100.0f);
 }
 
-float FWorldGenOneInstance::GetMoisture(v_flt X, v_flt Y, v_flt Z, int32 LOD, const FVoxelItemStack& Items) const
+float
+FWorldGenOneInstance::GetMoisture(v_flt X, v_flt Y, v_flt Z) const
 {
 	float Klat = GetLatitude(Y);
 
 	float Mnoise = (MoistureNoise.GetPerlin_2D(X, Y, MoistureVariationFreq)) * MoistureVariation;
 	float Mraw = EquatorMoisture - (Klat * (EquatorMoisture - PolarMoisture)) + Mnoise - TerrainHeight * 0.01;
-	float M = FMath::Clamp(Mraw, 0.02f, 0.99f);
-	return M;
+	return Mraw;
 }
 
-float FWorldGenOneInstance::GetLatitude(v_flt Y) const
+float
+FWorldGenOneInstance::GetTemperature(v_flt X, v_flt Y, v_flt Z) const
+{
+	float Klat = GetLatitude(Y);
+
+	float Tnoise = (TemperatureNoise.GetPerlin_2D(X, Y, TemperatureVariationFreq) - 0.5f)* TemperatureVariation;
+	float T = EquatorTemperature - (Klat * (EquatorTemperature - PolarTemperature)) + Tnoise - TemperatureHeightCoeff * Z;
+
+	return T;
+}
+
+float
+FWorldGenOneInstance::GetLatitude(v_flt Y) const
 {
 	return (2 * abs(Y) / WorldSize);
 }
 
 
-v_flt FWorldGenOneInstance::GetValueImpl(v_flt X, v_flt Y, v_flt Z, int32 LOD, const FVoxelItemStack& Items) const
+v_flt
+FWorldGenOneInstance::GetValueImpl(v_flt X, v_flt Y, v_flt Z, int32 LOD, const FVoxelItemStack& Items) const
 {
-	float Height = GetTerrainHeight(X, Y, Z, LOD, Items);
+	float Height = GetTerrainHeight(X, Y, Z);
 
 	// Positive value -> empty voxel
 	// Negative value -> full voxel
@@ -103,27 +126,25 @@ v_flt FWorldGenOneInstance::GetValueImpl(v_flt X, v_flt Y, v_flt Z, int32 LOD, c
 	return Value;
 }
 
-FVoxelMaterial FWorldGenOneInstance::GetMaterialImpl(v_flt X, v_flt Y, v_flt Z, int32 LOD, const FVoxelItemStack& Items) const
+FVoxelMaterial
+FWorldGenOneInstance::GetMaterialImpl(v_flt X, v_flt Y, v_flt Z, int32 LOD, const FVoxelItemStack& Items) const
 {
 	FVoxelMaterialBuilder Builder;
 
 	Builder.SetMaterialConfig(EVoxelMaterialConfig::MultiIndex);
 
-	float Height = GetTerrainHeight(X, Y, Z, LOD, Items);
-	float Klat = GetLatitude(Y);
+	float Height = GetTerrainHeight(X, Y, Z);
+	float T = GetTemperature(X, Y, Z);
 
-	float Tnoise = (TemperatureNoise.GetPerlin_2D(X, Y, TemperatureVariationFreq) - 0.5f)* TemperatureVariation;
-	float T = EquatorTemperature - (Klat * (EquatorTemperature - PolarTemperature)) + Tnoise - TemperatureHeightCoeff * Z;
-
-	float M = GetMoisture(X, Y, Z, LOD, Items);
+	float M = GetMoisture(X, Y, Z);
 
 	// ???? TODO: Add moisture's effects to snow thickness and vegetation
 
-	float SnowThickness = T < 0.0f ? -T * 1.0f : 0.0f;
+	float SnowThickness = T < -5.0f ? -(T + 5.0f) * 1.0f : 0.0f;
 	const int32 snowMaterial = 9;
 	const int32 coldMaterial = 8;
 	const int32 temperateMaterial = 1;
-	const int32 hotMaterial = M < 0.4 ? 7 : 2;
+	const int32 hotMaterial = M < 30.0f ? 7 : 2;
 
 	if (SnowThickness > 0.0f && Z > Height - SnowThickness)
 	{
@@ -151,7 +172,8 @@ FVoxelMaterial FWorldGenOneInstance::GetMaterialImpl(v_flt X, v_flt Y, v_flt Z, 
 	return Builder.Build();
 }
 
-TVoxelRange<v_flt> FWorldGenOneInstance::GetValueRangeImpl(const FVoxelIntBox& Bounds, int32 LOD, const FVoxelItemStack& Items) const
+TVoxelRange<v_flt>
+FWorldGenOneInstance::GetValueRangeImpl(const FVoxelIntBox& Bounds, int32 LOD, const FVoxelItemStack& Items) const
 {
 	// Return the values that GetValueImpl can return in Bounds
 	// Used to skip chunks where the value does not change
@@ -172,7 +194,8 @@ TVoxelRange<v_flt> FWorldGenOneInstance::GetValueRangeImpl(const FVoxelIntBox& B
 	return Value;
 }
 
-FVector FWorldGenOneInstance::GetUpVector(v_flt X, v_flt Y, v_flt Z) const
+FVector
+FWorldGenOneInstance::GetUpVector(v_flt X, v_flt Y, v_flt Z) const
 {
 	// Used by spawners
 	return FVector::UpVector;

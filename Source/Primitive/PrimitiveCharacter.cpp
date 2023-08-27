@@ -16,6 +16,7 @@
 #include <Runtime/Engine/Classes/Kismet/KismetSystemLibrary.h>
 #include <Runtime/JsonUtilities/Public/JsonObjectConverter.h>
 #include <Primitive/Interactable.h>
+#include "WorldGenOne.h"
 
 #include <D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelTools/Gen/VoxelSphereTools.h>
 #include "D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelWorldInterface.h"
@@ -84,6 +85,9 @@ APrimitiveCharacter::APrimitiveCharacter()
 
 	HUDWidgetClass = nullptr;
 	HUDWidget = nullptr;
+
+	WorldGeneratorClass = nullptr;
+	Environment = nullptr;
 
 //	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 }
@@ -280,6 +284,26 @@ void APrimitiveCharacter::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 
 	CheckTarget();
+
+	CheckEnvironment();
+}
+
+void
+APrimitiveCharacter::CheckEnvironment()
+{
+	Environment = FWorldGenOneInstance::sGeneratorInstance; // ???? Dirty!
+	if (Environment)
+	{
+		if (TargetVoxelWorld) // ???? TODO: Fix to get a permanenet handle to the "world"
+		{
+			auto l = TargetVoxelWorld->GlobalToLocal(GetActorLocation());
+			auto T = Environment->GetTemperature(l.X, l.Y, l.Z);
+			auto M = Environment->GetMoisture(l.X, l.Y, l.Z);
+			HUDWidget->SetEnvironment(T, M);
+			float lat = Environment->GetLatitude(l.Y);
+			HUDWidget->SetLocation(l, lat);
+		}
+	}
 }
 
 
