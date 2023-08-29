@@ -85,6 +85,10 @@ public:
 	float GetMoisture(v_flt X, v_flt Y, v_flt Z) const;
 	float GetTemperature(v_flt X, v_flt Y, v_flt Z) const;
 	float GetLatitude(v_flt Y) const;
+	int32 GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator &outRotation, FVector &outScale, FVector& outOffset) const;
+
+	int32 GetWorldSize() const { return WorldSize; }
+	float GetWaterLevel() const { return WaterLevel; }
 
 	static FWorldGenOneInstance* sGeneratorInstance; // ???? DIRTY!
 

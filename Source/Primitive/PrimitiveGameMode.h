@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
+#include "WorldGenOne.h"
 #include "PrimitiveGameMode.generated.h"
 
 UCLASS(minimalapi)
@@ -13,7 +14,10 @@ class APrimitiveGameMode : public AGameModeBase
 
 public:
 	APrimitiveGameMode();
+
+	void BeginPlay() override;
+
+	void GenerateFoilage();
+
+	FWorldGenOneInstance* WorldGenInstance;
 };
-
-
-

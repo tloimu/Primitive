@@ -161,6 +161,8 @@ protected:
 
 	void CheckEnvironment();
 
+	void EnsureNotUnderGround();
+
 /*	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	class UInventoryComponent* InventoryComponent;*/
 

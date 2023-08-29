@@ -120,6 +120,14 @@ void APrimitiveCharacter::BeginPlay()
 
 	ReadConfigFiles();
 	ReadGameSave();
+
+	EnsureNotUnderGround();
+}
+
+void
+APrimitiveCharacter::EnsureNotUnderGround()
+{
+	// ???? TODO: move the player on top of the terrain if under ground at startup
 }
 
 void
@@ -294,9 +302,24 @@ APrimitiveCharacter::CheckEnvironment()
 	Environment = FWorldGenOneInstance::sGeneratorInstance; // ???? Dirty!
 	if (Environment)
 	{
-		if (TargetVoxelWorld) // ???? TODO: Fix to get a permanenet handle to the "world"
+		if (GetActorLocation().Z < -100.f)
+		{
+			FVector up = GetActorLocation();
+			up.Z += 10000.0f;
+			SetActorLocation(up);
+		}
+		if (TargetVoxelWorld) // ???? TODO: Fix to get a permanenet handle to the "world" - maybe via GameInstance?
 		{
 			auto l = TargetVoxelWorld->GlobalToLocal(GetActorLocation());
+			auto th = Environment->GetTerrainHeight(l.X, l.Y, l.Z);
+
+			if (l.Z < th || GetActorLocation().Z < -100.0f)
+			{
+				FVector up = GetActorLocation();
+				up.Z += th * 20.0f + 1000.0f;
+				SetActorLocation(up);
+			}
+
 			auto T = Environment->GetTemperature(l.X, l.Y, l.Z);
 			auto M = Environment->GetMoisture(l.X, l.Y, l.Z);
 			HUDWidget->SetEnvironment(T, M);

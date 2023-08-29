@@ -1,3 +1,9 @@
+# Remove some free large asset packs from Git
+
+Content/EuropeanHornBeam
+Content/ProceduralNaturePack
+
+
 # Visual Studio 2015 user specific files
 .vs/
 

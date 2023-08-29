@@ -109,6 +109,106 @@ FWorldGenOneInstance::GetLatitude(v_flt Y) const
 	return (2 * abs(Y) / WorldSize);
 }
 
+const int32 ID_None = -1;
+const int32 ID_Grass1 = 0;
+const int32 ID_Rock1 = 1;
+const int32 ID_Tree1 = 2;
+const int32 ID_Tree2 = 3;
+const int32 ID_Tree3 = 4;
+
+float GetNearLowestTerrainHeight(const FWorldGenOneInstance& Gen, v_flt X, v_flt Y)
+{
+	float z = Gen.GetTerrainHeight(X, Y, 0);
+	for (int dx = -1; dx < 2; dx++)
+	{
+		for (int dy = -1; dy < 2; dy++)
+		{
+			float nz = Gen.GetTerrainHeight(X + dx, Y + dy, 0);
+			if (nz < z)
+				z = nz;
+		}
+	}
+	return z;
+}
+
+int32
+FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRotation, FVector& outScale, FVector& outOffset) const
+{
+	int32 x = (int32) X;
+	int32 y = (int32) Y;
+
+	int32 type = ID_None;
+	outOffset.Z = 0.0f;
+	float z = 0.0f;
+
+	outOffset.X = FMath::RandHelper(400) - 200.0f;
+	outOffset.Y = FMath::RandHelper(400) - 200.0f;
+	X += outOffset.X / 20.0f;
+	Y += outOffset.Y / 20.0f;
+	auto rocks = (WaterNoise.GetPerlin_2D(X, Y, 0.001f) + WaterNoise.GetPerlin_2D(X, Y, 0.02f));
+	auto trees = (TemperatureNoise.GetPerlin_2D(X, Y, 0.001f) + TemperatureNoise.GetPerlin_2D(X, Y, 0.02f));
+
+	if (rocks > 0.5f)
+	{
+		if (x % 20 != 0 || y % 20 != 0)
+			return ID_None;
+
+		auto T = GetTemperature(X, Y, Z);
+		if (T > -15.0f && WaterNoise.GetPerlin_2D(X, Y, 10.0f) * 3.5f < rocks)
+		{
+			z = GetNearLowestTerrainHeight(*this, X, Y);
+			type = ID_Rock1;
+			outOffset.Z = -FMath::RandHelper(200);
+		}
+	}
+	else if (trees > 0.0f)
+	{
+		if (x % 30 != 0 || y % 30 != 0)
+			return ID_None;
+
+		if (TemperatureNoise.GetPerlin_2D(X, Y, 10.0f) * 2.0f < trees)
+		{
+			z = GetNearLowestTerrainHeight(*this, X, Y);
+			if (z > WaterLevel + 1.0f)
+			{
+				auto T = GetTemperature(X, Y, Z);
+				auto M = GetMoisture(X, Y, Z);
+				if (T > 0.0f && M > 10.0f)
+				{
+					if (trees > 0.5 || T < 10.0f || M < 30.f)
+						type = ID_Grass1;
+					else if (M > 70.0f)
+						type = ID_Tree1;
+					else if (M > 40.0f)
+						type = ID_Tree2;
+					else
+						type = ID_Tree3;
+				}
+			}
+		}
+	}
+	else
+	{
+		// TODO: Undergrowth
+	}
+
+	if (type != ID_None)
+	{
+		outRotation.Yaw = FMath::RandHelper(360);
+		float scale = FMath::RandHelper(100) * 0.004f;
+		if (scale > 1.1f)
+			scale = 1.1f;
+
+		outScale.X = 1.2f - scale;
+		outScale.Y = 1.2f - scale;
+		outScale.Z = 1.2f - scale;
+
+		outOffset.Z += z * 20.0f;
+	}
+
+	return type;
+}
+
 
 v_flt
 FWorldGenOneInstance::GetValueImpl(v_flt X, v_flt Y, v_flt Z, int32 LOD, const FVoxelItemStack& Items) const
