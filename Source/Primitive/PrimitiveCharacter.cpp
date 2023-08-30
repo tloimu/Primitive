@@ -78,6 +78,7 @@ APrimitiveCharacter::APrimitiveCharacter()
 	CameraBoom->TargetArmLength = ZoomTransforms[CurrentZoomLevel];
 
 	CurrentTarget = nullptr;
+	CurrentTargetComponent = nullptr;
 	CurrentTargetInstanceId = -1;
 	ShowingInventory = false;
 	TargetVoxelWorld = nullptr;
@@ -434,7 +435,9 @@ void APrimitiveCharacter::CheckTarget()
 				// UE_LOG(LogTemp, Warning, TEXT("Hit non-Interactable target %s (%d)"), *hit->GetName(), rand());
 			}
 			if (hits.Item != -1)
-				SetCurrentTarget(hit, hits.Item);
+			{
+				SetCurrentTarget(hit, hits.GetComponent(), hits.Item);
+			}
 			else
 				SetCurrentTarget(nullptr);
 		}
@@ -447,9 +450,9 @@ void APrimitiveCharacter::CheckTarget()
 	}
 }
 
-void APrimitiveCharacter::SetCurrentTarget(AActor* target, int32 instanceId)
+void APrimitiveCharacter::SetCurrentTarget(AActor* target, UPrimitiveComponent* component, int32 instanceId)
 {
-	if (CurrentTarget != target || CurrentTargetInstanceId != instanceId)
+	if (CurrentTarget != target || CurrentTargetInstanceId != instanceId || CurrentTargetComponent != component)
 	{
 		if (CurrentTarget != nullptr)
 		{
@@ -462,9 +465,9 @@ void APrimitiveCharacter::SetCurrentTarget(AActor* target, int32 instanceId)
 		{
 			auto name = target->GetActorNameOrLabel();
 			SetHighlightIfInteractableTarget(target, true);
-			if (instanceId)
+			if (component && instanceId)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("Target %s instance %ld"), *name, instanceId);
+				UE_LOG(LogTemp, Warning, TEXT("Target %s component %s instance %ld"), *name, *component->GetName(), instanceId);
 			}
 			else
 			{
@@ -472,6 +475,7 @@ void APrimitiveCharacter::SetCurrentTarget(AActor* target, int32 instanceId)
 			}
 		}
 		CurrentTarget = target;
+		CurrentTargetComponent = Cast<UInstancedStaticMeshComponent>(component);
 		CurrentTargetInstanceId = instanceId;
 		
 		if (target != nullptr && UKismetSystemLibrary::DoesImplementInterface(target, UInteractable::StaticClass()))
@@ -633,6 +637,16 @@ void APrimitiveCharacter::Hit(const FInputActionValue& Value)
 	{
 		IInteractable::Execute_Hit(CurrentInteractable);
 	}
+	else if (CurrentTarget && CurrentTargetComponent && CurrentTargetInstanceId != -1)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Interact %s instance %ld"), *CurrentTargetComponent->GetName(), CurrentTargetInstanceId);
+		auto fa = Cast<AInstancedFoliageActor>(CurrentTarget);
+		// fa->SelectInstance(CurrentTargetComponent, CurrentTargetInstanceId, true);
+		CurrentTargetComponent->RemoveInstance(CurrentTargetInstanceId);
+		CurrentTargetInstanceId = -1;
+		CurrentTargetComponent = nullptr;
+		CurrentTarget = nullptr;
+	}
 }
 
 void APrimitiveCharacter::Interact(const FInputActionValue& Value)
@@ -647,6 +661,12 @@ void APrimitiveCharacter::Interact(const FInputActionValue& Value)
 		{
 			//UE_LOG(LogTemp, Warning, TEXT("Interact Voxels at [%f, %f, %f]"), TargetLocation.X, TargetLocation.Y, TargetLocation.Z);
 			CollectMaterialsFrom(TargetLocation);
+		}
+		else if (CurrentTarget && CurrentTargetComponent && CurrentTargetInstanceId != -1)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Interact %s instance %ld"), *CurrentTargetComponent->GetName(), CurrentTargetInstanceId);
+			auto fa = Cast<AInstancedFoliageActor>(CurrentTarget);
+			fa->SelectInstance(CurrentTargetComponent, CurrentTargetInstanceId, true);
 		}
 	}
 }

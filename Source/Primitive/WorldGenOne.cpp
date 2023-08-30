@@ -140,6 +140,9 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 
 	int32 type = ID_None;
 	outOffset.Z = 0.0f;
+	outRotation.Pitch = 0.0f;
+	outRotation.Roll = 0.0f;
+	outRotation.Yaw = 0.0f;
 	float z = 0.0f;
 
 	outOffset.X = FMath::RandHelper(400) - 200.0f;
@@ -160,6 +163,8 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 			z = GetNearLowestTerrainHeight(*this, X, Y);
 			type = ID_Rock1;
 			outOffset.Z = -FMath::RandHelper(200);
+			outRotation.Pitch = FMath::RandHelper(360);
+			outRotation.Roll = FMath::RandHelper(360);
 		}
 	}
 	else if (trees > 0.0f)
@@ -196,13 +201,11 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 	if (type != ID_None)
 	{
 		outRotation.Yaw = FMath::RandHelper(360);
-		float scale = FMath::RandHelper(100) * 0.004f;
-		if (scale > 1.1f)
-			scale = 1.1f;
+		float scale = FMath::RandHelper(100) * 0.01f;
 
-		outScale.X = 1.2f - scale;
-		outScale.Y = 1.2f - scale;
-		outScale.Z = 1.2f - scale;
+		outScale.X = 0.5f + scale;
+		outScale.Y = 0.5f + scale;
+		outScale.Z = 0.5f + scale;
 
 		outOffset.Z += z * 20.0f;
 	}
