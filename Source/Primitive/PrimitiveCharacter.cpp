@@ -13,6 +13,7 @@
 #include "Blueprint/UserWidget.h"
 #include "InventoryComponent.h"
 #include "GameSettings.h"
+#include "InstancedFoliageActor.h"
 #include <Runtime/Engine/Classes/Kismet/KismetSystemLibrary.h>
 #include <Runtime/JsonUtilities/Public/JsonObjectConverter.h>
 #include <Primitive/Interactable.h>
@@ -77,6 +78,7 @@ APrimitiveCharacter::APrimitiveCharacter()
 	CameraBoom->TargetArmLength = ZoomTransforms[CurrentZoomLevel];
 
 	CurrentTarget = nullptr;
+	CurrentTargetInstanceId = -1;
 	ShowingInventory = false;
 	TargetVoxelWorld = nullptr;
 
@@ -417,14 +419,6 @@ void APrimitiveCharacter::CheckTarget()
 						i++;
 					}*/
 				}
-
-/*				UVoxelSphereTools::RemoveSphere(voxels,
-					hits.Location, 100.0f,
-					&OutModifiedValues);
-				for (const auto& mf : OutModifiedValues)
-				{
-					UE_LOG(LogTemp, Warning, TEXT("Modified voxel value %f -> %f"), mf.OldValue, mf.NewValue);
-				}*/
 			}
 			else
 			{
@@ -439,7 +433,10 @@ void APrimitiveCharacter::CheckTarget()
 			{
 				// UE_LOG(LogTemp, Warning, TEXT("Hit non-Interactable target %s (%d)"), *hit->GetName(), rand());
 			}
-			SetCurrentTarget(nullptr);
+			if (hits.Item != -1)
+				SetCurrentTarget(hit, hits.Item);
+			else
+				SetCurrentTarget(nullptr);
 		}
 	}
 	else
@@ -450,9 +447,9 @@ void APrimitiveCharacter::CheckTarget()
 	}
 }
 
-void APrimitiveCharacter::SetCurrentTarget(AActor* target)
+void APrimitiveCharacter::SetCurrentTarget(AActor* target, int32 instanceId)
 {
-	if (CurrentTarget != target)
+	if (CurrentTarget != target || CurrentTargetInstanceId != instanceId)
 	{
 		if (CurrentTarget != nullptr)
 		{
@@ -465,9 +462,17 @@ void APrimitiveCharacter::SetCurrentTarget(AActor* target)
 		{
 			auto name = target->GetActorNameOrLabel();
 			SetHighlightIfInteractableTarget(target, true);
-			UE_LOG(LogTemp, Warning, TEXT("Target %s"), *name);
+			if (instanceId)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Target %s instance %ld"), *name, instanceId);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Target %s"), *name);
+			}
 		}
 		CurrentTarget = target;
+		CurrentTargetInstanceId = instanceId;
 		
 		if (target != nullptr && UKismetSystemLibrary::DoesImplementInterface(target, UInteractable::StaticClass()))
 			CurrentInteractable = Cast<AInteractableActor>(target);

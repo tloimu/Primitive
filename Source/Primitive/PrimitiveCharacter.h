@@ -143,9 +143,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) FIntVector CurrentVoxel;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) FVector TargetLocation;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) class AVoxelWorld *TargetVoxelWorld;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 CurrentTargetInstanceId;
 
 	void CheckTarget();
-	void SetCurrentTarget(AActor* target);
+	void SetCurrentTarget(AActor* target, int32 instanceId = -1);
 	void SetHighlightIfInteractableTarget(AActor* target, bool value);
 
 	bool ShowingInventory;

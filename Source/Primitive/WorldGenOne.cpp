@@ -76,7 +76,8 @@ FWorldGenOneInstance::GetTerrainHeight(v_flt X, v_flt Y, v_flt Z) const
 	// float lowlandsErosion = FMath::Clamp(Noise.GetPerlin_2D(X, Y, 0.0004f), 0.3f, 1.0f);
 
 	return (TerrainHeight * flatness) * (
-		Noise.GetPerlin_2D(X, Y, 0.0001f)
+		Noise.GetPerlin_2D(X, Y, 0.000001f) * 2.0f
+		+ Noise.GetPerlin_2D(X, Y, 0.0001f)
 		+ Noise.GetPerlin_2D(X, Y, 0.001f)
 		+ ErosionFromMoisture * Noise.GetPerlin_2D(X, Y, 0.01f) / 10.0f
 		+ ErosionFromMoisture * Noise.GetPerlin_2D(X, Y, 0.003f) * Noise.GetPerlin_2D(X, Y, 0.1f) / 100.0f);
@@ -106,7 +107,7 @@ FWorldGenOneInstance::GetTemperature(v_flt X, v_flt Y, v_flt Z) const
 float
 FWorldGenOneInstance::GetLatitude(v_flt Y) const
 {
-	return (2 * abs(Y) / WorldSize);
+	return (abs(Y) / WorldSize);
 }
 
 const int32 ID_None = -1;

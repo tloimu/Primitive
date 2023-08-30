@@ -72,7 +72,7 @@ APrimitiveGameMode::GenerateFoilage()
 		{
 			//Now you just need to add instances to component
 			FTransform transform = FTransform();
-			auto worldSize = WorldGenInstance ? WorldGenInstance->GetWorldSize() /2 : 3000;
+			auto worldSize = WorldGenInstance ? WorldGenInstance->GetWorldSize() / 4 : 3000;
 			auto waterLevel = WorldGenInstance ? WorldGenInstance->GetWaterLevel() : 0.0f;
 			FRotator rotation(0, 0, 0);
 			FVector scale;
