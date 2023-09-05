@@ -42,14 +42,14 @@ FWorldGenOneInstance::FWorldGenOneInstance(const UWorldGenOne& MyGenerator)
 	, WaterLevel(MyGenerator.WaterLevel)
 	, WaterVariation(MyGenerator.WaterVariation)
 	, WaterVariationFreq(MyGenerator.WaterVariationFreq)
+	, TemperatureVariation(MyGenerator.TemperatureVariation)
 	, PolarTemperature(MyGenerator.PolarTemperature)
 	, EquatorTemperature(MyGenerator.EquatorTemperature)
-	, TemperatureHeightCoeff(MyGenerator.TemperatureHeightCoeff)
-	, TemperatureVariation(MyGenerator.TemperatureVariation)
 	, TemperatureVariationFreq(MyGenerator.TemperatureVariationFreq)
+	, TemperatureHeightCoeff(MyGenerator.TemperatureHeightCoeff)
+	, MoistureVariation(MyGenerator.MoistureVariation)
 	, PolarMoisture(MyGenerator.PolarMoisture)
 	, EquatorMoisture(MyGenerator.EquatorMoisture)
-	, MoistureVariation(MyGenerator.MoistureVariation)
 	, MoistureVariationFreq(MyGenerator.MoistureVariationFreq)
 	, Seed(MyGenerator.Seed)
 {
@@ -112,10 +112,11 @@ FWorldGenOneInstance::GetLatitude(v_flt Y) const
 
 const int32 ID_None = -1;
 const int32 ID_Grass1 = 0;
-const int32 ID_Rock1 = 1;
-const int32 ID_Tree1 = 2;
-const int32 ID_Tree2 = 3;
-const int32 ID_Tree3 = 4;
+const int32 ID_Grass2 = 1;
+const int32 ID_Rock1 = 2;
+const int32 ID_Tree1 = 3;
+const int32 ID_Tree2 = 4;
+const int32 ID_Tree3 = 5;
 
 float GetNearLowestTerrainHeight(const FWorldGenOneInstance& Gen, v_flt X, v_flt Y)
 {
@@ -152,11 +153,8 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 	auto rocks = (WaterNoise.GetPerlin_2D(X, Y, 0.001f) + WaterNoise.GetPerlin_2D(X, Y, 0.02f));
 	auto trees = (TemperatureNoise.GetPerlin_2D(X, Y, 0.001f) + TemperatureNoise.GetPerlin_2D(X, Y, 0.02f));
 
-	if (rocks > 0.5f)
+	if (rocks > 0.5f && (x % 20 == 0 && y % 20 == 0))
 	{
-		if (x % 20 != 0 || y % 20 != 0)
-			return ID_None;
-
 		auto T = GetTemperature(X, Y, Z);
 		if (T > -15.0f && WaterNoise.GetPerlin_2D(X, Y, 10.0f) * 3.5f < rocks)
 		{
@@ -167,23 +165,18 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 			outRotation.Roll = FMath::RandHelper(360);
 		}
 	}
-	else if (trees > 0.0f)
+	else if (trees > 0.0f && (x % 30 == 0 && y % 30 == 0))
 	{
-		if (x % 30 != 0 || y % 30 != 0)
-			return ID_None;
-
 		if (TemperatureNoise.GetPerlin_2D(X, Y, 10.0f) * 2.0f < trees)
 		{
+			auto T = GetTemperature(X, Y, Z);
+			auto M = GetMoisture(X, Y, Z);
 			z = GetNearLowestTerrainHeight(*this, X, Y);
 			if (z > WaterLevel + 1.0f)
 			{
-				auto T = GetTemperature(X, Y, Z);
-				auto M = GetMoisture(X, Y, Z);
 				if (T > 0.0f && M > 10.0f)
 				{
-					if (trees > 0.5 || T < 10.0f || M < 30.f)
-						type = ID_Grass1;
-					else if (M > 70.0f)
+					if (M > 70.0f)
 						type = ID_Tree1;
 					else if (M > 40.0f)
 						type = ID_Tree2;
@@ -193,9 +186,22 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 			}
 		}
 	}
-	else
+	else if (x % 10 == 0 && y % 10 == 0)
 	{
 		// TODO: Undergrowth
+		if (trees > -0.3)
+		{
+			auto T = GetTemperature(X, Y, Z);
+			auto M = GetMoisture(X, Y, Z);
+			z = GetNearLowestTerrainHeight(*this, X, Y);
+			if (z > WaterLevel + 1.0f)
+			{
+				if (T > 10.0f)
+					type = ID_Grass2;
+				else
+					type = ID_Grass1;
+			}
+		}
 	}
 
 	if (type != ID_None)

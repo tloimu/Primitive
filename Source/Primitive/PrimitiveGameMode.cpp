@@ -63,7 +63,9 @@ APrimitiveGameMode::GenerateFoilage()
 
 		for (auto& c : components)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Component: %s"), *c->GetName());
+			auto cs = c->InstanceStartCullDistance;
+			auto ce = c->InstanceEndCullDistance;
+			UE_LOG(LogTemp, Warning, TEXT("Component: %s, cull %d .. %d"), *c->GetName(), cs, ce);
 		}
 
 		int32 count = 0;
@@ -99,6 +101,11 @@ APrimitiveGameMode::GenerateFoilage()
 						transform.SetScale3D(scale);
 						meshComponent->AddInstance(transform);
 						count++;
+						if (count > 1000000)
+						{
+							UE_LOG(LogTemp, Warning, TEXT("TOO MANY foliage instances %ld - bailing out"), count);
+							return;
+						}
 						// UE_LOG(LogTemp, Warning, TEXT("Spawn foilage at (%d, %d, %f) r=%f"), x, y, offset.Z, rotation.Yaw);
 					}
 				}
