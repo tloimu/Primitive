@@ -2,6 +2,7 @@
 
 #include "WorldGenOne.h"
 #include "FastNoise/VoxelFastNoise.inl"
+#include "Runtime/Foliage/Public/InstancedFoliageActor.h"
 #include "VoxelMaterialBuilder.h"
 
 TVoxelSharedRef<FVoxelGeneratorInstance> UWorldGenOne::GetInstance()
@@ -68,6 +69,36 @@ FWorldGenOneInstance::Init(const FVoxelGeneratorInit& InitStruct)
 }
 
 
+TVoxelRange<v_flt>
+FWorldGenOneInstance::GetValueRangeImpl(const FVoxelIntBox& Bounds, int32 LOD, const FVoxelItemStack& Items) const
+{
+	// Return the values that GetValueImpl can return in Bounds
+	// Used to skip chunks where the value does not change
+	// Be careful, if wrong your world will have holes!
+	// By default return infinite range to be safe
+	return TVoxelRange<v_flt>::Infinite();
+
+	// Example for the GetValueImpl above
+
+	// Noise is between -1 and 1
+	const TVoxelRange<v_flt> Height = TVoxelRange<v_flt>(-1, 1) * TerrainHeight;
+
+	// Z can go from min to max
+	TVoxelRange<v_flt> Value = TVoxelRange<v_flt>(Bounds.Min.Z, Bounds.Max.Z) - Height;
+
+	Value /= 5;
+
+	return Value;
+}
+
+FVector
+FWorldGenOneInstance::GetUpVector(v_flt X, v_flt Y, v_flt Z) const
+{
+	// Used by spawners
+	return FVector::UpVector;
+}
+
+
 float
 FWorldGenOneInstance::GetTerrainHeight(v_flt X, v_flt Y, v_flt Z) const
 {
@@ -76,7 +107,7 @@ FWorldGenOneInstance::GetTerrainHeight(v_flt X, v_flt Y, v_flt Z) const
 	// float lowlandsErosion = FMath::Clamp(Noise.GetPerlin_2D(X, Y, 0.0004f), 0.3f, 1.0f);
 
 	return (TerrainHeight * flatness) * (
-		Noise.GetPerlin_2D(X, Y, 0.000001f) * 2.0f
+		Noise.GetPerlin_2D(X, Y, 0.000001f) * 4.0f * FMath::Clamp(0.5f, 1.0f, Noise.GetPerlin_2D(X, Y, 0.0001f))
 		+ Noise.GetPerlin_2D(X, Y, 0.0001f)
 		+ Noise.GetPerlin_2D(X, Y, 0.001f)
 		+ ErosionFromMoisture * Noise.GetPerlin_2D(X, Y, 0.01f) / 10.0f
@@ -118,107 +149,21 @@ const int32 ID_Tree1 = 3;
 const int32 ID_Tree2 = 4;
 const int32 ID_Tree3 = 5;
 
-float GetNearLowestTerrainHeight(const FWorldGenOneInstance& Gen, v_flt X, v_flt Y)
+float
+FWorldGenOneInstance::GetNearLowestTerrainHeight(v_flt X, v_flt Y) const
 {
-	float z = Gen.GetTerrainHeight(X, Y, 0);
+	float z = GetTerrainHeight(X, Y, 0);
 	for (int dx = -1; dx < 2; dx++)
 	{
 		for (int dy = -1; dy < 2; dy++)
 		{
-			float nz = Gen.GetTerrainHeight(X + dx, Y + dy, 0);
+			float nz = GetTerrainHeight(X + dx, Y + dy, 0);
 			if (nz < z)
 				z = nz;
 		}
 	}
 	return z;
 }
-
-int32
-FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRotation, FVector& outScale, FVector& outOffset) const
-{
-	int32 x = (int32) X;
-	int32 y = (int32) Y;
-
-	int32 type = ID_None;
-	outOffset.Z = 0.0f;
-	outRotation.Pitch = 0.0f;
-	outRotation.Roll = 0.0f;
-	outRotation.Yaw = 0.0f;
-	float z = 0.0f;
-
-	outOffset.X = FMath::RandHelper(400) - 200.0f;
-	outOffset.Y = FMath::RandHelper(400) - 200.0f;
-	X += outOffset.X / 20.0f;
-	Y += outOffset.Y / 20.0f;
-	auto rocks = (WaterNoise.GetPerlin_2D(X, Y, 0.001f) + WaterNoise.GetPerlin_2D(X, Y, 0.02f));
-	auto trees = (TemperatureNoise.GetPerlin_2D(X, Y, 0.001f) + TemperatureNoise.GetPerlin_2D(X, Y, 0.02f));
-
-	if (rocks > 0.5f && (x % 20 == 0 && y % 20 == 0))
-	{
-		auto T = GetTemperature(X, Y, Z);
-		if (T > -15.0f && WaterNoise.GetPerlin_2D(X, Y, 10.0f) * 3.5f < rocks)
-		{
-			z = GetNearLowestTerrainHeight(*this, X, Y);
-			type = ID_Rock1;
-			outOffset.Z = -FMath::RandHelper(200);
-			outRotation.Pitch = FMath::RandHelper(360);
-			outRotation.Roll = FMath::RandHelper(360);
-		}
-	}
-	else if (trees > 0.0f && (x % 30 == 0 && y % 30 == 0))
-	{
-		if (TemperatureNoise.GetPerlin_2D(X, Y, 10.0f) * 2.0f < trees)
-		{
-			auto T = GetTemperature(X, Y, Z);
-			auto M = GetMoisture(X, Y, Z);
-			z = GetNearLowestTerrainHeight(*this, X, Y);
-			if (z > WaterLevel + 1.0f)
-			{
-				if (T > 0.0f && M > 10.0f)
-				{
-					if (M > 70.0f)
-						type = ID_Tree1;
-					else if (M > 40.0f)
-						type = ID_Tree2;
-					else
-						type = ID_Tree3;
-				}
-			}
-		}
-	}
-	else if (x % 10 == 0 && y % 10 == 0)
-	{
-		// TODO: Undergrowth
-		if (trees > -0.3)
-		{
-			auto T = GetTemperature(X, Y, Z);
-			auto M = GetMoisture(X, Y, Z);
-			z = GetNearLowestTerrainHeight(*this, X, Y);
-			if (z > WaterLevel + 1.0f)
-			{
-				if (T > 10.0f)
-					type = ID_Grass2;
-				else
-					type = ID_Grass1;
-			}
-		}
-	}
-
-	if (type != ID_None)
-	{
-		outRotation.Yaw = FMath::RandHelper(360);
-		float scale = FMath::RandHelper(100) * 0.01f;
-
-		outScale.X = 0.5f + scale;
-		outScale.Y = 0.5f + scale;
-		outScale.Z = 0.5f + scale;
-
-		outOffset.Z += z * 20.0f;
-	}
-
-	return type;
-}
-
 
 v_flt
 FWorldGenOneInstance::GetValueImpl(v_flt X, v_flt Y, v_flt Z, int32 LOD, const FVoxelItemStack& Items) const
@@ -282,31 +227,163 @@ FWorldGenOneInstance::GetMaterialImpl(v_flt X, v_flt Y, v_flt Z, int32 LOD, cons
 	return Builder.Build();
 }
 
-TVoxelRange<v_flt>
-FWorldGenOneInstance::GetValueRangeImpl(const FVoxelIntBox& Bounds, int32 LOD, const FVoxelItemStack& Items) const
+
+int32
+FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRotation, FVector& outScale, FVector& outOffset) const
 {
-	// Return the values that GetValueImpl can return in Bounds
-	// Used to skip chunks where the value does not change
-	// Be careful, if wrong your world will have holes!
-	// By default return infinite range to be safe
-	return TVoxelRange<v_flt>::Infinite();
+	int32 x = (int32)X;
+	int32 y = (int32)Y;
 
-	// Example for the GetValueImpl above
+	auto T = GetTemperature(X, Y, Z);
+	auto M = GetMoisture(X, Y, Z);
+	if (T < -10.0f || M < 5.0f) // Too cold an/or dry
+		return ID_None;
 
-	// Noise is between -1 and 1
-	const TVoxelRange<v_flt> Height = TVoxelRange<v_flt>(-1, 1) * TerrainHeight;
+	int32 type = ID_None;
+	outOffset.Z = 0.0f;
+	outRotation.Pitch = 0.0f;
+	outRotation.Roll = 0.0f;
+	outRotation.Yaw = 0.0f;
+	float z = 0.0f;
 
-	// Z can go from min to max
-	TVoxelRange<v_flt> Value = TVoxelRange<v_flt>(Bounds.Min.Z, Bounds.Max.Z) - Height;
+	outOffset.X = FMath::RandHelper(20 * VoxelSize) - 10 * VoxelSize;
+	outOffset.Y = FMath::RandHelper(20 * VoxelSize) - 10 * VoxelSize;
+	X += outOffset.X / VoxelSize;
+	Y += outOffset.Y / VoxelSize;
+	auto rocks = (WaterNoise.GetPerlin_2D(X, Y, 0.001f) + WaterNoise.GetPerlin_2D(X, Y, 0.02f));
+	auto trees = (TemperatureNoise.GetPerlin_2D(X, Y, 0.001f) + TemperatureNoise.GetPerlin_2D(X, Y, 0.02f));
 
-	Value /= 5;
+	if (rocks > 0.5f && (x % 20 == 0 && y % 20 == 0))
+	{
+		if (T > -15.0f && WaterNoise.GetPerlin_2D(X, Y, 10.0f) * 3.5f < rocks)
+		{
+			z = GetNearLowestTerrainHeight(X, Y);
+			type = ID_Rock1;
+			outOffset.Z = -FMath::RandHelper(200);
+			outRotation.Pitch = FMath::RandHelper(360);
+			outRotation.Roll = FMath::RandHelper(360);
+		}
+	}
+	else if (trees > 0.0f && (x % 30 == 0 && y % 30 == 0))
+	{
+		if (TemperatureNoise.GetPerlin_2D(X, Y, 10.0f) * 2.0f < trees)
+		{
+			z = GetNearLowestTerrainHeight(X, Y);
+			if (z > WaterLevel + 1.0f)
+			{
+				if (T > 0.0f && M > 10.0f)
+				{
+					if (M > 70.0f)
+						type = ID_Tree1;
+					else if (M > 40.0f)
+						type = ID_Tree2;
+					else
+						type = ID_Tree3;
+				}
+			}
+		}
+	}
+	else if (x % 20 == 0 && y % 20 == 0)
+	{
+		if (trees > -0.3)
+		{
+			z = GetTerrainHeight(X, Y, Z);
+			if (z > WaterLevel + 1.0f)
+			{
+				if (T > 10.0f)
+					type = ID_Grass2;
+				else
+					type = ID_Grass1;
+			}
+		}
+	}
 
-	return Value;
+	if (type != ID_None)
+	{
+		outRotation.Yaw = FMath::RandHelper(360);
+		float scale = FMath::RandHelper(100) * 0.01f;
+
+		outScale.X = 0.5f + scale;
+		outScale.Y = 0.5f + scale;
+		outScale.Z = 0.5f + scale;
+
+		outOffset.Z += z * VoxelSize;
+	}
+
+	return type;
 }
 
-FVector
-FWorldGenOneInstance::GetUpVector(v_flt X, v_flt Y, v_flt Z) const
+
+void
+FWorldGenOneInstance::GenerateFoilage(AInstancedFoliageActor& foliageActor)
 {
-	// Used by spawners
-	return FVector::UpVector;
+	TArray<UInstancedStaticMeshComponent*> components;
+	foliageActor.GetComponents<UInstancedStaticMeshComponent>(components);
+	UInstancedStaticMeshComponent* meshComponent = nullptr;
+	if (components.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No foilage components found (empty array)"));
+	}
+	else
+	{
+		meshComponent = components[0];
+	}
+
+	for (auto& c : components)
+	{
+		auto cs = c->InstanceStartCullDistance;
+		auto ce = c->InstanceEndCullDistance;
+		UE_LOG(LogTemp, Warning, TEXT("Component: %s, cull %d .. %d"), *c->GetName(), cs, ce);
+	}
+
+	int32 count = 0;
+
+	if (!components.IsEmpty())
+	{
+		//Now you just need to add instances to component
+		FTransform transform = FTransform();
+		auto worldSize = WorldSize;
+		auto waterLevel = WaterLevel;
+		FRotator rotation(0, 0, 0);
+		FVector scale;
+		FVector offset;
+		for (int32 x = -worldSize / 2; x < worldSize / 2; x = x + 1)
+		{
+			for (int32 y = -worldSize / 2; y < worldSize / 2; y = y + 1)
+			{
+				int32 ft = -1;
+				ft = GetFoilageType(x, y, 0, rotation, scale, offset);
+				if (ft >= 0)
+				{
+					if (ft > components.Num() - 1)
+						ft = 0;
+					meshComponent = components[ft];
+				}
+
+				if (ft >= 0)
+				{
+					transform.SetLocation(FVector(VoxelSize * x + offset.X, VoxelSize * y + offset.Y, offset.Z));
+					transform.SetRotation(rotation.Quaternion());
+					transform.SetScale3D(scale);
+					meshComponent->AddInstance(transform);
+					count++;
+					if (count % 50000 == 0)
+					{
+						UE_LOG(LogTemp, Warning, TEXT("Foliage instance count = %ld..."), count);
+					}
+					if (count > 200000)
+					{
+						UE_LOG(LogTemp, Warning, TEXT("TOO MANY foliage instances %ld - bailing out"), count);
+						return;
+					}
+					// UE_LOG(LogTemp, Warning, TEXT("Spawn foilage at (%d, %d, %f) r=%f"), x, y, offset.Z, rotation.Yaw);
+				}
+			}
+		}
+		UE_LOG(LogTemp, Warning, TEXT("Spawned %ld foilages"), count);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("No foilage components found (empty array)"));
+	}
 }

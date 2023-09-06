@@ -14,7 +14,7 @@ class UWorldGenOne : public UVoxelGenerator
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
-		int32 WorldSize = 32768;
+		int32 WorldSize = 8192;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
 		int32 Seed = 1337;
@@ -82,6 +82,7 @@ public:
 	//~ End FWorldGenOneInstance Interface
 
 	float GetTerrainHeight(v_flt X, v_flt Y, v_flt Z) const;
+	float GetNearLowestTerrainHeight(v_flt X, v_flt Y) const;
 	float GetMoisture(v_flt X, v_flt Y, v_flt Z) const;
 	float GetTemperature(v_flt X, v_flt Y, v_flt Z) const;
 	float GetLatitude(v_flt Y) const;
@@ -92,7 +93,10 @@ public:
 
 	static FWorldGenOneInstance* sGeneratorInstance; // ???? DIRTY!
 
+	void GenerateFoilage(AInstancedFoliageActor& foliageActor);
+
 private:
+	const float VoxelSize = 20.0f;
 	const int32 WorldSize;
 	const float TerrainHeight;
 	const float WaterLevel, WaterVariation, WaterVariationFreq;
