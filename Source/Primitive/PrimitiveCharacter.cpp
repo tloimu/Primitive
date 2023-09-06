@@ -18,6 +18,7 @@
 #include <Runtime/JsonUtilities/Public/JsonObjectConverter.h>
 #include <Primitive/Interactable.h>
 #include "WorldGenOne.h"
+#include "PrimitiveGameMode.h"
 
 #include <D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelTools/Gen/VoxelSphereTools.h>
 #include "D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelWorldInterface.h"
@@ -61,6 +62,8 @@ APrimitiveCharacter::APrimitiveCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+	FollowCamera->PostProcessSettings.AutoExposureMaxBrightness = 1.0f;
+	FollowCamera->PostProcessSettings.AutoExposureMinBrightness = 1.0f;
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -297,6 +300,12 @@ void APrimitiveCharacter::Tick(float DeltaSeconds)
 	CheckTarget();
 
 	CheckEnvironment();
+
+	auto gm = GetWorld()->GetAuthGameMode();
+	if (gm)
+	{
+		gm->Tick(DeltaSeconds);
+	}
 }
 
 void
@@ -316,7 +325,7 @@ APrimitiveCharacter::CheckEnvironment()
 			auto l = TargetVoxelWorld->GlobalToLocal(GetActorLocation());
 			auto th = Environment->GetTerrainHeight(l.X, l.Y, l.Z);
 
-			if (l.Z < th || GetActorLocation().Z < -100.0f)
+			if (l.Z < th || GetActorLocation().Z < -700.0f)
 			{
 				FVector up = GetActorLocation();
 				up.Z += th * 20.0f + 1000.0f;

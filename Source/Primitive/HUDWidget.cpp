@@ -6,6 +6,7 @@
 UHUDWidget::UHUDWidget(const FObjectInitializer& ObjectInitializer) : UUserWidget(ObjectInitializer)
 {
 	Health = 90.0f;
+	Stamina = 100.0f;
 	Temperature = 0.0f;
 	Moisture = 0.0f;
 	ClockInHoursOfDay = 0.0f;
@@ -15,6 +16,12 @@ void
 UHUDWidget::SetHealth(float Value)
 {
 	Health = Value;
+}
+
+void
+UHUDWidget::SetStamina(float Value)
+{
+	Stamina = Value;
 }
 
 void

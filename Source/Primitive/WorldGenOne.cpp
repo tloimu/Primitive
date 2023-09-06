@@ -285,7 +285,7 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 	}
 	else if (x % 20 == 0 && y % 20 == 0)
 	{
-		if (trees > -0.3)
+		if (trees > 0.0f && TemperatureNoise.GetPerlin_2D(X, Y, 2.0f) * 2.0f < trees)
 		{
 			z = GetTerrainHeight(X, Y, Z);
 			if (z > WaterLevel + 1.0f)
@@ -342,8 +342,9 @@ FWorldGenOneInstance::GenerateFoilage(AInstancedFoliageActor& foliageActor)
 	{
 		//Now you just need to add instances to component
 		FTransform transform = FTransform();
-		auto worldSize = WorldSize;
+		auto worldSize = WorldSize / 2;
 		auto waterLevel = WaterLevel;
+		bool skipAdding = false;
 		FRotator rotation(0, 0, 0);
 		FVector scale;
 		FVector offset;
@@ -362,19 +363,22 @@ FWorldGenOneInstance::GenerateFoilage(AInstancedFoliageActor& foliageActor)
 
 				if (ft >= 0)
 				{
-					transform.SetLocation(FVector(VoxelSize * x + offset.X, VoxelSize * y + offset.Y, offset.Z));
-					transform.SetRotation(rotation.Quaternion());
-					transform.SetScale3D(scale);
-					meshComponent->AddInstance(transform);
+					if (!skipAdding)
+					{
+						transform.SetLocation(FVector(VoxelSize * x + offset.X, VoxelSize * y + offset.Y, offset.Z));
+						transform.SetRotation(rotation.Quaternion());
+						transform.SetScale3D(scale);
+						meshComponent->AddInstance(transform);
+					}
 					count++;
 					if (count % 50000 == 0)
 					{
 						UE_LOG(LogTemp, Warning, TEXT("Foliage instance count = %ld..."), count);
 					}
-					if (count > 200000)
+					if (skipAdding == false && count > 200000)
 					{
 						UE_LOG(LogTemp, Warning, TEXT("TOO MANY foliage instances %ld - bailing out"), count);
-						return;
+						skipAdding = true;
 					}
 					// UE_LOG(LogTemp, Warning, TEXT("Spawn foilage at (%d, %d, %f) r=%f"), x, y, offset.Z, rotation.Yaw);
 				}
