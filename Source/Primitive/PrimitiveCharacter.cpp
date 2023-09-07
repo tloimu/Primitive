@@ -19,6 +19,8 @@
 #include <Primitive/Interactable.h>
 #include "WorldGenOne.h"
 #include "PrimitiveGameMode.h"
+#include "Runtime/Engine/Public/EngineUtils.h"
+#include "Runtime/Foliage/Public/InstancedFoliageActor.h"
 
 #include <D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelTools/Gen/VoxelSphereTools.h>
 #include "D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelWorldInterface.h"
@@ -30,7 +32,7 @@
 //////////////////////////////////////////////////////////////////////////
 // APrimitiveCharacter
 
-APrimitiveCharacter::APrimitiveCharacter()
+APrimitiveCharacter::APrimitiveCharacter(): WorldGenInstance(nullptr), DoGenerateFoliage(true), ClockInSecs(12 * 60 * 60.0f), Day(1), DayOfYear(6 * 30), ClockSpeed(600.0f)
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -93,7 +95,7 @@ APrimitiveCharacter::APrimitiveCharacter()
 	HUDWidget = nullptr;
 
 	WorldGeneratorClass = nullptr;
-	Environment = nullptr;
+	WorldGenInstance = nullptr;
 
 //	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 }
@@ -128,6 +130,45 @@ void APrimitiveCharacter::BeginPlay()
 	ReadGameSave();
 
 	EnsureNotUnderGround();
+
+	if (DoGenerateFoliage)
+		GenerateFoilage();
+
+	// Some validity checking
+	if (SunLight)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SunLight actor found"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("SunLight actor NOT found"));
+	}
+
+
+}
+
+void
+APrimitiveCharacter::GenerateFoilage()
+{
+	WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
+	TActorIterator<AInstancedFoliageActor> foliageIterator(GetWorld());
+	if (foliageIterator)
+	{
+		AInstancedFoliageActor* foliageActor = *foliageIterator;
+
+		if (WorldGenInstance)
+		{
+			WorldGenInstance->GenerateFoilage(*foliageActor);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("No World Generator Instance found"));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("No foilage actor found"));
+	}
 }
 
 void
@@ -300,19 +341,14 @@ void APrimitiveCharacter::Tick(float DeltaSeconds)
 	CheckTarget();
 
 	CheckEnvironment();
-
-	auto gm = GetWorld()->GetAuthGameMode();
-	if (gm)
-	{
-		gm->Tick(DeltaSeconds);
-	}
+	CheckSunlight(DeltaSeconds);
 }
 
 void
 APrimitiveCharacter::CheckEnvironment()
 {
-	Environment = FWorldGenOneInstance::sGeneratorInstance; // ???? Dirty!
-	if (Environment)
+	WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance; // ???? Dirty!
+	if (WorldGenInstance)
 	{
 		if (GetActorLocation().Z < -100.f)
 		{
@@ -323,7 +359,7 @@ APrimitiveCharacter::CheckEnvironment()
 		if (TargetVoxelWorld) // ???? TODO: Fix to get a permanenet handle to the "world" - maybe via GameInstance?
 		{
 			auto l = TargetVoxelWorld->GlobalToLocal(GetActorLocation());
-			auto th = Environment->GetTerrainHeight(l.X, l.Y, l.Z);
+			auto th = WorldGenInstance->GetTerrainHeight(l.X, l.Y, l.Z);
 
 			if (l.Z < th || GetActorLocation().Z < -700.0f)
 			{
@@ -332,15 +368,45 @@ APrimitiveCharacter::CheckEnvironment()
 				SetActorLocation(up);
 			}
 
-			auto T = Environment->GetTemperature(l.X, l.Y, l.Z);
-			auto M = Environment->GetMoisture(l.X, l.Y, l.Z);
+			auto T = WorldGenInstance->GetTemperature(l.X, l.Y, l.Z);
+			auto M = WorldGenInstance->GetMoisture(l.X, l.Y, l.Z);
 			HUDWidget->SetEnvironment(T, M);
-			float lat = Environment->GetLatitude(l.Y);
+			float lat = WorldGenInstance->GetLatitude(l.Y);
 			HUDWidget->SetLocation(l, lat);
 		}
 	}
 }
 
+void
+APrimitiveCharacter::CheckSunlight(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	// UE_LOG(LogTemp, Warning, TEXT("APrimitiveGameMode::Tick %f"), DeltaSeconds);
+	if (SunLight)
+	{
+		float clockAdvance = DeltaSeconds * ClockSpeed;
+		if (FMath::TruncToInt(ClockInSecs / (60 * 60.0f)) != FMath::TruncToInt((ClockInSecs + clockAdvance) / (60 * 60.0f)))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("APrimitiveGameMode::Hour = %d"), FMath::TruncToInt((ClockInSecs + clockAdvance) / (60 * 60.0f)));
+		}
+		ClockInSecs += clockAdvance;
+		if (ClockInSecs > 24 * 60 * 60.0f)
+		{
+			Day++;
+			DayOfYear++;
+			ClockInSecs -= 24 * 60 * 60.0f;
+			UE_LOG(LogTemp, Warning, TEXT("Start of Day %d"), Day);
+		}
+
+		FRotator rot;
+		rot.Pitch = ClockInSecs * 360.0f / (24 * 60 * 60.0f) + 90.0f;
+		SunLight->SetActorRotation(rot);
+		if (SkyLight)
+		{
+		}
+	}
+}
 
 TArray<ContainedMaterial>
 APrimitiveCharacter::CollectMaterialsFrom(const FVector& Location)
@@ -674,8 +740,8 @@ void APrimitiveCharacter::Interact(const FInputActionValue& Value)
 		else if (CurrentTarget && CurrentTargetComponent && CurrentTargetInstanceId != -1)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Interact %s instance %ld"), *CurrentTargetComponent->GetName(), CurrentTargetInstanceId);
-			auto fa = Cast<AInstancedFoliageActor>(CurrentTarget);
-			fa->SelectInstance(CurrentTargetComponent, CurrentTargetInstanceId, true);
+			//auto fa = Cast<AInstancedFoliageActor>(CurrentTarget);
+			// fa->SelectInstance(CurrentTargetComponent, CurrentTargetInstanceId, true);
 		}
 	}
 }

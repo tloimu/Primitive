@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Runtime/Engine/Classes/Engine/DirectionalLight.h"
+#include "Runtime/Engine/Classes/Engine/SkyLight.h"
 #include "InputActionValue.h"
 #include "InventoryWidget.h"
 #include "HUDWidget.h"
@@ -158,15 +160,42 @@ protected:
 	UPROPERTY(EditAnywhere) TSubclassOf<UHUDWidget> HUDWidgetClass;
 	UPROPERTY() UHUDWidget* HUDWidget;
 
+	// Setting up the Map
+
 	UPROPERTY(EditAnywhere) TSubclassOf<class UHUDWidget> WorldGeneratorClass;
-	FWorldGenOneInstance* Environment;
+	FWorldGenOneInstance* WorldGenInstance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
+	bool DoGenerateFoliage;
+
+	void GenerateFoilage();
 
 	void CheckEnvironment();
-
 	void EnsureNotUnderGround();
+	void CheckSunlight(float DeltaSeconds);
 
 /*	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	class UInventoryComponent* InventoryComponent;*/
+
+	// Environmental variables and functionality
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")
+	float ClockInSecs;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")
+	int32 Day;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")
+	int32 DayOfYear;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")
+	float ClockSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")
+	TSoftObjectPtr<ADirectionalLight> SunLight;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")
+	TSoftObjectPtr<ASkyLight> SkyLight;
 
 public:
 	/** Returns CameraBoom subobject **/
