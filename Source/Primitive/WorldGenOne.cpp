@@ -38,7 +38,8 @@ FWorldGenOneInstance* FWorldGenOneInstance::sGeneratorInstance = nullptr;
 
 FWorldGenOneInstance::FWorldGenOneInstance(const UWorldGenOne& MyGenerator)
 	: Super(&MyGenerator)
-	, WorldSize(MyGenerator.WorldSize)
+	, MaxFoliageInstances(MyGenerator.MaxFoliageInstances)
+	, MaxFoliageRange(MyGenerator.MaxFoliageRange)
 	, TerrainHeight(MyGenerator.TerrainHeight)
 	, WaterLevel(MyGenerator.WaterLevel)
 	, WaterVariation(MyGenerator.WaterVariation)
@@ -59,6 +60,9 @@ FWorldGenOneInstance::FWorldGenOneInstance(const UWorldGenOne& MyGenerator)
 void
 FWorldGenOneInstance::Init(const FVoxelGeneratorInit& InitStruct)
 {
+	WorldSize = InitStruct.WorldSize;
+	VoxelSize = InitStruct.VoxelSize;
+
 	Noise.SetSeed(Seed);
 	WaterNoise.SetSeed(Seed + 10);
 	TemperatureNoise.SetSeed(Seed + 100);
@@ -102,16 +106,14 @@ FWorldGenOneInstance::GetUpVector(v_flt X, v_flt Y, v_flt Z) const
 float
 FWorldGenOneInstance::GetTerrainHeight(v_flt X, v_flt Y, v_flt Z) const
 {
-	float ErosionFromMoisture = FMath::Clamp(1.0f - GetMoisture(X, Y, Z)/110.0f, 0.4f, 1.0f);
-	float flatness = FMath::Clamp(Noise.GetPerlin_2D(X, Y, 0.0002f), 0.3f, 1.0f);
-	// float lowlandsErosion = FMath::Clamp(Noise.GetPerlin_2D(X, Y, 0.0004f), 0.3f, 1.0f);
+	float ErosionFromMoisture = FMath::Clamp(1.0f - GetMoisture(X, Y, Z) / 110.0f, 0.4f, 1.0f);
+	float flatness = FMath::Clamp(Noise.GetPerlin_2D(X, Y, 0.0001f), 0.3f, 2.0f);
+
+	int32 octaves = 11 + 2 * Noise.GetPerlin_2D(X, Y, 0.001f);
 
 	return (TerrainHeight * flatness) * (
-		Noise.GetPerlin_2D(X, Y, 0.000001f) * 4.0f * FMath::Clamp(0.5f, 1.0f, Noise.GetPerlin_2D(X, Y, 0.0001f))
-		+ Noise.GetPerlin_2D(X, Y, 0.0001f)
-		+ Noise.GetPerlin_2D(X, Y, 0.001f)
-		+ ErosionFromMoisture * Noise.GetPerlin_2D(X, Y, 0.01f) / 10.0f
-		+ ErosionFromMoisture * Noise.GetPerlin_2D(X, Y, 0.003f) * Noise.GetPerlin_2D(X, Y, 0.1f) / 100.0f);
+		+ Noise.GetSimplexFractal_2D(X, Y, 0.00004f, octaves)
+		);
 }
 
 float
@@ -129,8 +131,8 @@ FWorldGenOneInstance::GetTemperature(v_flt X, v_flt Y, v_flt Z) const
 {
 	float Klat = GetLatitude(Y);
 
-	float Tnoise = (TemperatureNoise.GetPerlin_2D(X, Y, TemperatureVariationFreq) - 0.5f)* TemperatureVariation;
-	float T = EquatorTemperature - (Klat * (EquatorTemperature - PolarTemperature)) + Tnoise - TemperatureHeightCoeff * Z;
+	float Tnoise = (TemperatureNoise.GetPerlin_2D(X, Y, TemperatureVariationFreq))* TemperatureVariation;
+	float T = EquatorTemperature - (Klat * (EquatorTemperature - PolarTemperature)) + Tnoise - TemperatureHeightCoeff * (Z * VoxelSize / 100);
 
 	return T;
 }
@@ -138,7 +140,7 @@ FWorldGenOneInstance::GetTemperature(v_flt X, v_flt Y, v_flt Z) const
 float
 FWorldGenOneInstance::GetLatitude(v_flt Y) const
 {
-	return (abs(Y) / WorldSize);
+	return 2 * (abs(Y) / WorldSize);
 }
 
 const int32 ID_None = -1;
@@ -234,9 +236,12 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 	int32 x = (int32)X;
 	int32 y = (int32)Y;
 
+	if (x % 20 != 0 || y % 20 != 0)
+		return ID_None;
+
 	auto T = GetTemperature(X, Y, Z);
 	auto M = GetMoisture(X, Y, Z);
-	if (T < -10.0f || M < 5.0f) // Too cold an/or dry
+	if (T < -2.0f || M < 5.0f) // Too cold an/or dry
 		return ID_None;
 
 	int32 type = ID_None;
@@ -253,7 +258,7 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 	auto rocks = (WaterNoise.GetPerlin_2D(X, Y, 0.001f) + WaterNoise.GetPerlin_2D(X, Y, 0.02f));
 	auto trees = (TemperatureNoise.GetPerlin_2D(X, Y, 0.001f) + TemperatureNoise.GetPerlin_2D(X, Y, 0.02f));
 
-	if (rocks > 0.5f && (x % 20 == 0 && y % 20 == 0))
+	if (rocks > 0.5f && (x % 40 == 0 && y % 40 == 0))
 	{
 		if (T > -15.0f && WaterNoise.GetPerlin_2D(X, Y, 10.0f) * 3.5f < rocks)
 		{
@@ -264,7 +269,7 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 			outRotation.Roll = FMath::RandHelper(360);
 		}
 	}
-	else if (trees > 0.0f && (x % 30 == 0 && y % 30 == 0))
+	else if (trees > 0.0f && (x % 60 == 0 && y % 60 == 0))
 	{
 		if (TemperatureNoise.GetPerlin_2D(X, Y, 10.0f) * 2.0f < trees)
 		{
@@ -275,7 +280,7 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 				{
 					if (M > 70.0f)
 						type = ID_Tree1;
-					else if (M > 40.0f)
+					else if (M > 55.0f)
 						type = ID_Tree2;
 					else
 						type = ID_Tree3;
@@ -283,7 +288,7 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 			}
 		}
 	}
-	else if (x % 20 == 0 && y % 20 == 0)
+	else if (x % 40 == 0 && y % 40 == 0)
 	{
 		if (trees > 0.0f && TemperatureNoise.GetPerlin_2D(X, Y, 2.0f) * 2.0f < trees)
 		{
@@ -314,11 +319,48 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 }
 
 
+class MsTimer
+{
+public:
+	int64 started = 0;
+	int64 checked = 0;
+
+	MsTimer() { Start(); }
+
+	void Start()
+	{
+		started = FDateTime::UtcNow().GetTicks();
+		checked = FDateTime::UtcNow().GetTicks();
+	}
+
+	int32 Check()
+	{
+		auto check = SinceCheck();
+		checked = FDateTime::UtcNow().GetTicks();
+		return check;
+	}
+
+	int32 SinceCheck()
+	{
+		auto now = FDateTime::UtcNow().GetTicks();
+		return (now - checked) / 10000;
+	}
+
+	int32 Total()
+	{
+		auto now = FDateTime::UtcNow().GetTicks();
+		return (now - started) / 10000;
+	}
+};
+
 void
 FWorldGenOneInstance::GenerateFoilage(AInstancedFoliageActor& foliageActor)
 {
+	MsTimer timer;
+
 	TArray<UInstancedStaticMeshComponent*> components;
 	foliageActor.GetComponents<UInstancedStaticMeshComponent>(components);
+
 	UInstancedStaticMeshComponent* meshComponent = nullptr;
 	if (components.IsEmpty())
 	{
@@ -334,15 +376,29 @@ FWorldGenOneInstance::GenerateFoilage(AInstancedFoliageActor& foliageActor)
 		auto cs = c->InstanceStartCullDistance;
 		auto ce = c->InstanceEndCullDistance;
 		UE_LOG(LogTemp, Warning, TEXT("Component: %s, cull %d .. %d"), *c->GetName(), cs, ce);
+		//c->PreAllocateInstancesMemory(MaxFoliageInstances + 1); // Preallocated memory to include the new added instances count, to prevent reallloc during the add operation
 	}
 
+	auto setupMs = FDateTime::UtcNow().GetTicks();
+	UE_LOG(LogTemp, Warning, TEXT("Foilage setup time: %d"), timer.Check());
+
 	int32 count = 0;
+
+	TArray<TArray<FTransform> > NewInstancesPerComponent;
+	for (auto& c : components)
+	{
+		NewInstancesPerComponent.AddDefaulted();
+		NewInstancesPerComponent.Reserve(MaxFoliageInstances);
+	}
 
 	if (!components.IsEmpty())
 	{
 		//Now you just need to add instances to component
+		// foliageActor.bAutoRebuildTreeOnInstanceChanges;
 		FTransform transform = FTransform();
-		auto worldSize = WorldSize / 2;
+		auto worldSize = WorldSize;
+		if (MaxFoliageRange > 0)
+			worldSize = MaxFoliageRange;
 		auto waterLevel = WaterLevel;
 		bool skipAdding = false;
 		FRotator rotation(0, 0, 0);
@@ -368,17 +424,19 @@ FWorldGenOneInstance::GenerateFoilage(AInstancedFoliageActor& foliageActor)
 						transform.SetLocation(FVector(VoxelSize * x + offset.X, VoxelSize * y + offset.Y, offset.Z));
 						transform.SetRotation(rotation.Quaternion());
 						transform.SetScale3D(scale);
-						meshComponent->AddInstance(transform);
+						NewInstancesPerComponent[ft].Add(transform);
 					}
 					count++;
 					if (count % 50000 == 0)
 					{
 						UE_LOG(LogTemp, Warning, TEXT("Foliage instance count = %ld..."), count);
 					}
-					if (skipAdding == false && count > 200000)
+					if (skipAdding == false && count > MaxFoliageInstances)
 					{
 						UE_LOG(LogTemp, Warning, TEXT("TOO MANY foliage instances %ld - bailing out"), count);
 						skipAdding = true;
+						auto generateUntilBailMs = FDateTime::UtcNow().GetTicks();
+						UE_LOG(LogTemp, Warning, TEXT("Foilage generation time until bailing out: %ld"), timer.SinceCheck());
 					}
 					// UE_LOG(LogTemp, Warning, TEXT("Spawn foilage at (%d, %d, %f) r=%f"), x, y, offset.Z, rotation.Yaw);
 				}
@@ -390,4 +448,18 @@ FWorldGenOneInstance::GenerateFoilage(AInstancedFoliageActor& foliageActor)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("No foilage components found (empty array)"));
 	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Foilage generation time: %d"), timer.Check());
+
+	int32 ci = 0;
+	for (auto& c : components)
+	{
+		c->AddInstances(NewInstancesPerComponent[ci], false);
+		UE_LOG(LogTemp, Warning, TEXT("Component: %s, instances %d"), *c->GetName(), NewInstancesPerComponent[ci].Num());
+		ci++;
+	}
+	UE_LOG(LogTemp, Warning, TEXT("Foilage adding time: %d"), timer.Check());
+
+	auto totalMs = FDateTime::UtcNow().GetTicks();
+	UE_LOG(LogTemp, Warning, TEXT("Foilage total time: %d"), timer.Total());
 }

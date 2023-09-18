@@ -168,6 +168,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
 	bool DoGenerateFoliage;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
+	int32 MaxFoliageInstances = 200000;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
+	int32 MaxFoliageRange = 20000;
+
 	void GenerateFoilage();
 
 	void CheckEnvironment();

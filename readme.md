@@ -6,4 +6,8 @@ Uses the free Voxel Plugin for terrain creation.
 
 ## Building
 
-I have excluded **European Hornbeam** and **Procedural Nature Pack** from Git as they take over 11GB alone. So, before building you need to add those two free asset packs from Epic's Unreal Engine Marketplace before trying to run or build this project.
+I have excluded some asset packs to save space (over 10+GB), so you need to add these before building from scratch:
+- **European Hornbeam**
+- **Procedural Nature Pack**
+- **Animation Starter Pack**
+- **Low Poly Viking World**

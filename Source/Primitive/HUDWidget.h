@@ -21,11 +21,13 @@ public:
 	UFUNCTION(BlueprintCallable) void SetStamina(float Value);
 	UFUNCTION(BlueprintCallable) void SetEnvironment(float T, float M);
 	UFUNCTION(BlueprintCallable) void SetLocation(const FIntVector &Loc, float Lat);
+	UFUNCTION(BlueprintCallable) void SetTerrainHeight(int H);
 	UFUNCTION(BlueprintCallable) void SetClock(float HoursOfDay);
 
 	UFUNCTION(BlueprintCallable) float GetTemperature() const { return Temperature; }
 	UFUNCTION(BlueprintCallable) float GetMoisture() const { return Moisture; }
 	UFUNCTION(BlueprintCallable) FIntVector GetLocation() const { return Location; }
+	UFUNCTION(BlueprintCallable) float GetTerrainHeight() const { return TerrainHeight; }
 
 protected:
 
@@ -36,4 +38,5 @@ protected:
 	UPROPERTY(EditAnywhere, Transient) float Latitude;
 	UPROPERTY(EditAnywhere, Transient) float ClockInHoursOfDay;
 	UPROPERTY(EditAnywhere, Transient) FIntVector Location;
+	UPROPERTY(EditAnywhere, Transient) float TerrainHeight;
 };

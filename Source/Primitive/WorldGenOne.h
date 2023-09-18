@@ -14,16 +14,19 @@ class UWorldGenOne : public UVoxelGenerator
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
-		int32 WorldSize = 8192;
+		int32 MaxFoliageInstances = 400000;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
+		int32 MaxFoliageRange = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
 		int32 Seed = 1337;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Terrain")
-		float TerrainHeight = 1500.f;
+		float TerrainHeight = 3000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Water")
-		float WaterLevel = 30.f;
+		float WaterLevel = 0.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Water")
 		float WaterVariation = 10.f;
@@ -95,13 +98,17 @@ public:
 
 	void GenerateFoilage(AInstancedFoliageActor& foliageActor);
 
-private:
-	const float VoxelSize = 20.0f;
-	const int32 WorldSize;
+	float VoxelSize = 20.0f;
+	int32 WorldSize = 1;
+
+	const int32 MaxFoliageInstances;
+	const int32 MaxFoliageRange;
+
 	const float TerrainHeight;
 	const float WaterLevel, WaterVariation, WaterVariationFreq;
 	const float TemperatureVariation, PolarTemperature, EquatorTemperature, TemperatureVariationFreq, TemperatureHeightCoeff;
 	const float MoistureVariation, PolarMoisture, EquatorMoisture, MoistureVariationFreq;
 	const int32 Seed;
+private:
 	FVoxelFastNoise Noise, WaterNoise, TemperatureNoise, MoistureNoise;
 };

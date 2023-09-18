@@ -39,6 +39,12 @@ UHUDWidget::SetLocation(const FIntVector& Loc, float Lat)
 }
 
 void
+UHUDWidget::SetTerrainHeight(int H)
+{
+	TerrainHeight = H;
+}
+
+void
 UHUDWidget::SetClock(float HoursOfDay)
 {
 	ClockInHoursOfDay = HoursOfDay;

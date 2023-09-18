@@ -126,13 +126,14 @@ void APrimitiveCharacter::BeginPlay()
 		}
 	}
 
+	WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
+
 	ReadConfigFiles();
 	ReadGameSave();
 
 	EnsureNotUnderGround();
 
-	if (DoGenerateFoliage)
-		GenerateFoilage();
+	GenerateFoilage();
 
 	// Some validity checking
 	if (SunLight)
@@ -151,6 +152,34 @@ void
 APrimitiveCharacter::GenerateFoilage()
 {
 	WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
+	TActorIterator<AInstancedFoliageActor> foliageIterator2(GetWorld());
+	while (foliageIterator2)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("===> FoliageActor: %s"), *(foliageIterator2->GetName()));
+
+		TArray<UInstancedStaticMeshComponent*> components;
+		foliageIterator2->GetComponents<UInstancedStaticMeshComponent>(components);
+		UInstancedStaticMeshComponent* meshComponent = nullptr;
+		if (components.IsEmpty())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("No foilage components found (empty array)"));
+		}
+		else
+		{
+			meshComponent = components[0];
+		}
+
+		for (auto& c : components)
+		{
+			auto cs = c->InstanceStartCullDistance;
+			auto ce = c->InstanceEndCullDistance;
+			UE_LOG(LogTemp, Warning, TEXT("Component: %s, cull %d .. %d"), *c->GetName(), cs, ce);
+		}
+		UE_LOG(LogTemp, Warning, TEXT("<--- FoliageActor: %s"), *(foliageIterator2->GetName()));
+		++foliageIterator2;
+	}
+
+
 	TActorIterator<AInstancedFoliageActor> foliageIterator(GetWorld());
 	if (foliageIterator)
 	{
@@ -158,7 +187,8 @@ APrimitiveCharacter::GenerateFoilage()
 
 		if (WorldGenInstance)
 		{
-			WorldGenInstance->GenerateFoilage(*foliageActor);
+			if (DoGenerateFoliage)
+				WorldGenInstance->GenerateFoilage(*foliageActor);
 		}
 		else
 		{
@@ -294,12 +324,28 @@ APrimitiveCharacter::ReadGameSave()
 
 void APrimitiveCharacter::SpawnItem(const FSavedItem& item)
 {
+	WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
 	FVector location;
 	if (item.location.Num() >= 3)
 		location.Set(item.location[0], item.location[1], item.location[2]);
 	FRotator rotation;
 	if (item.rotation.Num() >= 3)
 		rotation.Add(item.rotation[0], item.rotation[1], item.rotation[2]);
+
+	if (WorldGenInstance)
+	{
+		// Ensure not under ground
+		auto l = location / WorldGenInstance->VoxelSize;
+		auto th = WorldGenInstance->GetTerrainHeight(l.X, l.Y, l.Z);
+		location.Z = th * WorldGenInstance->VoxelSize + 120.0f;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("World Generator not set yet to spawn items to"));
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Spawn item %s to x= %f, y= %f, z=%f"), *item.id, location.X, location.Y, location.Z);
+
 	FActorSpawnParameters SpawnInfo;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;//  AlwaysSpawn;
 
@@ -350,21 +396,15 @@ APrimitiveCharacter::CheckEnvironment()
 	WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance; // ???? Dirty!
 	if (WorldGenInstance)
 	{
-		if (GetActorLocation().Z < -100.f)
+		if (true)//TargetVoxelWorld) // ???? TODO: Fix to get a permanenet handle to the "world" - maybe via GameInstance?
 		{
-			FVector up = GetActorLocation();
-			up.Z += 10000.0f;
-			SetActorLocation(up);
-		}
-		if (TargetVoxelWorld) // ???? TODO: Fix to get a permanenet handle to the "world" - maybe via GameInstance?
-		{
-			auto l = TargetVoxelWorld->GlobalToLocal(GetActorLocation());
+			FIntVector l(GetActorLocation() / WorldGenInstance->VoxelSize);//TargetVoxelWorld->GlobalToLocal(GetActorLocation());
 			auto th = WorldGenInstance->GetTerrainHeight(l.X, l.Y, l.Z);
 
-			if (l.Z < th || GetActorLocation().Z < -700.0f)
+			if (l.Z < th - 2.0f)// || GetActorLocation().Z < -100000.0f)
 			{
 				FVector up = GetActorLocation();
-				up.Z += th * 20.0f + 1000.0f;
+				up.Z += th * WorldGenInstance->VoxelSize + 5000.0f;
 				SetActorLocation(up);
 			}
 
@@ -373,6 +413,17 @@ APrimitiveCharacter::CheckEnvironment()
 			HUDWidget->SetEnvironment(T, M);
 			float lat = WorldGenInstance->GetLatitude(l.Y);
 			HUDWidget->SetLocation(l, lat);
+			HUDWidget->SetTerrainHeight(th);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Jumped up without TargetVoxelWorld"));
+			if (GetActorLocation().Z < -10000.f)
+			{
+				FVector up = GetActorLocation();
+				up.Z += 30000.0f;
+				SetActorLocation(up);
+			}
 		}
 	}
 }
