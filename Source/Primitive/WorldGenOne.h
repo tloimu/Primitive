@@ -13,52 +13,49 @@ class UWorldGenOne : public UVoxelGenerator
 	GENERATED_BODY()
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Testing")
 		int32 MaxFoliageInstances = 400000;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
-		int32 MaxFoliageRange = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Testing")
+		int32 MaxFoliageRange = 0; // Non-zero value sets the maximum total foliage instances to actually be added to the map
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
-		int32 Seed = 1337;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Terrain")
+		int32 Seed = 1338;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Terrain")
-		float TerrainHeight = 3000.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Terrain")
+		float TerrainHeight = 3500.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Water")
-		float WaterLevel = 0.f;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Water")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climate")
 		float WaterVariation = 10.f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Water")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climate")
 		float WaterVariationFreq = 0.001f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Temperature")
-		float PolarTemperature = -50.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climate")
+		float PolarTemperature = -40.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Temperature")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climate")
 		float EquatorTemperature = 32.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Temperature")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climate")
 		float TemperatureVariation = 10.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Temperature")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climate")
 		float TemperatureVariationFreq = 0.002f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Temperature")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climate")
 		float TemperatureHeightCoeff = 0.05f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Moisture")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climate")
 		float PolarMoisture = 0.20f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Moisture")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climate")
 		float EquatorMoisture = 98.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Moisture")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climate")
 		float MoistureVariation = 10.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator|Moisture")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climate")
 		float MoistureVariationFreq = 0.01f;
 
 	//~ Begin UWorldGenOne Interface
@@ -91,9 +88,6 @@ public:
 	float GetLatitude(v_flt Y) const;
 	int32 GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator &outRotation, FVector &outScale, FVector& outOffset) const;
 
-	int32 GetWorldSize() const { return WorldSize; }
-	float GetWaterLevel() const { return WaterLevel; }
-
 	static FWorldGenOneInstance* sGeneratorInstance; // ???? DIRTY!
 
 	void GenerateFoilage(AInstancedFoliageActor& foliageActor);
@@ -105,7 +99,7 @@ public:
 	const int32 MaxFoliageRange;
 
 	const float TerrainHeight;
-	const float WaterLevel, WaterVariation, WaterVariationFreq;
+	const float WaterVariation, WaterVariationFreq;
 	const float TemperatureVariation, PolarTemperature, EquatorTemperature, TemperatureVariationFreq, TemperatureHeightCoeff;
 	const float MoistureVariation, PolarMoisture, EquatorMoisture, MoistureVariationFreq;
 	const int32 Seed;

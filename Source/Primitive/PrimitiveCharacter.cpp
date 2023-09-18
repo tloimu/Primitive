@@ -414,6 +414,8 @@ APrimitiveCharacter::CheckEnvironment()
 			float lat = WorldGenInstance->GetLatitude(l.Y);
 			HUDWidget->SetLocation(l, lat);
 			HUDWidget->SetTerrainHeight(th);
+			HUDWidget->SetHealth(99.0f);
+			HUDWidget->SetStamina(92.0f);
 		}
 		else
 		{

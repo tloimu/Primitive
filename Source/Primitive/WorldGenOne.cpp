@@ -41,7 +41,6 @@ FWorldGenOneInstance::FWorldGenOneInstance(const UWorldGenOne& MyGenerator)
 	, MaxFoliageInstances(MyGenerator.MaxFoliageInstances)
 	, MaxFoliageRange(MyGenerator.MaxFoliageRange)
 	, TerrainHeight(MyGenerator.TerrainHeight)
-	, WaterLevel(MyGenerator.WaterLevel)
 	, WaterVariation(MyGenerator.WaterVariation)
 	, WaterVariationFreq(MyGenerator.WaterVariationFreq)
 	, TemperatureVariation(MyGenerator.TemperatureVariation)
@@ -106,13 +105,13 @@ FWorldGenOneInstance::GetUpVector(v_flt X, v_flt Y, v_flt Z) const
 float
 FWorldGenOneInstance::GetTerrainHeight(v_flt X, v_flt Y, v_flt Z) const
 {
-	float ErosionFromMoisture = FMath::Clamp(1.0f - GetMoisture(X, Y, Z) / 110.0f, 0.4f, 1.0f);
+	// float ErosionFromMoisture = FMath::Clamp(1.0f - GetMoisture(X, Y, Z) / 110.0f, 0.4f, 1.0f);
 	float flatness = FMath::Clamp(Noise.GetPerlin_2D(X, Y, 0.0001f), 0.3f, 2.0f);
 
 	int32 octaves = 11 + 2 * Noise.GetPerlin_2D(X, Y, 0.001f);
 
 	return (TerrainHeight * flatness) * (
-		+ Noise.GetSimplexFractal_2D(X, Y, 0.00004f, octaves)
+		+ Noise.GetSimplexFractal_2D(X, Y, 0.00006f, octaves)
 		);
 }
 
@@ -147,9 +146,9 @@ const int32 ID_None = -1;
 const int32 ID_Grass1 = 0;
 const int32 ID_Grass2 = 1;
 const int32 ID_Rock1 = 2;
-const int32 ID_Tree1 = 3;
-const int32 ID_Tree2 = 4;
-const int32 ID_Tree3 = 5;
+const int32 ID_Tree1 = 3; // Mid-sized tree
+const int32 ID_Tree2 = 4; // Big tree
+const int32 ID_Tree3 = 5; // Small tree
 
 float
 FWorldGenOneInstance::GetNearLowestTerrainHeight(v_flt X, v_flt Y) const
@@ -172,6 +171,13 @@ FWorldGenOneInstance::GetValueImpl(v_flt X, v_flt Y, v_flt Z, int32 LOD, const F
 {
 	float Height = GetTerrainHeight(X, Y, Z);
 
+	if (Z == 0) // Water Level
+	{
+		// Sea ice
+		if (GetTemperature(X, Y, Z) < -10.0f)
+			return -1;
+	}
+
 	// Positive value -> empty voxel
 	// Negative value -> full voxel
 	// Value positive when Z > Height, and negative Z < Height
@@ -183,6 +189,7 @@ FWorldGenOneInstance::GetValueImpl(v_flt X, v_flt Y, v_flt Z, int32 LOD, const F
 	return Value;
 }
 
+
 FVoxelMaterial
 FWorldGenOneInstance::GetMaterialImpl(v_flt X, v_flt Y, v_flt Z, int32 LOD, const FVoxelItemStack& Items) const
 {
@@ -191,39 +198,48 @@ FWorldGenOneInstance::GetMaterialImpl(v_flt X, v_flt Y, v_flt Z, int32 LOD, cons
 	Builder.SetMaterialConfig(EVoxelMaterialConfig::MultiIndex);
 
 	float Height = GetTerrainHeight(X, Y, Z);
-	float T = GetTemperature(X, Y, Z);
 
-	float M = GetMoisture(X, Y, Z);
-
-	// ???? TODO: Add moisture's effects to snow thickness and vegetation
-
-	float SnowThickness = T < -5.0f ? -(T + 5.0f) * 1.0f : 0.0f;
-	const int32 snowMaterial = 9;
-	const int32 coldMaterial = 8;
-	const int32 temperateMaterial = 1;
-	const int32 hotMaterial = M < 30.0f ? 7 : 2;
-
-	if (SnowThickness > 0.0f && Z > Height - SnowThickness)
+	const int32 underWaterMaterial = 7;
+	if (Z < -1.0f) // Water Level
 	{
-		float snowRatio = FMath::Clamp(SnowThickness / 1.0f, 0.0f, 1.0f);
-		Builder.AddMultiIndex(snowMaterial, snowRatio);
-		Builder.AddMultiIndex(coldMaterial, 1.0f - snowRatio);
-	}
-	else if (T < 10.0f)
-	{
-		float grassRatio = FMath::Clamp(T / 10.0f, 0.0f, 1.0f);
-		Builder.AddMultiIndex(temperateMaterial, grassRatio);
-		Builder.AddMultiIndex(coldMaterial, 1.0f - grassRatio);
-	}
-	else if (T < 25.0f)
-	{
-		Builder.AddMultiIndex(temperateMaterial, 1.0f);
+		Builder.AddMultiIndex(underWaterMaterial, 1.0f);
 	}
 	else
 	{
-		float desertRatio = FMath::Clamp((T - 25.0f) / 10.0f, 0.0f, 1.0f);
-		Builder.AddMultiIndex(hotMaterial, desertRatio);
-		Builder.AddMultiIndex(temperateMaterial, 1.0f - desertRatio);
+		float T = GetTemperature(X, Y, Z);
+		float M = GetMoisture(X, Y, Z);
+
+		const int32 snowMaterial = 9;
+		const int32 coldMaterial = 8;
+		const int32 temperateMaterial = 1;
+		const int32 hotMaterial = M < 30.0f ? 7 : 2;
+
+		// ???? TODO: Add moisture's effects to snow thickness and vegetation
+
+		float SnowThickness = T < -5.0f ? -(T + 5.0f) * 1.0f : 0.0f;
+
+		if (SnowThickness > 0.0f && Z > Height - SnowThickness)
+		{
+			float snowRatio = FMath::Clamp(SnowThickness / 1.0f, 0.0f, 1.0f);
+			Builder.AddMultiIndex(snowMaterial, snowRatio);
+			Builder.AddMultiIndex(coldMaterial, 1.0f - snowRatio);
+		}
+		else if (T < 10.0f)
+		{
+			float grassRatio = FMath::Clamp(T / 10.0f, 0.0f, 1.0f);
+			Builder.AddMultiIndex(temperateMaterial, grassRatio);
+			Builder.AddMultiIndex(coldMaterial, 1.0f - grassRatio);
+		}
+		else if (T < 25.0f)
+		{
+			Builder.AddMultiIndex(temperateMaterial, 1.0f);
+		}
+		else
+		{
+			float desertRatio = FMath::Clamp((T - 25.0f) / 10.0f, 0.0f, 1.0f);
+			Builder.AddMultiIndex(hotMaterial, desertRatio);
+			Builder.AddMultiIndex(temperateMaterial, 1.0f - desertRatio);
+		}
 	}
 
 	return Builder.Build();
@@ -274,14 +290,14 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 		if (TemperatureNoise.GetPerlin_2D(X, Y, 10.0f) * 2.0f < trees)
 		{
 			z = GetNearLowestTerrainHeight(X, Y);
-			if (z > WaterLevel + 1.0f)
+			if (z > 1.0f) // Above Water Level
 			{
 				if (T > 0.0f && M > 10.0f)
 				{
 					if (M > 70.0f)
-						type = ID_Tree1;
-					else if (M > 55.0f)
 						type = ID_Tree2;
+					else if (M > 55.0f)
+						type = ID_Tree1;
 					else
 						type = ID_Tree3;
 				}
@@ -293,7 +309,7 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 		if (trees > 0.0f && TemperatureNoise.GetPerlin_2D(X, Y, 2.0f) * 2.0f < trees)
 		{
 			z = GetTerrainHeight(X, Y, Z);
-			if (z > WaterLevel + 1.0f)
+			if (z > 1.0f) // Above Water Level
 			{
 				if (T > 10.0f)
 					type = ID_Grass2;
@@ -376,11 +392,10 @@ FWorldGenOneInstance::GenerateFoilage(AInstancedFoliageActor& foliageActor)
 		auto cs = c->InstanceStartCullDistance;
 		auto ce = c->InstanceEndCullDistance;
 		UE_LOG(LogTemp, Warning, TEXT("Component: %s, cull %d .. %d"), *c->GetName(), cs, ce);
-		//c->PreAllocateInstancesMemory(MaxFoliageInstances + 1); // Preallocated memory to include the new added instances count, to prevent reallloc during the add operation
 	}
 
 	auto setupMs = FDateTime::UtcNow().GetTicks();
-	UE_LOG(LogTemp, Warning, TEXT("Foilage setup time: %d"), timer.Check());
+	UE_LOG(LogTemp, Warning, TEXT("Foilage setup time: %d, %d max instances"), timer.Check(), MaxFoliageInstances);
 
 	int32 count = 0;
 
@@ -399,7 +414,6 @@ FWorldGenOneInstance::GenerateFoilage(AInstancedFoliageActor& foliageActor)
 		auto worldSize = WorldSize;
 		if (MaxFoliageRange > 0)
 			worldSize = MaxFoliageRange;
-		auto waterLevel = WaterLevel;
 		bool skipAdding = false;
 		FRotator rotation(0, 0, 0);
 		FVector scale;

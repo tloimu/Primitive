@@ -28,6 +28,8 @@ public:
 	UFUNCTION(BlueprintCallable) float GetMoisture() const { return Moisture; }
 	UFUNCTION(BlueprintCallable) FIntVector GetLocation() const { return Location; }
 	UFUNCTION(BlueprintCallable) float GetTerrainHeight() const { return TerrainHeight; }
+	UFUNCTION(BlueprintCallable) float GetHealth() const { return Health; }
+	UFUNCTION(BlueprintCallable) float GetStamina() const { return Stamina; }
 
 protected:
 
