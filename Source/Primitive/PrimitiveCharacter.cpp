@@ -119,6 +119,7 @@ void APrimitiveCharacter::BeginPlay()
 			InventoryWidget = CreateWidget<UInventoryWidget>(pc, InventoryWidgetClass);
 			check(InventoryWidget);
 			InventoryWidget->Player = this;
+			InventoryWidget->SetMaxSlots(30);
 
 			HUDWidget = CreateWidget<UHUDWidget>(pc, HUDWidgetClass);
 			check(HUDWidget);

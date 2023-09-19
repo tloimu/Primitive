@@ -31,6 +31,7 @@ public:
 	UPROPERTY(EditAnywhere) int32 MaxSlots;
 
 	UPROPERTY(EditAnywhere) TSubclassOf<UInventorySlot> InventorySlotClass;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) TSoftObjectPtr<UTexture> EmptySlotIcon;
 
 	UInventorySlot* AddToNewSlot(const FItemStruct& inItem, int inItemCount);
 	void DropItemsFromSlot(UInventorySlot* inSlot, int inCount);

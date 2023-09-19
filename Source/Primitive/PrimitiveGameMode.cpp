@@ -17,8 +17,8 @@ APrimitiveGameMode::APrimitiveGameMode() : AGameModeBase()
 		DefaultPawnClass = PlayerPawnBPClass.Class;
 	}
 
+	// Prevent Widgets (like Inventory) to consume Tab-key events
 	FNavigationConfig& NavigationConfig = *FSlateApplication::Get().GetNavigationConfig();
-
 	NavigationConfig.bTabNavigation = false;
 }
 

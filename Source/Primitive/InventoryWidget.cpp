@@ -13,6 +13,7 @@ UInventoryWidget::UInventoryWidget(const FObjectInitializer& ObjectInitializer):
 
 void UInventoryWidget::SetMaxSlots(int Count)
 {
+	EmptySlotIcon.LoadSynchronous();
 	MaxSlots = Count;
 	InventorySlotsChanged();
 }
@@ -47,6 +48,7 @@ UInventoryWidget::AddToNewSlot(const FItemStruct& inItem, int inItemCount)
 	auto slot = CreateWidget<UInventorySlot>(this, InventorySlotClass);
 	if (slot)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("Add to new slot: %s"), *inItem.Icon.GetAssetName());
 		slot->Inventory = this;
 		slot->SetItemAndCount(inItem, inItemCount);
 		Slots.Add(slot);
@@ -62,6 +64,7 @@ UInventoryWidget::AddToNewSlot(const FItemStruct& inItem, int inItemCount)
 
 bool UInventoryWidget::AddToExistingSlot(const FItemStruct& inItem)
 {
+	// Accumulate to slot with same item class and that has space in it still
 	for (auto slot : Slots)
 	{
 		auto slotItem = slot->GetItem();
@@ -75,6 +78,16 @@ bool UInventoryWidget::AddToExistingSlot(const FItemStruct& inItem)
 					slot->Clear();
 				return true;
 			}
+		}
+	}
+
+	// Add to the first empty slot
+	for (auto slot : Slots)
+	{
+		if (slot->IsEmpty())
+		{
+			slot->SetItemAndCount(inItem, 1);
+			return true;
 		}
 	}
 
@@ -93,9 +106,16 @@ bool UInventoryWidget::RemoveFromSlot(const FItemStruct& inItem)
 				slot->SetItemCount(slotItemCount - 1);
 			else
 			{
-				slot->Clear();
-				InventorySlotRemoved(slot);
-				Slots.RemoveSingle(slot);
+				if (slot->ShouldRemoveWhenEmpty())
+				{
+					slot->Clear();
+					InventorySlotRemoved(slot);
+					Slots.RemoveSingle(slot);
+				}
+				else
+				{
+					slot->SetEmpty();
+				}
 			}
 			return true;
 		}
@@ -117,6 +137,12 @@ void UInventoryWidget::InventorySlotRemoved_Implementation(UInventorySlot* inSlo
 void UInventoryWidget::InventorySlotsChanged_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("SlotsChanged count %d"), Slots.Num());
+	for (auto i = Slots.Num(); i < MaxSlots; i++)
+	{
+		FItemStruct empty;
+		empty.Icon = EmptySlotIcon;
+		AddToNewSlot(empty, 0);
+	}
 }
 
 void UInventoryWidget::InventoryItemDropped_Implementation(const FItemStruct& item)
@@ -184,11 +210,19 @@ void UInventoryWidget::DropItemsFromSlot(UInventorySlot* inSlot, int inCount)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Inventory: Dropped %d item %s"), inCount, *inSlot->GetItem().Name);
 	auto count = inCount;
+	auto item = inSlot->GetItem();
 	if (inCount >= inSlot->GetItemCount())
 	{
-		Slots.RemoveSingle(inSlot);
-		InventorySlotRemoved(inSlot);
 		count = inSlot->GetItemCount();
+		if (inSlot->ShouldRemoveWhenEmpty())
+		{
+			Slots.RemoveSingle(inSlot);
+			InventorySlotRemoved(inSlot);
+		}
+		else
+		{
+			inSlot->SetEmpty();
+		}
 	}
 	else
 	{

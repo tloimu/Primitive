@@ -25,6 +25,12 @@ void
 UInventorySlot::SetItemCount(int inCount)
 {
 	ItemCount = inCount;
+	if (ItemCount == 0 && Inventory)
+	{
+		Item.Icon = Inventory->EmptySlotIcon;
+		Item.Name = TEXT("Empty");
+	}
+
 	ItemSet(Item, ItemCount);
 }
 
@@ -33,6 +39,19 @@ UInventorySlot::Clear()
 {
 	ItemCount = -1;
 	Cleared();
+}
+
+void
+UInventorySlot::SetEmpty()
+{
+	if (Inventory)
+	{
+		Item.Icon = Inventory->EmptySlotIcon;
+	}
+	Item.Name = TEXT("Empty");
+	Item.MaxStackSize = 0;
+	ItemCount = 0;
+	ItemSet(Item, ItemCount);
 }
 
 void
@@ -119,18 +138,23 @@ UInventorySlot::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPoin
 
 bool UInventorySlot::CanMergeWith(UInventorySlot* Other) const
 {
-	return (Other && Other != this && Other->Item.Id == Item.Id && ItemCount < Item.MaxStackSize);
+	return (IsEmpty() || (Other && Other != this && Other->Item.Id == Item.Id && ItemCount < Item.MaxStackSize));
 }
 
 void UInventorySlot::MoveItemsHereFromSlot(UInventorySlot* Other)
 {
+	if (IsEmpty())
+	{
+		Item = Other->Item;
+	}
+
 	auto n = Other->ItemCount;
 	if (ItemCount + n > Item.MaxStackSize)
 		n = Item.MaxStackSize - ItemCount + n;
 	ItemCount += n;
 	Other->ItemCount -= n;
 	if (Other->ItemCount < 1)
-		Other->RemoveFromParent();
+		Other->SetItemCount(0);
 	else
 		Other->SetItemCount(Other->ItemCount);
 	SetItemCount(ItemCount);

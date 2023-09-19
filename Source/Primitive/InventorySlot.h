@@ -19,6 +19,8 @@ public:
     UFUNCTION(BlueprintCallable) void Clear();
     UFUNCTION(BlueprintCallable) FItemStruct GetItem() const { return Item; }
     UFUNCTION(BlueprintCallable) int GetItemCount() const { return ItemCount; }
+    UFUNCTION(BlueprintCallable) bool IsEmpty() const { return (ItemCount == 0); }
+    UFUNCTION(BlueprintCallable) bool ShouldRemoveWhenEmpty() const { return RemoveWhenEmpty; }
 
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void ItemSet(const FItemStruct& inItem, int inCount);
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void Cleared();
@@ -38,6 +40,7 @@ public:
     bool CanMergeWith(UInventorySlot* Other) const;
     void MoveItemsHereFromSlot(UInventorySlot* Other);
     void Split();
+    void SetEmpty();
 
     class UInventoryWidget* Inventory; // ???? TODO: Make sure this gets memory managed correctly
 
@@ -45,4 +48,5 @@ protected:
 
     UPROPERTY(EditAnywhere) FItemStruct Item;
     UPROPERTY(EditAnywhere) int ItemCount;
+    UPROPERTY(EditAnywhere) bool RemoveWhenEmpty = false;
 };
