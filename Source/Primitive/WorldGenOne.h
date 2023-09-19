@@ -32,16 +32,16 @@ public:
 		float WaterVariationFreq = 0.001f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climate")
-		float PolarTemperature = -40.0f;
+		float PolarTemperature = -55.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climate")
-		float EquatorTemperature = 32.0f;
+		float EquatorTemperature = 35.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climate")
-		float TemperatureVariation = 10.0f;
+		float TemperatureVariation = 15.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climate")
-		float TemperatureVariationFreq = 0.002f;
+		float TemperatureVariationFreq = 0.0005f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climate")
 		float TemperatureHeightCoeff = 0.05f;

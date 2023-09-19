@@ -3,6 +3,7 @@
 #include "PrimitiveGameMode.h"
 #include "PrimitiveCharacter.h"
 #include "CoreFwd.h"
+#include "Framework/Application/NavigationConfig.h"
 #include "UObject/ConstructorHelpers.h"
 
 APrimitiveGameMode::APrimitiveGameMode() : AGameModeBase()
@@ -15,6 +16,10 @@ APrimitiveGameMode::APrimitiveGameMode() : AGameModeBase()
 	{
 		DefaultPawnClass = PlayerPawnBPClass.Class;
 	}
+
+	FNavigationConfig& NavigationConfig = *FSlateApplication::Get().GetNavigationConfig();
+
+	NavigationConfig.bTabNavigation = false;
 }
 
 

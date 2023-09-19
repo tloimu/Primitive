@@ -396,15 +396,15 @@ APrimitiveCharacter::CheckEnvironment()
 	WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance; // ???? Dirty!
 	if (WorldGenInstance)
 	{
-		if (true)//TargetVoxelWorld) // ???? TODO: Fix to get a permanenet handle to the "world" - maybe via GameInstance?
+		if (WorldGenInstance->VoxelSize > 1.0f)//TargetVoxelWorld) // ???? TODO: Fix to get a permanenet handle to the "world" - maybe via GameInstance?
 		{
 			FIntVector l(GetActorLocation() / WorldGenInstance->VoxelSize);//TargetVoxelWorld->GlobalToLocal(GetActorLocation());
 			auto th = WorldGenInstance->GetTerrainHeight(l.X, l.Y, l.Z);
-
+			UE_LOG(LogTemp, Warning, TEXT("Jumped UP %f"), WorldGenInstance->VoxelSize);
 			if (l.Z < th - 2.0f)// || GetActorLocation().Z < -100000.0f)
 			{
 				FVector up = GetActorLocation();
-				up.Z += th * WorldGenInstance->VoxelSize + 5000.0f;
+				up.Z += FMath::Max(0.0f, th) * WorldGenInstance->VoxelSize + 5000.0f;
 				SetActorLocation(up);
 			}
 
@@ -419,9 +419,9 @@ APrimitiveCharacter::CheckEnvironment()
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Jumped up without TargetVoxelWorld"));
 			if (GetActorLocation().Z < -10000.f)
 			{
+				UE_LOG(LogTemp, Warning, TEXT("Jumped up without TargetVoxelWorld"));
 				FVector up = GetActorLocation();
 				up.Z += 30000.0f;
 				SetActorLocation(up);
@@ -802,26 +802,42 @@ void APrimitiveCharacter::Interact(const FInputActionValue& Value)
 void APrimitiveCharacter::ToggleInventory(const FInputActionValue& Value)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory %d"), Value.Get<bool>());
-	if (ShowingInventory)
-		return;
 
 	auto pc = GetController<APlayerController>();
-	ShowingInventory = true;
-	if (InventoryWidget != nullptr)
-	{	
-		UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory ON"));
-		InventoryWidget->AddToPlayerScreen();
-		if (pc)
+	if (ShowingInventory)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory OFF"));
+		ShowingInventory = false;
+		if (InventoryWidget)
 		{
-			FInputModeGameAndUI mode;
-			//auto w = TSharedPtr<UUserWidget>(InventoryWidget);
-			//SWidget;
-			//mode.SetWidgetToFocus(w);
-			mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-			mode.SetHideCursorDuringCapture(false);
-			InventoryWidget->SetFocus();// SetUserFocus(pc);
+			InventoryWidget->RemoveFromParent();
+			if (pc)
+			{
+				FInputModeGameOnly mode;
+				pc->SetInputMode(mode);
+			}
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory ON"));
+		ShowingInventory = true;
+		if (InventoryWidget != nullptr)
+		{
+			InventoryWidget->AddToPlayerScreen();
+			if (pc)
+			{
+				FInputModeGameAndUI mode;
+				//auto w = TSharedPtr<UUserWidget>(InventoryWidget);
+				//SWidget;
+				//mode.SetWidgetToFocus(w);
+				
+				mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+				mode.SetHideCursorDuringCapture(false);
+				InventoryWidget->SetFocus();// SetUserFocus(pc);
 
-			pc->SetInputMode(mode);
+				pc->SetInputMode(mode);
+			}
 		}
 	}
 }
