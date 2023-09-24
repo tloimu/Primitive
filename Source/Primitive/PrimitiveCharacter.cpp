@@ -32,7 +32,7 @@
 //////////////////////////////////////////////////////////////////////////
 // APrimitiveCharacter
 
-APrimitiveCharacter::APrimitiveCharacter(): WorldGenInstance(nullptr), DoGenerateFoliage(true), ClockInSecs(12 * 60 * 60.0f), Day(1), DayOfYear(6 * 30), ClockSpeed(600.0f)
+APrimitiveCharacter::APrimitiveCharacter(): DoGenerateFoliage(true), ClockInSecs(12 * 60 * 60.0f), Day(1), DayOfYear(6 * 30), ClockSpeed(600.0f)
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -95,7 +95,9 @@ APrimitiveCharacter::APrimitiveCharacter(): WorldGenInstance(nullptr), DoGenerat
 	HUDWidget = nullptr;
 
 	WorldGeneratorClass = nullptr;
-	WorldGenInstance = nullptr;
+
+	Inventory = NewObject<UInventory>();
+	Inventory->Player = this;
 
 //	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 }
@@ -118,16 +120,15 @@ void APrimitiveCharacter::BeginPlay()
 		{
 			InventoryWidget = CreateWidget<UInventoryWidget>(pc, InventoryWidgetClass);
 			check(InventoryWidget);
-			InventoryWidget->Player = this;
-			InventoryWidget->SetMaxSlots(30);
+			InventoryWidget->Inventory = Inventory;
+			Inventory->InventoryListener = InventoryWidget;
+			Inventory->SetMaxSlots(30);
 
 			HUDWidget = CreateWidget<UHUDWidget>(pc, HUDWidgetClass);
 			check(HUDWidget);
 			HUDWidget->AddToPlayerScreen();
 		}
 	}
-
-	WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
 
 	ReadConfigFiles();
 	ReadGameSave();
@@ -152,7 +153,7 @@ void APrimitiveCharacter::BeginPlay()
 void
 APrimitiveCharacter::GenerateFoilage()
 {
-	WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
+	auto WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
 	TActorIterator<AInstancedFoliageActor> foliageIterator2(GetWorld());
 	while (foliageIterator2)
 	{
@@ -325,7 +326,7 @@ APrimitiveCharacter::ReadGameSave()
 
 void APrimitiveCharacter::SpawnItem(const FSavedItem& item)
 {
-	WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
+	auto WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
 	FVector location;
 	if (item.location.Num() >= 3)
 		location.Set(item.location[0], item.location[1], item.location[2]);
@@ -394,16 +395,16 @@ void APrimitiveCharacter::Tick(float DeltaSeconds)
 void
 APrimitiveCharacter::CheckEnvironment()
 {
-	WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance; // ???? Dirty!
+	auto WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
 	if (WorldGenInstance)
 	{
 		if (WorldGenInstance->VoxelSize > 1.0f)//TargetVoxelWorld) // ???? TODO: Fix to get a permanenet handle to the "world" - maybe via GameInstance?
 		{
 			FIntVector l(GetActorLocation() / WorldGenInstance->VoxelSize);//TargetVoxelWorld->GlobalToLocal(GetActorLocation());
 			auto th = WorldGenInstance->GetTerrainHeight(l.X, l.Y, l.Z);
-			UE_LOG(LogTemp, Warning, TEXT("Jumped UP %f"), WorldGenInstance->VoxelSize);
 			if (l.Z < th - 2.0f)// || GetActorLocation().Z < -100000.0f)
 			{
+				UE_LOG(LogTemp, Warning, TEXT("Jumped UP %f"), WorldGenInstance->VoxelSize);
 				FVector up = GetActorLocation();
 				up.Z += FMath::Max(0.0f, th) * WorldGenInstance->VoxelSize + 5000.0f;
 				SetActorLocation(up);
@@ -659,6 +660,12 @@ void APrimitiveCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 		EnhancedInputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::ToggleInventory);
 		EnhancedInputComponent->BindAction(BackAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::Back);
 		EnhancedInputComponent->BindAction(TransferAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::Transfer);
+
+		EnhancedInputComponent->BindAction(ShiftModifierDownAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::ShiftModifierDown);
+		EnhancedInputComponent->BindAction(ShiftModifierUpAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::ShiftModifierUp);
+
+		EnhancedInputComponent->BindAction(CtrlModifierDownAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::CtrlModifierDown);
+		EnhancedInputComponent->BindAction(CtrlModifierUpAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::CtrlModifierUp);
 	}
 
 }
@@ -732,7 +739,7 @@ void APrimitiveCharacter::Pick(const FInputActionValue& Value)
 			auto const& item = CurrentInteractable->GetItem();
 			UE_LOG(LogTemp, Warning, TEXT("Adding item to inventory %s"), *item.Name);
 			item.Icon.LoadSynchronous(); // Force resolve lazy loading - not sure if this is the best way but seems to make it work. Maybe check icon.IsPending() to see the need to load
-			if (InventoryWidget->AddItem(item))
+			if (Inventory->AddItem(item))// InventoryWidget->AddItem(item))
 			{
 				auto actor = CurrentInteractable;
 				SetCurrentTarget(nullptr);
@@ -744,7 +751,14 @@ void APrimitiveCharacter::Pick(const FInputActionValue& Value)
 
 void APrimitiveCharacter::Drop(const FInputActionValue& Value)
 {
-	// ???? TODO:
+	if (Inventory && Inventory->CurrentSelectedSlotIndex != -1)
+	{
+		auto& slot = Inventory->GetSlotAt(Inventory->CurrentSelectedSlotIndex);
+		auto n = slot.Count;
+		if (ModifierShiftDown)
+			n = 1;
+		Inventory->DropItemsFromSlot(slot, n);
+	}
 }
 
 void APrimitiveCharacter::Consume(const FInputActionValue& Value)

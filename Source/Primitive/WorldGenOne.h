@@ -88,7 +88,7 @@ public:
 	float GetLatitude(v_flt Y) const;
 	int32 GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator &outRotation, FVector &outScale, FVector& outOffset) const;
 
-	static FWorldGenOneInstance* sGeneratorInstance; // ???? DIRTY!
+	static TSharedPtr<FWorldGenOneInstance> sGeneratorInstance; // ???? DIRTY!
 
 	void GenerateFoilage(AInstancedFoliageActor& foliageActor);
 

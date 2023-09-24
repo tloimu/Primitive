@@ -1,101 +1,123 @@
 #include "InventorySlot.h"
 #include "InventoryWidget.h"
+#include "PrimitiveCharacter.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
 #include "InventorySlotDragOperation.h"
 
-UInventorySlot::UInventorySlot(const FObjectInitializer& ObjectInitializer): UUserWidget(ObjectInitializer), ItemCount(-1)
+UInventorySlot::UInventorySlot(const FObjectInitializer& ObjectInitializer): UUserWidget(ObjectInitializer), Inventory(nullptr), SlotIndex(0)
 {
 }
 
-void
-UInventorySlot::SetItemAndCount(const FItemStruct& inItem, int inCount)
-{
-	Item = inItem;
-	ItemCount = inCount;
-	ItemSet(Item, ItemCount);
-}
-
-void
-UInventorySlot::SetItem(const FItemStruct& inItem)
-{
-	Item = inItem;
-	ItemSet(Item, ItemCount);
-}
-
-void
-UInventorySlot::SetItemCount(int inCount)
-{
-	ItemCount = inCount;
-	if (ItemCount == 0 && Inventory)
-	{
-		Item.Icon = Inventory->EmptySlotIcon;
-		Item.Name = TEXT("Empty");
-	}
-
-	ItemSet(Item, ItemCount);
-}
-
-void
-UInventorySlot::Clear()
-{
-	ItemCount = -1;
-	Cleared();
-}
-
-void
-UInventorySlot::SetEmpty()
+bool
+UInventorySlot::IsEmpty()
 {
 	if (Inventory)
 	{
-		Item.Icon = Inventory->EmptySlotIcon;
+		return Inventory->GetSlotAt(SlotIndex).Count == 0;
 	}
-	Item.Name = TEXT("Empty");
-	Item.MaxStackSize = 0;
-	ItemCount = 0;
-	ItemSet(Item, ItemCount);
+	return true;
+}
+
+int
+UInventorySlot::GetItemCount()
+{
+	if (Inventory)
+	{
+		return Inventory->GetSlotAt(SlotIndex).Count;
+	}
+	return 0;
+}
+
+UTexture*
+UInventorySlot::GetIcon()
+{
+	if (Inventory)
+	{
+		Inventory->GetSlotAt(SlotIndex).Item.Icon.LoadSynchronous();
+		return Inventory->GetSlotAt(SlotIndex).Item.Icon.Get();
+	}
+	return 0;
 }
 
 void
-UInventorySlot::ItemSet_Implementation(const FItemStruct& inItem, int inCount)
+UInventorySlot::SlotSet_Implementation(const FItemSlot& inSlot)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Added %s to slot of %d now"), *inItem.Name, inCount);
+	UE_LOG(LogTemp, Warning, TEXT("Set %d (%s) to slot of %d now"), inSlot.Index, *inSlot.Item.Name, inSlot.Count);
+	SlotIndex = inSlot.Index;
 }
 
 void
-UInventorySlot::Cleared_Implementation()
+UInventorySlot::SlotRemoved_Implementation(const FItemSlot& inSlot)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Cleared slot of %s"), *Item.Name);
+	UE_LOG(LogTemp, Warning, TEXT("Slot %d (%s) removed"), inSlot.Index, *inSlot.Item.Name);
 }
 
 void
 UInventorySlot::SetHighlight_Implementation(bool DoHighlight)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Highlight %d"), DoHighlight);
+	UE_LOG(LogTemp, Warning, TEXT("Slot %d highlight %d"), SlotIndex, DoHighlight);
 }
-
 
 // Drag'n'Drop
 
-void UInventorySlot::NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+void
+UInventorySlot::NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Drag enter"));
+	Super::NativeOnDragDetected(InGeometry, InMouseEvent, OutOperation);
+
+	UE_LOG(LogTemp, Warning, TEXT("Drag detected slot %d"), SlotIndex);
+
+	if (!IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Start dragging slot %d..."), SlotIndex);
+		auto oper = Cast<UInventorySlotDragOperation>(UWidgetBlueprintLibrary::CreateDragDropOperation(UInventorySlotDragOperation::StaticClass()));
+		if (oper)
+		{
+			auto dragged = CreateWidget<UDraggedInventorySlot>(this, DraggedInventorySlotWidgetClass);
+			if (dragged)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Dragging slot %d %s"), SlotIndex, *DraggedInventorySlotWidgetClass.Get()->GetName());
+				dragged->SetInventorySlot(this);
+				oper->InventorySlot = dragged;
+				oper->Payload = this;
+
+				oper->DragOffset = InGeometry.AbsoluteToLocal(InMouseEvent.GetScreenSpacePosition());
+				oper->DefaultDragVisual = this;
+				oper->Pivot = EDragPivot::MouseDown;
+
+				OutOperation = oper;
+			}
+		}
+	}
+}
+
+void
+UInventorySlot::NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Drag enter slot %d"), SlotIndex);
 	auto dragged = Cast<UInventorySlot>(InOperation->Payload);
-	if (CanMergeWith(dragged))
-		SetHighlight(true);
+	if (dragged && Inventory)
+	{
+		auto& fromSlot = Inventory->GetSlotAt(dragged->SlotIndex);
+		auto& toSlot = Inventory->GetSlotAt(SlotIndex);
+		if (Inventory->CanMergeWith(toSlot, fromSlot))
+			SetHighlight(true);
+	}
 }
 
 void UInventorySlot::NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Drag leave"));
+	UE_LOG(LogTemp, Warning, TEXT("Drag leave slot %d"), SlotIndex);
 	SetHighlight(false);
 }
 
 bool UInventorySlot::NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Drag over"));
-	auto oper = Cast<UInventorySlot>(InOperation->Payload);
-	if (oper != nullptr)
+	// UE_LOG(LogTemp, Warning, TEXT("Drag over slot %d"), SlotIndex);
+	auto dragged = Cast<UInventorySlot>(InOperation->Payload);
+	if (dragged)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Drag over from %s to %s"), *oper->GetItem().Name,*Item.Name);
+		// UE_LOG(LogTemp, Warning, TEXT("Drag over from slot index %d to %d"), dragged->SlotIndex, SlotIndex);
 	}
 	return true;
 }
@@ -104,17 +126,22 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 {
 	UE_LOG(LogTemp, Warning, TEXT("OnDrop"));
 	auto dragged = Cast<UInventorySlot>(InOperation->Payload);
-	if (CanMergeWith(dragged))
+	if (dragged && Inventory)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Dropped item %s"), *dragged->GetItem().Name);
-		MoveItemsHereFromSlot(dragged);
-		return true;
+		UE_LOG(LogTemp, Warning, TEXT("Dropped item"));
+		auto& fromSlot = Inventory->GetSlotAt(dragged->SlotIndex);
+		auto& toSlot = Inventory->GetSlotAt(SlotIndex);
+		auto n = fromSlot.Count;
+		if (InDragDropEvent.GetModifierKeys().IsShiftDown())
+			n = 1;
+		if (Inventory->CanMergeWith(toSlot, fromSlot))
+			Inventory->MergeWith(toSlot, fromSlot, n);
 	}
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Dropped incompatible item"));
-		return true;
 	}
+
 	return true;
 }
 
@@ -129,50 +156,31 @@ UInventorySlot::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPoin
 
 	if (InMouseEvent.IsMouseButtonDown(EKeys::RightMouseButton))
 	{
-		Split();
+		Inventory->SplitSlot(SlotIndex);
 		return FReply::Handled();
 	}
 	return FReply::Unhandled();
 }
 
-
-bool UInventorySlot::CanMergeWith(UInventorySlot* Other) const
+void
+UInventorySlot::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	return (IsEmpty() || (Other && Other != this && Other->Item.Id == Item.Id && ItemCount < Item.MaxStackSize));
-}
-
-void UInventorySlot::MoveItemsHereFromSlot(UInventorySlot* Other)
-{
-	if (IsEmpty())
+	UE_LOG(LogTemp, Warning, TEXT("Mouse enter slot %d"), SlotIndex);
+	SetHighlight(true);
+	if (Inventory)
 	{
-		Item = Other->Item;
+		Inventory->CurrentSelectedSlotIndex = SlotIndex;
 	}
-
-	auto n = Other->ItemCount;
-	if (ItemCount + n > Item.MaxStackSize)
-		n = Item.MaxStackSize - ItemCount + n;
-	ItemCount += n;
-	Other->ItemCount -= n;
-	if (Other->ItemCount < 1)
-		Other->SetItemCount(0);
-	else
-		Other->SetItemCount(Other->ItemCount);
-	SetItemCount(ItemCount);
 }
 
-void UInventorySlot::Split()
+void
+UInventorySlot::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Split slot"));
-	if (ItemCount > 1)
+	UE_LOG(LogTemp, Warning, TEXT("Mouse leave slot %d"), SlotIndex);
+	SetHighlight(false);
+	if (Inventory)
 	{
-		auto n = ItemCount / 2;
-		if (Inventory)
-		{
-			auto slot = Inventory->AddToNewSlot(Item, n);
-			if (slot)
-			{
-				SetItemCount(ItemCount - slot->ItemCount);
-			}
-		}
+		if (Inventory->CurrentSelectedSlotIndex == SlotIndex)
+			Inventory->CurrentSelectedSlotIndex = -1;
 	}
 }

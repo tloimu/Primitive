@@ -8,9 +8,9 @@
 UENUM(BlueprintType)
 enum class BodyPart : uint8
 {
-    Head = 0            UMETA(DisplayName = "Head"),
-    PrimaryHand = 1     UMETA(DisplayName = "PrimaryHand"),
-    SecondaryHand = 2   UMETA(DisplayName = "SecondaryHand"),
+    None = 0            UMETA(DisplayName = "None"),
+    Head = 1            UMETA(DisplayName = "Head"),
+    Hand = 2            UMETA(DisplayName = "Hand"),
     TwoHanded = 3       UMETA(DisplayName = "TwoHanded"),
     Feet = 4            UMETA(DisplayName = "Feet"),
     Torso = 5           UMETA(DisplayName = "Torso"),
@@ -29,11 +29,11 @@ struct FItemStruct : public FTableRowBase
 {
     GENERATED_BODY()
 
-    FItemStruct() : Weight(0.0f), Quality(1.0f), MaxStackSize(1) {}
+    FItemStruct() : Weight(0.0f), Quality(1.0f), MaxStackSize(1), MaxHealth(1), Health(1) {}
 
     bool operator== (const FItemStruct rhs) const
     {
-        if (Id == rhs.Id)
+        if (Id == rhs.Id && Quality == rhs.Quality)
         {
             return true;
         }
@@ -46,6 +46,8 @@ struct FItemStruct : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadWrite) float Quality;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSet<BodyPart> CanWearIn;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) int MaxStackSize;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) int MaxHealth;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) int Health;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSubclassOf<class AInteractableActor> ItemClass;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSoftObjectPtr<UTexture> Icon;

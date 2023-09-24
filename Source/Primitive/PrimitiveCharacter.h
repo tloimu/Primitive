@@ -10,6 +10,7 @@
 #include "InventoryWidget.h"
 #include "HUDWidget.h"
 #include "GameSettings.h"
+#include "Inventory.h"
 #include "PrimitiveCharacter.generated.h"
 
 struct ContainedMaterial
@@ -88,6 +89,19 @@ class APrimitiveCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* TransferAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* ShiftModifierDownAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* CtrlModifierDownAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* ShiftModifierUpAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* CtrlModifierUpAction;
+
+
 public:
 	APrimitiveCharacter();
 	
@@ -117,6 +131,11 @@ protected:
 	void ToggleInventory(const FInputActionValue& Value);
 	void Back(const FInputActionValue& Value);
 	void Transfer(const FInputActionValue& Value);
+
+	void ShiftModifierDown(const FInputActionValue& Value) { ModifierShiftDown = true; }
+	void CtrlModifierDown(const FInputActionValue& Value) { ModifierCtrlDown = true; }
+	void ShiftModifierUp(const FInputActionValue& Value) { ModifierShiftDown = false; }
+	void CtrlModifierUp(const FInputActionValue& Value) { ModifierCtrlDown = false; }
 
 	UPROPERTY(EditAnywhere, Category = "Zoom Transforms", BlueprintReadWrite) TArray<float> ZoomTransforms;
 	uint8 CurrentZoomLevel;
@@ -152,6 +171,15 @@ protected:
 	void SetCurrentTarget(AActor* target, UPrimitiveComponent* component = nullptr, int32 instanceId = -1);
 	void SetHighlightIfInteractableTarget(AActor* target, bool value);
 
+	// Input state
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Generator")
+	bool ModifierShiftDown = false;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Generator")
+	bool ModifierCtrlDown = false;
+
+	// Inventory
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) UInventory	*Inventory;
 	bool ShowingInventory;
 
 	UPROPERTY(EditAnywhere) TSubclassOf<UInventoryWidget> InventoryWidgetClass;
@@ -163,7 +191,6 @@ protected:
 	// Setting up the Map
 
 	UPROPERTY(EditAnywhere) TSubclassOf<class UHUDWidget> WorldGeneratorClass;
-	FWorldGenOneInstance* WorldGenInstance;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
 	bool DoGenerateFoliage;

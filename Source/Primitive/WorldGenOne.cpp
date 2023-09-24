@@ -7,18 +7,15 @@
 
 TVoxelSharedRef<FVoxelGeneratorInstance> UWorldGenOne::GetInstance()
 {
-	return MakeVoxelShared<FWorldGenOneInstance>(*this);
+	auto p = MakeVoxelShared<FWorldGenOneInstance>(*this);
+	FWorldGenOneInstance::sGeneratorInstance = p;
+	return p;
 }
+
+TSharedPtr<FWorldGenOneInstance> FWorldGenOneInstance::sGeneratorInstance; // ???? DIRTY!
 
 ///////////////////////////////////////////////////////////////////////////////
 /*
-		float LatitudeTemperatureCoeff = 0.1f;
-		float EquatorTemperature = 32.0f;
-		float TemperatureNoiseHeight = 10.0f;
-		float TemperatureNoiseFreq = 1.0f;
-		int32 WorldSize = 4096;
-
-
 		Materials:
 		
 		0 - grass rock + brown mud rocks
@@ -33,8 +30,6 @@ TVoxelSharedRef<FVoxelGeneratorInstance> UWorldGenOne::GetInstance()
 		9 - grass rock
 		10- brown mud rocks
 */
-
-FWorldGenOneInstance* FWorldGenOneInstance::sGeneratorInstance = nullptr;
 
 FWorldGenOneInstance::FWorldGenOneInstance(const UWorldGenOne& MyGenerator)
 	: Super(&MyGenerator)
@@ -66,9 +61,6 @@ FWorldGenOneInstance::Init(const FVoxelGeneratorInit& InitStruct)
 	WaterNoise.SetSeed(Seed + 10);
 	TemperatureNoise.SetSeed(Seed + 100);
 	MoistureNoise.SetSeed(Seed + 500);
-
-	// ???? DIRTY!
-	FWorldGenOneInstance::sGeneratorInstance = this;
 }
 
 

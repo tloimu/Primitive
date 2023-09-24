@@ -1,56 +1,65 @@
 #include "InventoryWidget.h"
 #include "InventorySlotDragOperation.h"
 #include "InteractableActor.h"
+#include "Inventory.h"
 #include "PrimitiveCharacter.h"
 
 UInventoryWidget::UInventoryWidget(const FObjectInitializer& ObjectInitializer): UUserWidget(ObjectInitializer)
 {
-	Player = nullptr;
 	bIsFocusable = true;
-	MaxSlots = 30;
+	// MaxSlots = 30;
 	InventorySlotClass = StaticClass();
 }
 
-void UInventoryWidget::SetMaxSlots(int Count)
+void
+UInventoryWidget::SlotChanged(int Index, const FItemSlot& inSlot)
 {
-	EmptySlotIcon.LoadSynchronous();
-	MaxSlots = Count;
-	InventorySlotsChanged();
-}
-
-bool UInventoryWidget::AddItem(const FItemStruct& inItem)
-{
-	if (AddToExistingSlot(inItem))
+	while (Index > Slots.Num())
 	{
-		return true;
+		FItemSlot empty;
+		empty.Index = Slots.Num();
+		AddToNewSlot(empty);
 	}
 
-	if (Slots.Num() < MaxSlots)
+	auto SlotUI = Slots[Index];
+	if (inSlot.Count > 0)
+		inSlot.Item.Icon.LoadSynchronous();
+	SlotUI->SlotSet(inSlot);
+}
+
+void
+UInventoryWidget::MaxSlotsChanged(int inMaxSlots)
+{
+	while (inMaxSlots > Slots.Num())
 	{
-		auto slot = AddToNewSlot(inItem, 1);
-		if (slot)
-			return true;
-		else
-			return false;
+		FItemSlot empty;
+		empty.Index = Slots.Num();
+		AddToNewSlot(empty);
 	}
 
-	return false;
+	while (inMaxSlots < Slots.Num())
+	{
+		RemoveSlot(Slots.Num() - 1);
+	}
 }
 
-bool UInventoryWidget::RemoveItem(const FItemStruct& inItem)
+void
+UInventoryWidget::SlotRemoved(int Index)
 {
-	return RemoveFromSlot(inItem);
+	RemoveSlot(Index);
 }
+
 
 UInventorySlot*
-UInventoryWidget::AddToNewSlot(const FItemStruct& inItem, int inItemCount)
+UInventoryWidget::AddToNewSlot(const FItemSlot& inSlot)
 {
 	auto slot = CreateWidget<UInventorySlot>(this, InventorySlotClass);
 	if (slot)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Add to new slot: %s"), *inItem.Icon.GetAssetName());
-		slot->Inventory = this;
-		slot->SetItemAndCount(inItem, inItemCount);
+		UE_LOG(LogTemp, Warning, TEXT("Add to new slot: %s"), *inSlot.Item.Icon.GetAssetName());
+		slot->Inventory = Inventory;
+		slot->SlotIndex = inSlot.Index;
+		slot->SlotSet(inSlot);
 		Slots.Add(slot);
 		InventorySlotAdded(slot);
 		return slot;
@@ -62,97 +71,46 @@ UInventoryWidget::AddToNewSlot(const FItemStruct& inItem, int inItemCount)
 	}
 }
 
-bool UInventoryWidget::AddToExistingSlot(const FItemStruct& inItem)
+void
+UInventoryWidget::RemoveSlot(int Index)
 {
-	// Accumulate to slot with same item class and that has space in it still
-	for (auto slot : Slots)
-	{
-		auto slotItem = slot->GetItem();
-		if (slotItem.Id == inItem.Id)
-		{
-			auto slotItemCount = slot->GetItemCount();
-			if (slotItemCount >= 0 && slotItemCount < slotItem.MaxStackSize)
-			{
-				slot->SetItemCount(slotItemCount + 1);
-				if (slotItemCount == 0)
-					slot->Clear();
-				return true;
-			}
-		}
-	}
-
-	// Add to the first empty slot
-	for (auto slot : Slots)
-	{
-		if (slot->IsEmpty())
-		{
-			slot->SetItemAndCount(inItem, 1);
-			return true;
-		}
-	}
-
-	return false;
+	auto slot = Slots[Index];
+	slot->Inventory = nullptr;
+	slot->RemoveFromParent();
+	Slots.RemoveAt(Index);
+	InventorySlotsChanged();
 }
 
-bool UInventoryWidget::RemoveFromSlot(const FItemStruct& inItem)
-{
-	for (auto slot : Slots)
-	{
-		auto slotItem = slot->GetItem();
-		auto slotItemCount = slot->GetItemCount();
-		if (slotItem.Id == inItem.Id)
-		{
-			if (slotItemCount > 1)
-				slot->SetItemCount(slotItemCount - 1);
-			else
-			{
-				if (slot->ShouldRemoveWhenEmpty())
-				{
-					slot->Clear();
-					InventorySlotRemoved(slot);
-					Slots.RemoveSingle(slot);
-				}
-				else
-				{
-					slot->SetEmpty();
-				}
-			}
-			return true;
-		}
-	}
-	return false;
-}
-
-
-void UInventoryWidget::InventorySlotAdded_Implementation(UInventorySlot* inSlot)
+void
+UInventoryWidget::InventorySlotAdded_Implementation(UInventorySlot* inSlot)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Added slot to Inventory"));
 }
 
-void UInventoryWidget::InventorySlotRemoved_Implementation(UInventorySlot* inSlot)
+void
+UInventoryWidget::InventorySlotRemoved_Implementation(UInventorySlot* inSlot)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Removed slot from Inventory"));
 }
 
-void UInventoryWidget::InventorySlotsChanged_Implementation()
+void
+UInventoryWidget::InventorySlotsChanged_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("SlotsChanged count %d"), Slots.Num());
-	for (auto i = Slots.Num(); i < MaxSlots; i++)
+/*	for (auto i = Slots.Num(); i < MaxSlots; i++)
 	{
 		FItemStruct empty;
 		empty.Icon = EmptySlotIcon;
 		AddToNewSlot(empty, 0);
 	}
-}
-
-void UInventoryWidget::InventoryItemDropped_Implementation(const FItemStruct& item)
-{
-	UE_LOG(LogTemp, Warning, TEXT("Inventory item dropped %s"), *item.Name);
+	// ???? TODO: Remove extra slots
+	*/
 }
 
 // Drag'n'Drop
 
-void UInventoryWidget::NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+void
+UInventoryWidget::NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
 	Super::NativeOnDragEnter(InGeometry, InDragDropEvent, InOperation);
 
@@ -160,11 +118,12 @@ void UInventoryWidget::NativeOnDragEnter(const FGeometry& InGeometry, const FDra
 	auto dragged = Cast<UInventorySlot>(InOperation->Payload);
 	if (dragged)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Drag over from %s"), *dragged->GetItem().Name);
+		UE_LOG(LogTemp, Warning, TEXT("Drag over from slot %d"), dragged->SlotIndex);
 	}
 }
 
-void UInventoryWidget::NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+void
+UInventoryWidget::NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
 	Super::NativeOnDragLeave(InDragDropEvent, InOperation);
 
@@ -172,32 +131,34 @@ void UInventoryWidget::NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, 
 	auto dragged = Cast<UInventorySlot>(InOperation->Payload);
 	if (dragged)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Drag over from %s"), *dragged->GetItem().Name);
+		UE_LOG(LogTemp, Warning, TEXT("Drag over from slot %d"), dragged->SlotIndex);
 	}
 }
 
-bool UInventoryWidget::NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+bool
+UInventoryWidget::NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
 	Super::NativeOnDragOver(InGeometry, InDragDropEvent, InOperation);
 
-	UE_LOG(LogTemp, Warning, TEXT("Inventory: Drag over"));
+	// UE_LOG(LogTemp, Warning, TEXT("Inventory: Drag over"));
 	auto dragged = Cast<UInventorySlot>(InOperation->Payload);
 	if (dragged)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Drag over from %s"), *dragged->GetItem().Name);
+		//UE_LOG(LogTemp, Warning, TEXT("Drag over from slot %d"), dragged->SlotIndex);
 	}
 	return true;
 }
 
-bool UInventoryWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+bool
+UInventoryWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
 {
 	Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
 
 	UE_LOG(LogTemp, Warning, TEXT("Inventory: OnDrop"));
 	auto dragged = Cast<UInventorySlot>(InOperation->Payload);
-	if (dragged)
+	if (dragged && Inventory)
 	{
-		auto n = dragged->GetItemCount();
+		auto n = Inventory->GetSlotAt(dragged->SlotIndex).Count;
 		if (InDragDropEvent.GetModifierKeys().IsShiftDown())
 			n = 1;
 		DropItemsFromSlot(dragged, n);
@@ -205,39 +166,13 @@ bool UInventoryWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDrop
 	return true;
 }
 
-
-void UInventoryWidget::DropItemsFromSlot(UInventorySlot* inSlot, int inCount)
+void
+UInventoryWidget::DropItemsFromSlot(UInventorySlot* inSlot, int inCount)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Inventory: Dropped %d item %s"), inCount, *inSlot->GetItem().Name);
-	auto count = inCount;
-	auto item = inSlot->GetItem();
-	if (inCount >= inSlot->GetItemCount())
+	if (Inventory)
 	{
-		count = inSlot->GetItemCount();
-		if (inSlot->ShouldRemoveWhenEmpty())
-		{
-			Slots.RemoveSingle(inSlot);
-			InventorySlotRemoved(inSlot);
-		}
-		else
-		{
-			inSlot->SetEmpty();
-		}
+		UE_LOG(LogTemp, Warning, TEXT("InventoryWidget: Drop %d from slot %d"), inCount, inSlot->SlotIndex);
+		auto& slot = Inventory->GetSlotAt(inSlot->SlotIndex);
+		Inventory->DropItemsFromSlot(slot, inCount);
 	}
-	else
-	{
-		inSlot->SetItemCount(inSlot->GetItemCount() - inCount);
-	}
-
-	for (int i = 0; i < count; i++)
-	{
-		DropItem(inSlot->GetItem());
-	}
-}
-
-void UInventoryWidget::DropItem(const FItemStruct& inItem)
-{
-	if (Player)
-		Player->CreateDroppedItem(inItem);
-	InventoryItemDropped(inItem);
 }

@@ -2,7 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "ItemStruct.h"
+#include "Inventory.h"
+#include "InventorySlotDragOperation.h"
 #include "InventorySlot.generated.h"
 
 UCLASS(MinimalAPI, Blueprintable)
@@ -13,21 +14,17 @@ class UInventorySlot : public UUserWidget
 public:
     UInventorySlot(const FObjectInitializer& ObjectInitializer);
 
-    UFUNCTION(BlueprintCallable) void SetItemAndCount(const FItemStruct &inItem, int inCount);
-    UFUNCTION(BlueprintCallable) void SetItem(const FItemStruct &inItem);
-    UFUNCTION(BlueprintCallable) void SetItemCount(int inCount);
-    UFUNCTION(BlueprintCallable) void Clear();
-    UFUNCTION(BlueprintCallable) FItemStruct GetItem() const { return Item; }
-    UFUNCTION(BlueprintCallable) int GetItemCount() const { return ItemCount; }
-    UFUNCTION(BlueprintCallable) bool IsEmpty() const { return (ItemCount == 0); }
-    UFUNCTION(BlueprintCallable) bool ShouldRemoveWhenEmpty() const { return RemoveWhenEmpty; }
-
-    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void ItemSet(const FItemStruct& inItem, int inCount);
-    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void Cleared();
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void SlotSet(const FItemSlot& inSlot);
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void SlotRemoved(const FItemSlot& inSlot);
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void SetHighlight(bool DoHighlight);
+
+    UFUNCTION(BlueprintCallable) bool IsEmpty();
+    UFUNCTION(BlueprintCallable) int GetItemCount();
+    UFUNCTION(BlueprintCallable) UTexture* GetIcon();
 
     // Drag'n'drop
 
+    void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
     void NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
     void NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
     bool NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
@@ -36,17 +33,13 @@ public:
     // Splitting and merging
 
     FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+    void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+    void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
 
-    bool CanMergeWith(UInventorySlot* Other) const;
-    void MoveItemsHereFromSlot(UInventorySlot* Other);
-    void Split();
-    void SetEmpty();
+    UPROPERTY() class UInventory* Inventory;
+    UPROPERTY() int SlotIndex = 0;
 
-    class UInventoryWidget* Inventory; // ???? TODO: Make sure this gets memory managed correctly
+    UPROPERTY(EditAnywhere) TSubclassOf<UDraggedInventorySlot> DraggedInventorySlotWidgetClass;
 
 protected:
-
-    UPROPERTY(EditAnywhere) FItemStruct Item;
-    UPROPERTY(EditAnywhere) int ItemCount;
-    UPROPERTY(EditAnywhere) bool RemoveWhenEmpty = false;
 };
