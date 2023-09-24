@@ -21,12 +21,13 @@
 #include "PrimitiveGameMode.h"
 #include "Runtime/Engine/Public/EngineUtils.h"
 #include "Runtime/Foliage/Public/InstancedFoliageActor.h"
+#include "Kismet/GameplayStatics.h"
 
-#include <D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelTools/Gen/VoxelSphereTools.h>
-#include "D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelWorldInterface.h"
-#include <D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelWorld.h>
-#include "D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelTools/Gen/VoxelToolsBase.h"
-#include <D:/EpicGames/UE_5.2/Engine/Plugins/Marketplace/VoxelFree/Source/Voxel/Public/VoxelTools/VoxelDataTools.h>
+#include <Voxel/Public/VoxelTools/Gen/VoxelSphereTools.h>
+#include <Voxel/Public/VoxelWorldInterface.h>
+#include <Voxel/Public/VoxelWorld.h>
+#include <Voxel/Public/VoxelTools/Gen/VoxelToolsBase.h>
+#include <Voxel/Public/VoxelTools/VoxelDataTools.h>
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -138,13 +139,24 @@ void APrimitiveCharacter::BeginPlay()
 	GenerateFoilage();
 
 	// Some validity checking
+	if (!SunLight)
+	{
+		TArray<AActor*> FoundActors;
+		UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADirectionalLight::StaticClass(), FoundActors);
+		if (FoundActors.Num() > 0)
+		{
+			SunLight = FoundActors[0];
+			UE_LOG(LogTemp, Warning, TEXT("Surrogate SunLight actor found as the first ADirectionalLight in the level"));
+		}
+	}
+
 	if (SunLight)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("SunLight actor found"));
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("SunLight actor NOT found"));
+		UE_LOG(LogTemp, Error, TEXT("SunLight actor NOT found"));		
 	}
 
 
