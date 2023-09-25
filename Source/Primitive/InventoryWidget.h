@@ -33,7 +33,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) TSoftObjectPtr<UTexture> EmptySlotIcon;
 
 	//UInventorySlot* AddToNewSlot(const FItemStruct& inItem, int inItemCount);
-	UInventorySlot* AddToNewSlot(const FItemSlot& inSlot);
+	UInventorySlot* AddNewSlot();
 	void RemoveSlot(int Index);
 	void DropItemsFromSlot(UInventorySlot* inSlot, int inCount);
 

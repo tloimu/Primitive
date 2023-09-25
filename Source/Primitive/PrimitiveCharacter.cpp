@@ -13,6 +13,7 @@
 #include "Blueprint/UserWidget.h"
 #include "InventoryComponent.h"
 #include "GameSettings.h"
+#include "ItemDatabase.h"
 #include "InstancedFoliageActor.h"
 #include <Runtime/Engine/Classes/Kismet/KismetSystemLibrary.h>
 #include <Runtime/JsonUtilities/Public/JsonObjectConverter.h>
@@ -97,8 +98,7 @@ APrimitiveCharacter::APrimitiveCharacter(): DoGenerateFoliage(true), ClockInSecs
 
 	WorldGeneratorClass = nullptr;
 
-	Inventory = NewObject<UInventory>();
-	Inventory->Player = this;
+	Inventory = nullptr;
 
 //	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 }
@@ -107,6 +107,9 @@ void APrimitiveCharacter::BeginPlay()
 {
 	// Call the base class  
 	Super::BeginPlay();
+
+	Inventory = NewObject<UInventory>();
+	Inventory->Player = this;
 
 	//Add Input Mapping Context
 	auto pc = GetController<APlayerController>();
@@ -120,10 +123,15 @@ void APrimitiveCharacter::BeginPlay()
 		if (IsLocallyControlled() && InventoryWidgetClass)
 		{
 			InventoryWidget = CreateWidget<UInventoryWidget>(pc, InventoryWidgetClass);
+			UE_LOG(LogTemp, Warning, TEXT("BeginPlay: CreateInventoryWidget"));
 			check(InventoryWidget);
+			UE_LOG(LogTemp, Warning, TEXT("BeginPlay: CreateInventoryWidget OK"));
 			InventoryWidget->Inventory = Inventory;
+			UE_LOG(LogTemp, Warning, TEXT("BeginPlay: Inventory 1"));
 			Inventory->InventoryListener = InventoryWidget;
+			UE_LOG(LogTemp, Warning, TEXT("BeginPlay: Inventory 2"));
 			Inventory->SetMaxSlots(30);
+			UE_LOG(LogTemp, Warning, TEXT("BeginPlay: Inventory OK"));
 
 			HUDWidget = CreateWidget<UHUDWidget>(pc, HUDWidgetClass);
 			check(HUDWidget);
@@ -224,46 +232,20 @@ APrimitiveCharacter::EnsureNotUnderGround()
 void
 APrimitiveCharacter::ReadConfigFiles()
 {
-    const FString JsonFilePath = FPaths::ProjectContentDir() + "ConfigFiles/game.json";
-	UE_LOG(LogTemp, Warning, TEXT("ReadConfigFiles: %s"), *JsonFilePath);
-
-	if (!FPlatformFileManager::Get().GetPlatformFile().FileExists(*JsonFilePath))
+	if (ItemDb)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("DID NOT FIND FILE"));
-		return;
-	}
-
-	FString JsonString;
-	FFileHelper::LoadFileToString(JsonString, *JsonFilePath);
-
-	UE_LOG(LogTemp, Warning, TEXT("ConfigFiles/game.json %s"), *JsonString);
-
-    TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
-    TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(JsonString);
-
-    if (FJsonSerializer::Deserialize(JsonReader, JsonObject) && JsonObject.IsValid())
-    {
-
-        FGameSettings gameSettings;
-        FJsonObjectConverter::JsonObjectStringToUStruct<FGameSettings>(JsonString, &gameSettings, 0, 0);
-		UE_LOG(LogTemp, Warning, TEXT("Game Settings Name= %s"), *gameSettings.name);
-		for (auto item: gameSettings.items)
+		for (auto& item : ItemDb->Items)
 		{
-			if (item.className.IsEmpty())
-				item.className = "/Script/Engine.Blueprint'" + gameSettings.itemsPath + "/" + gameSettings.classNamePrefix + item.id + "." + gameSettings.classNamePrefix + item.id + "_C'";
-			if (item.icon.IsEmpty())
-				item.icon = "/Script/Engine.Blueprint'" + gameSettings.itemsPath + "/" + gameSettings.iconNamePrefix + item.id + "." + gameSettings.iconNamePrefix + item.id + "_C'";
-			UE_LOG(LogTemp, Warning, TEXT("Game Settings Id= %s, Class= %s, Icon= %s"), *item.id, *item.className, *item.icon);
-			UpdateItemSettingsClass(item);
-			ItemSettings.Add(item.id, item);
+			item.Icon.LoadSynchronous();
+			UE_LOG(LogTemp, Warning, TEXT("ItemDb: %s %s %s"), *item.Id, *item.Icon.GetAssetName(), *item.ItemClass->GetClass()->GetName());
 		}
-    }
-    else
-    {
-		UE_LOG(LogTemp, Error, TEXT("Invalid JSON at game settings file %s"), *JsonString);
-    }
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("No Item Database found"));
+	}
 }
-
+/*
 void
 APrimitiveCharacter::UpdateItemSettingsClass(FItemSettings& item)
 {
@@ -277,8 +259,11 @@ APrimitiveCharacter::UpdateItemSettingsClass(FItemSettings& item)
 	}
 
 	item.ItemClass = LoadedBpAsset;
-}
 
+	item.Icon = item.iconName;
+	item.Icon.LoadSynchronous();
+}
+*/
 /*
 // First we need a reference to the BP at all - yes, hardcoded asset paths are not a nice thing,
 // but it has to come from somewhere....
@@ -329,6 +314,31 @@ APrimitiveCharacter::ReadGameSave()
 			UE_LOG(LogTemp, Warning, TEXT("Game Settings Id= %s, x= %f, y= %f, z=%f"), *item.id, item.location[0], item.location[1], item.location[2]);
 			SpawnItem(item);
 		}
+		if (Inventory)
+		{
+			for (const auto& player : game.players)
+			{
+				if (player.name.Equals("one"))
+				{
+					for (const auto& savedSlot : player.slots)
+					{
+						auto& slot = Inventory->GetSlotAt(savedSlot.slot);
+						SetSavedInventorySlot(savedSlot, slot);
+					}
+					for (const auto& savedSlot : player.wear)
+					{
+						if (savedSlot.on == TEXT("back"))
+						{
+							// SetSavedInventorySlot(savedSlot, Inventory->Back);
+						}
+						else if (savedSlot.on == TEXT("head"))
+						{
+							// SetSavedInventorySlot(savedSlot, Inventory->Head);
+						}
+					}
+				}
+			}
+		}
 	}
 	else
 	{
@@ -336,7 +346,8 @@ APrimitiveCharacter::ReadGameSave()
 	}
 }
 
-void APrimitiveCharacter::SpawnItem(const FSavedItem& item)
+void
+APrimitiveCharacter::SpawnItem(const FSavedItem& item)
 {
 	auto WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
 	FVector location;
@@ -363,20 +374,53 @@ void APrimitiveCharacter::SpawnItem(const FSavedItem& item)
 	FActorSpawnParameters SpawnInfo;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;//  AlwaysSpawn;
 
-	auto itemSetting = ItemSettings.Find(item.id);
-	if (itemSetting)
+	auto itemInfo = FindItem(item.id);
+	if (itemInfo)
 	{
-		if (itemSetting->ItemClass->IsValidLowLevel())
-			auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(itemSetting->ItemClass, location, rotation, SpawnInfo);
+		if (itemInfo->ItemClass->IsValidLowLevel())
+			auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(itemInfo->ItemClass, location, rotation, SpawnInfo);
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("Cannot find item class %s"), *itemSetting->className);
+			UE_LOG(LogTemp, Error, TEXT("Cannot find item class %s"), *itemInfo->ItemClass->GetName());
 		}
 	}
 }
 
+FItemStruct*
+APrimitiveCharacter::FindItem(const FString& Id) const
+{
+	for (auto& item : ItemDb->Items)
+	{
+		if (item.Id == Id)
+			return &item;
+	}
+	return nullptr;
+}
 
-void APrimitiveCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void
+APrimitiveCharacter::SetSavedInventorySlot(const FSavedInventorySlot& saved, FItemSlot &slot)
+{
+	//auto itemSetting = ItemSettings.Find(saved.id);
+	auto itemSetting = FindItem(saved.id);
+	if (itemSetting && itemSetting->ItemClass->IsValidLowLevel())
+	{
+		slot.Item.Id = itemSetting->Id;
+		slot.Item.ItemClass = itemSetting->ItemClass;
+		slot.Item.Icon = itemSetting->Icon;
+		slot.Item.MaxStackSize = itemSetting->MaxStackSize;
+		slot.Item.MaxHealth = itemSetting->MaxHealth;
+		slot.Item.Weight = itemSetting->Weight;
+		// UE_LOG(LogTemp, Warning, TEXT("Saved slot item icon %s"), *itemSetting->iconName);
+		// slot.Item.CanWearIn = itemSetting->CanWearIn;
+		// slot.Item.Health = saved.health ? saved.health : 1.0f;
+		slot.Count = saved.count;
+		if (Inventory->InventoryListener)
+			Inventory->InventoryListener->SlotChanged(saved.slot, slot);
+	}
+}
+
+void
+APrimitiveCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	if (InventoryWidget)
 	{
@@ -750,8 +794,8 @@ void APrimitiveCharacter::Pick(const FInputActionValue& Value)
 		{
 			auto const& item = CurrentInteractable->GetItem();
 			UE_LOG(LogTemp, Warning, TEXT("Adding item to inventory %s"), *item.Name);
-			item.Icon.LoadSynchronous(); // Force resolve lazy loading - not sure if this is the best way but seems to make it work. Maybe check icon.IsPending() to see the need to load
-			if (Inventory->AddItem(item))// InventoryWidget->AddItem(item))
+			//item.Icon.LoadSynchronous(); // Force resolve lazy loading - not sure if this is the best way but seems to make it work. Maybe check icon.IsPending() to see the need to load
+			if (Inventory->AddItem(item))
 			{
 				auto actor = CurrentInteractable;
 				SetCurrentTarget(nullptr);

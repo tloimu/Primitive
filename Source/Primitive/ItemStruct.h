@@ -25,11 +25,11 @@ enum class BodyPart : uint8
 
 
 USTRUCT(BlueprintType)
-struct FItemStruct : public FTableRowBase
+struct FItemStruct// : public FTableRowBase
 {
     GENERATED_BODY()
 
-    FItemStruct() : Weight(0.0f), Quality(1.0f), MaxStackSize(1), MaxHealth(1), Health(1) {}
+    FItemStruct() : Weight(0.0f), Quality(1.0f), MaxStackSize(1), MaxHealth(1), Health(1), ContainedSlots(0) {}
 
     bool operator== (const FItemStruct rhs) const
     {
@@ -40,14 +40,15 @@ struct FItemStruct : public FTableRowBase
         else return false;
     }
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (TitleProperty = "Id")) FString Id;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (TitleProperty = "Name")) FString Name;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (TitleProperty = "Weight")) float Weight;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) FString Id;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) FString Name;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) float Weight;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) float Quality;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSet<BodyPart> CanWearIn;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) int MaxStackSize;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) int MaxHealth;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) int Health;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) int ContainedSlots;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSubclassOf<class AInteractableActor> ItemClass;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSoftObjectPtr<UTexture> Icon;

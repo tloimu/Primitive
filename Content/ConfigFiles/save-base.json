@@ -1,5 +1,36 @@
 {
     "name": "Default",
+    "players":
+    [
+        {
+            "name": "one",
+            "slots":
+            [
+                {
+                    "slot": 0,
+                    "id": "ShortStick",
+                    "count": 30
+                },
+                {
+                    "slot": 1,
+                    "id": "LongStick",
+                    "count": 30
+                },
+                {
+                    "slot": 2,
+                    "id": "SmallRock",
+                    "count": 30
+                }
+            ],
+            "wear":
+            [
+                {
+                    "id": "BackPack",
+                    "on": "back"
+                }
+            ]
+        }
+    ],
     "items":
     [
         {

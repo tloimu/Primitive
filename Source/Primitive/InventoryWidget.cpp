@@ -14,11 +14,9 @@ UInventoryWidget::UInventoryWidget(const FObjectInitializer& ObjectInitializer):
 void
 UInventoryWidget::SlotChanged(int Index, const FItemSlot& inSlot)
 {
-	while (Index > Slots.Num())
+	while (Index >= Slots.Num())
 	{
-		FItemSlot empty;
-		empty.Index = Slots.Num();
-		AddToNewSlot(empty);
+		AddNewSlot();
 	}
 
 	auto SlotUI = Slots[Index];
@@ -32,9 +30,7 @@ UInventoryWidget::MaxSlotsChanged(int inMaxSlots)
 {
 	while (inMaxSlots > Slots.Num())
 	{
-		FItemSlot empty;
-		empty.Index = Slots.Num();
-		AddToNewSlot(empty);
+		AddNewSlot();
 	}
 
 	while (inMaxSlots < Slots.Num())
@@ -51,15 +47,16 @@ UInventoryWidget::SlotRemoved(int Index)
 
 
 UInventorySlot*
-UInventoryWidget::AddToNewSlot(const FItemSlot& inSlot)
+UInventoryWidget::AddNewSlot()
 {
 	auto slot = CreateWidget<UInventorySlot>(this, InventorySlotClass);
 	if (slot)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Add to new slot: %s"), *inSlot.Item.Icon.GetAssetName());
+		FItemSlot empty;
+		empty.Index = Slots.Num();
 		slot->Inventory = Inventory;
-		slot->SlotIndex = inSlot.Index;
-		slot->SlotSet(inSlot);
+		slot->SlotIndex = empty.Index;
+		slot->SlotSet(empty);
 		Slots.Add(slot);
 		InventorySlotAdded(slot);
 		return slot;

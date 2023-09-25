@@ -4,18 +4,7 @@
 #include "ItemDatabase.h"
 #include "ItemStruct.h"
 
-UItemDatabase::UItemDatabase(const FObjectInitializer& Init)
+UItemDatabase::UItemDatabase(const FObjectInitializer& Init): UDataAsset(Init)
 {
-	InitItemData();
 }
 
-
-void
-UItemDatabase::InitItemData()
-{
-	FItemStruct longStick;
-	longStick.Id = TEXT("LongStick");
-	longStick.Name = TEXT("Long Stick");
-	//longStick.ItemClass = TEXT("/Game/ThirdPerson/Items/Item_LongStick");
-	AddRow(TEXT("LongStick"), longStick);
-}

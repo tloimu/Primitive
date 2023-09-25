@@ -3,18 +3,6 @@
 #include "CoreMinimal.h"
 #include "GameSettings.generated.h"
 
-
-USTRUCT(BlueprintType)
-struct FItemSettings
-{
-    GENERATED_BODY()
-
-    UPROPERTY() FString id;
-    UPROPERTY() FString className;
-    UPROPERTY() FString icon;
-    UPROPERTY() TSubclassOf<class AInteractableActor> ItemClass;
-};
-
 USTRUCT(BlueprintType)
 struct FGameSettings
 {
@@ -24,8 +12,6 @@ struct FGameSettings
     UPROPERTY() FString itemsPath;
     UPROPERTY() FString classNamePrefix;
     UPROPERTY() FString iconNamePrefix;
-
-    UPROPERTY() TArray<FItemSettings> items;
 };
 
 USTRUCT(BlueprintType)
@@ -39,10 +25,42 @@ struct FSavedItem
 };
 
 USTRUCT(BlueprintType)
+struct FSavedInventorySlot
+{
+    GENERATED_BODY()
+
+    UPROPERTY() int slot;
+    UPROPERTY() FString id;
+    UPROPERTY() int count;
+    UPROPERTY() float health;
+};
+
+USTRUCT(BlueprintType)
+struct FSavedWearables
+{
+    GENERATED_BODY()
+
+    UPROPERTY() FString id;
+    UPROPERTY() FString on;
+    UPROPERTY() float health;
+};
+
+USTRUCT(BlueprintType)
+struct FSavedPlayer
+{
+    GENERATED_BODY()
+
+    UPROPERTY() FString name;
+    UPROPERTY() TArray<FSavedInventorySlot> slots;
+    UPROPERTY() TArray<FSavedWearables> wear;
+};
+
+USTRUCT(BlueprintType)
 struct FGameSave
 {
     GENERATED_BODY()
 
     UPROPERTY() FString name;
     UPROPERTY() TArray<FSavedItem> items;
+    UPROPERTY() TArray<FSavedPlayer> players;
 };

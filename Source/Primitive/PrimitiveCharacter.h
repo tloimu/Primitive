@@ -151,11 +151,13 @@ protected:
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	void ReadConfigFiles();
-	void UpdateItemSettingsClass(FItemSettings& item);
+	FItemStruct* FindItem(const FString& Id) const;
+	//void UpdateItemSettingsClass(FItemSettings& item);
 	void ReadGameSave();
 	void SpawnItem(const FSavedItem& item);
+	void SetSavedInventorySlot(const FSavedInventorySlot& saved, FItemSlot& slot);
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) TMap<FString, FItemSettings> ItemSettings;
+	//UPROPERTY(EditAnywhere, BlueprintReadOnly) TMap<FString, FItemSettings> ItemSettings;
 
 	void Tick(float DeltaSeconds) override;
 
@@ -187,6 +189,8 @@ protected:
 
 	UPROPERTY(EditAnywhere) TSubclassOf<UHUDWidget> HUDWidgetClass;
 	UPROPERTY() UHUDWidget* HUDWidget;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) class UItemDatabase* ItemDb;
 
 	// Setting up the Map
 
