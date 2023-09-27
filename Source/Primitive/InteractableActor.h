@@ -22,9 +22,5 @@ public:
 
     UFUNCTION(BlueprintCallable) FItemStruct GetItem() const { return Item; }
 
-protected:
-
     UPROPERTY(EditAnywhere) FItemStruct Item;
-
-    //UPROPERTY(EditAnywhere) UItemSpecs* ItemSpecs;
 };

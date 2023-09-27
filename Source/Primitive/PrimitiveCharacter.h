@@ -11,6 +11,7 @@
 #include "HUDWidget.h"
 #include "GameSettings.h"
 #include "Inventory.h"
+#include "FoliageResource.h"
 #include "PrimitiveCharacter.generated.h"
 
 struct ContainedMaterial
@@ -141,6 +142,9 @@ protected:
 	uint8 CurrentZoomLevel;
 
 	TArray<ContainedMaterial> CollectMaterialsFrom(const FVector& Location);
+	void HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, UFoliageResource& inFoliageComponent, int32 inInstanceId);
+	void EquipItem(UInventorySlot& FromSlot, UInventorySlot &ToSlot);
+	void UnequipItem(UInventorySlot& FromSlot, UInventorySlot& ToSlot);
 
 protected:
 	// APawn interface
@@ -151,7 +155,7 @@ protected:
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	void ReadConfigFiles();
-	FItemStruct* FindItem(const FString& Id) const;
+	const FItemStruct* FindItem(const FString& Id) const;
 	//void UpdateItemSettingsClass(FItemSettings& item);
 	void ReadGameSave();
 	void SpawnItem(const FSavedItem& item);

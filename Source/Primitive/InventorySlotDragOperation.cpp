@@ -1,8 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "InventorySlot.h"
 #include "InventorySlotDragOperation.h"
+#include "InventorySlot.h"
 
 void
 UDraggedInventorySlot::SetInventorySlot(UInventorySlot* inSlot)
@@ -12,8 +12,10 @@ UDraggedInventorySlot::SetInventorySlot(UInventorySlot* inSlot)
 		FromSlot = inSlot;
 		auto& slot = inSlot->Inventory->GetSlotAt(inSlot->SlotIndex);
 
-		if (slot.Count > 0)
+		if (slot.Item.MaxStackSize > 1 && slot.Count > 0)
 			SizeText = FString::Format(TEXT("{0}"), { slot.Count });
+		else
+			SizeText.Empty();
 
 		Icon = slot.Item.Icon;
 

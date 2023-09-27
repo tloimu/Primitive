@@ -103,6 +103,17 @@ public:
 	const float TemperatureVariation, PolarTemperature, EquatorTemperature, TemperatureVariationFreq, TemperatureHeightCoeff;
 	const float MoistureVariation, PolarMoisture, EquatorMoisture, MoistureVariationFreq;
 	const int32 Seed;
+
+	// Foliage Component IDs - below are defaults, but eventually these are determined dynamically based on component name
+	// ???? TODO: Make more parametric and configurable
+	int32 ID_None = -1;
+	int32 ID_Grass1 = 0;
+	int32 ID_Grass2 = 1;
+	int32 ID_Rock1 = 2;
+	int32 ID_Tree1 = 3; // Mid-sized tree
+	int32 ID_Tree2 = 4; // Big tree
+	int32 ID_Tree3 = 5; // Small tree
+
 private:
 	FVoxelFastNoise Noise, WaterNoise, TemperatureNoise, MoistureNoise;
 };

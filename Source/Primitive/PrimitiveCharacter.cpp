@@ -386,15 +386,13 @@ APrimitiveCharacter::SpawnItem(const FSavedItem& item)
 	}
 }
 
-FItemStruct*
+const FItemStruct*
 APrimitiveCharacter::FindItem(const FString& Id) const
 {
-	for (auto& item : ItemDb->Items)
-	{
-		if (item.Id == Id)
-			return &item;
-	}
-	return nullptr;
+	if (ItemDb)
+		return ItemDb->FindItem(Id);
+	else
+		return nullptr;
 }
 
 void
@@ -410,9 +408,6 @@ APrimitiveCharacter::SetSavedInventorySlot(const FSavedInventorySlot& saved, FIt
 		slot.Item.MaxStackSize = itemSetting->MaxStackSize;
 		slot.Item.MaxHealth = itemSetting->MaxHealth;
 		slot.Item.Weight = itemSetting->Weight;
-		// UE_LOG(LogTemp, Warning, TEXT("Saved slot item icon %s"), *itemSetting->iconName);
-		// slot.Item.CanWearIn = itemSetting->CanWearIn;
-		// slot.Item.Health = saved.health ? saved.health : 1.0f;
 		slot.Count = saved.count;
 		if (Inventory->InventoryListener)
 			Inventory->InventoryListener->SlotChanged(saved.slot, slot);
@@ -517,34 +512,6 @@ APrimitiveCharacter::CheckSunlight(float DeltaSeconds)
 		{
 		}
 	}
-}
-
-TArray<ContainedMaterial>
-APrimitiveCharacter::CollectMaterialsFrom(const FVector& Location)
-{
-	TArray<ContainedMaterial> collected;
-	auto pos = TargetVoxelWorld->GlobalToLocal(Location);
-
-	// UE_LOG(LogTemp, Warning, TEXT("Collecting Voxel at [%d, %d, %d]"), pos.X, pos.Y, pos.Z);
-
-	auto& data = TargetVoxelWorld->GetData();
-	TArray<FVoxelValueMaterial> voxels;
-	TArray<FIntVector> poses;
-	poses.Push(pos);
-	UVoxelDataTools::GetVoxelsValueAndMaterial(voxels, TargetVoxelWorld, poses);
-	for (auto& v : voxels)
-	{
-		auto& m = v.Material;
-		if (v.Value >= 0.0f)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Collected Voxel value=%f, material={i0=%d, i1=%d, i2=%d, w=%d, b0=%d, b1=%d, b2=%d}, [%d, %d, %d]"), v.Value, m.GetMultiIndex_Index0(), m.GetMultiIndex_Index1(), m.GetMultiIndex_Index2(), m.GetMultiIndex_Blend0(), m.GetMultiIndex_Blend1(), m.GetMultiIndex_Blend2(), m.GetMultiIndex_Wetness(), pos.X, pos.Y, pos.Z);
-		}
-	}
-
-	TArray<FModifiedVoxelValue> modified;
-	UVoxelSphereTools::RemoveSphere(TargetVoxelWorld, Location, 50.0f, &modified);
-
-	return collected;
 }
 
 
@@ -838,17 +805,18 @@ void APrimitiveCharacter::Hit(const FInputActionValue& Value)
 	}
 	else if (CurrentTarget && CurrentTargetComponent && CurrentTargetInstanceId != -1)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Interact %s instance %ld"), *CurrentTargetComponent->GetName(), CurrentTargetInstanceId);
+		UE_LOG(LogTemp, Warning, TEXT("Hit %s instance %ld"), *CurrentTargetComponent->GetName(), CurrentTargetInstanceId);
 		auto fa = Cast<AInstancedFoliageActor>(CurrentTarget);
-		// fa->SelectInstance(CurrentTargetComponent, CurrentTargetInstanceId, true);
-		CurrentTargetComponent->RemoveInstance(CurrentTargetInstanceId);
-		CurrentTargetInstanceId = -1;
-		CurrentTargetComponent = nullptr;
-		CurrentTarget = nullptr;
+		auto co = Cast<UFoliageResource>(CurrentTargetComponent);
+		if (fa && co)
+		{
+			HitFoliageInstance(*fa, *co, CurrentTargetInstanceId);
+		}
 	}
 }
 
-void APrimitiveCharacter::Interact(const FInputActionValue& Value)
+void
+APrimitiveCharacter::Interact(const FInputActionValue& Value)
 {
 	if (CurrentInteractable)
 	{
@@ -934,7 +902,61 @@ void APrimitiveCharacter::Transfer(const FInputActionValue& Value)
 	// ???? TODO:
 }
 
-void APrimitiveCharacter::CreateDroppedItem(const FItemStruct& Item)
+void
+APrimitiveCharacter::HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, UFoliageResource& inFoliageComponent, int32 inInstanceId)
+{
+	auto atrans = GetActorTransform();
+	auto aloc = atrans.GetLocation();
+
+	UE_LOG(LogTemp, Warning, TEXT("Hit %s foliage instance %ld"), *inFoliageComponent.GetName(), inInstanceId);
+
+	FTransform trans;
+	if (inFoliageComponent.GetInstanceTransform(inInstanceId, trans, true))
+	{
+		// ???? TODO: Perhaps move up a bit to avoid things going underground?
+		for (auto& part : inFoliageComponent.BreaksIntoItems)
+		{
+			auto item = FindItem(part.ItemId);
+			if (item)
+			{
+				for (int i = 0; i < part.Count; i++)
+				{
+					FActorSpawnParameters SpawnInfo;
+					SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;// AdjustIfPossibleButAlwaysSpawn;
+
+					trans.AddToTranslation(FVector(20.0f, 20.f, 20.0f));
+					auto loc = trans.GetLocation();
+					UE_LOG(LogTemp, Warning, TEXT("  - break foliage into %s at (%f, %f, %f)"), *item->ItemClass->GetName(), loc.X, loc.Y, loc.Z);
+					auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(item->ItemClass, trans, SpawnInfo);
+					itemActor->Item = *item;
+					itemActor->Item.Quality = part.Quality;
+				}
+			}
+		}
+	}
+
+	inFoliageComponent.RemoveInstance(inInstanceId);
+	CurrentTargetInstanceId = -1;
+	CurrentTargetComponent = nullptr;
+	CurrentTarget = nullptr;
+}
+
+void
+APrimitiveCharacter::EquipItem(UInventorySlot& FromSlot, UInventorySlot& ToSlot)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Equip from slot % to slot %d"), FromSlot.SlotIndex, ToSlot.SlotIndex);
+	// ???? TODO:
+}
+
+void
+APrimitiveCharacter::UnequipItem(UInventorySlot& FromSlot, UInventorySlot& ToSlot)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Uneqip from slot % to slot %d"), FromSlot.SlotIndex, ToSlot.SlotIndex);
+	// ???? TODO:
+}
+
+void
+APrimitiveCharacter::CreateDroppedItem(const FItemStruct& Item)
 {
 	FVector start = GetActorLocation();
 	FVector end = start + FollowCamera->GetForwardVector().GetSafeNormal() * 50.0f;
@@ -943,4 +965,32 @@ void APrimitiveCharacter::CreateDroppedItem(const FItemStruct& Item)
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(Item.ItemClass, end, rotation, SpawnInfo);
+}
+
+TArray<ContainedMaterial>
+APrimitiveCharacter::CollectMaterialsFrom(const FVector& Location)
+{
+	TArray<ContainedMaterial> collected;
+	auto pos = TargetVoxelWorld->GlobalToLocal(Location);
+
+	// UE_LOG(LogTemp, Warning, TEXT("Collecting Voxel at [%d, %d, %d]"), pos.X, pos.Y, pos.Z);
+
+	auto& data = TargetVoxelWorld->GetData();
+	TArray<FVoxelValueMaterial> voxels;
+	TArray<FIntVector> poses;
+	poses.Push(pos);
+	UVoxelDataTools::GetVoxelsValueAndMaterial(voxels, TargetVoxelWorld, poses);
+	for (auto& v : voxels)
+	{
+		auto& m = v.Material;
+		if (v.Value >= 0.0f)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Collected Voxel value=%f, material={i0=%d, i1=%d, i2=%d, w=%d, b0=%d, b1=%d, b2=%d}, [%d, %d, %d]"), v.Value, m.GetMultiIndex_Index0(), m.GetMultiIndex_Index1(), m.GetMultiIndex_Index2(), m.GetMultiIndex_Blend0(), m.GetMultiIndex_Blend1(), m.GetMultiIndex_Blend2(), m.GetMultiIndex_Wetness(), pos.X, pos.Y, pos.Z);
+		}
+	}
+
+	TArray<FModifiedVoxelValue> modified;
+	UVoxelSphereTools::RemoveSphere(TargetVoxelWorld, Location, 50.0f, &modified);
+
+	return collected;
 }

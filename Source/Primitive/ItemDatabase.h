@@ -18,5 +18,7 @@ class PRIMITIVE_API UItemDatabase : public UDataAsset
 public:
 	UItemDatabase(const FObjectInitializer& Init);
 
+	const FItemStruct* FindItem(const FString& Id) const;
+
 	UPROPERTY(EditAnywhere) TArray<FItemStruct> Items;
 };

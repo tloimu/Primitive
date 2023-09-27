@@ -134,14 +134,6 @@ FWorldGenOneInstance::GetLatitude(v_flt Y) const
 	return 2 * (abs(Y) / WorldSize);
 }
 
-const int32 ID_None = -1;
-const int32 ID_Grass1 = 0;
-const int32 ID_Grass2 = 1;
-const int32 ID_Rock1 = 2;
-const int32 ID_Tree1 = 3; // Mid-sized tree
-const int32 ID_Tree2 = 4; // Big tree
-const int32 ID_Tree3 = 5; // Small tree
-
 float
 FWorldGenOneInstance::GetNearLowestTerrainHeight(v_flt X, v_flt Y) const
 {
@@ -379,12 +371,32 @@ FWorldGenOneInstance::GenerateFoilage(AInstancedFoliageActor& foliageActor)
 		meshComponent = components[0];
 	}
 
+	int ci = 0;
 	for (auto& c : components)
 	{
 		auto cs = c->InstanceStartCullDistance;
 		auto ce = c->InstanceEndCullDistance;
-		UE_LOG(LogTemp, Warning, TEXT("Component: %s, cull %d .. %d"), *c->GetName(), cs, ce);
+		UE_LOG(LogTemp, Warning, TEXT("Component %d: %s, cull %d .. %d"), ci, *c->GetName(), cs, ce);
+		// ???? TODO: Make foliage component ID discovery smarter and more configurable
+		auto name = c->GetName();
+		if (name.Contains("Rock"))
+			ID_Rock1 = ci;
+		else if (name.Contains("Tree1"))
+			ID_Tree1 = ci;
+		else if (name.Contains("Tree2"))
+			ID_Tree2 = ci;
+		else if (name.Contains("Tree3"))
+			ID_Tree3 = ci;
+		else if (name.Contains("Grass1"))
+			ID_Grass1 = ci;
+		else if (name.Contains("Grass2"))
+			ID_Grass2 = ci;
+		ci++;
 	}
+
+	UE_LOG(LogTemp, Warning,
+		TEXT("Foilage setup rock1=%d, tree1=%d, tree2=%d, tree3=%d, grass1=%d, grass2=%d"),
+		ID_Rock1, ID_Tree1, ID_Tree2, ID_Tree3, ID_Grass1, ID_Grass2);
 
 	auto setupMs = FDateTime::UtcNow().GetTicks();
 	UE_LOG(LogTemp, Warning, TEXT("Foilage setup time: %d, %d max instances"), timer.Check(), MaxFoliageInstances);
@@ -457,7 +469,7 @@ FWorldGenOneInstance::GenerateFoilage(AInstancedFoliageActor& foliageActor)
 
 	UE_LOG(LogTemp, Warning, TEXT("Foilage generation time: %d"), timer.Check());
 
-	int32 ci = 0;
+	ci = 0;
 	for (auto& c : components)
 	{
 		c->AddInstances(NewInstancesPerComponent[ci], false);

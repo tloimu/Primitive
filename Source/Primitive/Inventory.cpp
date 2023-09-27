@@ -25,7 +25,7 @@ UInventory::CanMergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot) const
 	}
 	else
 	{
-		if (ToSlot.Item.Id == FromSlot.Item.Id)
+		if (ToSlot.Item == FromSlot.Item)
 			return true;
 	}
 

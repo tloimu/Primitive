@@ -33,7 +33,6 @@ UInventorySlot::GetIcon()
 {
 	if (Inventory)
 	{
-		// Inventory->GetSlotAt(SlotIndex).Item.Icon.LoadSynchronous();
 		return Inventory->GetSlotAt(SlotIndex).Item.Icon.Get();
 	}
 	return 0;

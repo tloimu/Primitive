@@ -8,3 +8,13 @@ UItemDatabase::UItemDatabase(const FObjectInitializer& Init): UDataAsset(Init)
 {
 }
 
+const FItemStruct*
+UItemDatabase::FindItem(const FString& Id) const
+{
+	for (auto& item : Items)
+	{
+		if (item.Id == Id)
+			return &item;
+	}
+	return nullptr;
+}

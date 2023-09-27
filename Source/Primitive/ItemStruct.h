@@ -24,8 +24,32 @@ enum class BodyPart : uint8
 };
 
 
+UENUM(BlueprintType)
+enum class ToolUtility : uint8
+{
+    None = 0                    UMETA(DisplayName = "None"),
+    Cut = 1                     UMETA(DisplayName = "Cut"),
+    Dig = 2                     UMETA(DisplayName = "Dig"),
+    FarmSoftResource = 11       UMETA(DisplayName = "FarmSoftResource"),
+    FarmHardResource = 12       UMETA(DisplayName = "FarmHardResource"),
+    FarmVeryHardResource = 13   UMETA(DisplayName = "FarmVeryHardResource"),
+    ContainPowder = 20         UMETA(DisplayName = "ContainLiquid"),
+    ContainLiquid = 20          UMETA(DisplayName = "ContainLiquid")
+};
+
+UENUM(BlueprintType)
+enum class ItemForm : uint8
+{
+    None = 0       UMETA(DisplayName = "None"),
+    Long = 1       UMETA(DisplayName = "Long"), // Long itemst that do not fit into backpack, chest etc. e.g. logs or long beams
+    Powder = 2     UMETA(DisplayName = "Powder"), // Poweder form item e.g. sand or flour
+    Liquid = 3     UMETA(DisplayName = "Liquid"), // Liquid form item e.g. water, milk, honey, oil
+    Gas = 4        UMETA(DisplayName = "Gas") // Gas form item e.g. air, methane
+};
+
+
 USTRUCT(BlueprintType)
-struct FItemStruct// : public FTableRowBase
+struct FItemStruct
 {
     GENERATED_BODY()
 
@@ -44,13 +68,21 @@ struct FItemStruct// : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadWrite) FString Name;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) float Weight;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) float Quality;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) TSet<BodyPart> CanWearIn;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) int MaxStackSize;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) int MaxHealth;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) int Health;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) int ContainedSlots;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) TSet<ItemForm> RequiresStorageFor;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSubclassOf<class AInteractableActor> ItemClass;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSoftObjectPtr<UTexture> Icon;
 
+    // Instances
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) int Health;
+
+    // Tools and equipment
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) TSet<BodyPart> CanWearIn;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) TSet<ToolUtility> UsableFor;
+
+    // Containers
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) int ContainedSlots;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) TSet<ItemForm> SlotCapability;
 };
