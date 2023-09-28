@@ -11,8 +11,8 @@ struct FItemSlot
 {
 	GENERATED_BODY()
 
-	FItemSlot() : Count(0) {}
-	FItemSlot(const BodyPart MustWearIn) : Count(0), ShouldRemoveWhenEmpty(false) { CanOnlyWearIn.Add(MustWearIn); }
+	FItemSlot() {}
+	FItemSlot(const BodyPart MustWearIn) { CanOnlyWearIn.Add(MustWearIn); }
 
 	bool operator== (const FItemSlot rhs) const
 	{
@@ -25,17 +25,18 @@ struct FItemSlot
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int Index = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) FItemStruct Item;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) int Count;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) int Count = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) TSet<BodyPart> CanOnlyWearIn;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) bool ShouldRemoveWhenEmpty;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) bool ShouldRemoveWhenEmpty = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) UInventory* Inventory = nullptr;
 };
 
 class IInventoryListener
 {
 public:
-	virtual void SlotChanged(int Index, const FItemSlot& Slot) = 0;
-	virtual void MaxSlotsChanged(int MaxSlots) = 0;
-	virtual void SlotRemoved(int Index) = 0;
+	virtual void SlotChanged(const FItemSlot& Slot) = 0;
+	virtual void SlotRemoved(const FItemSlot& Slot) = 0;
+	virtual void MaxSlotsChanged(int MaxSlots) = 0; // Does this need to differentiate between different inventories?
 };
 
 
@@ -57,7 +58,7 @@ public:
 	UFUNCTION(BlueprintCallable) void MergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot, int count);
 	UFUNCTION(BlueprintCallable) void SplitSlot(int Index);
 
-	UFUNCTION(BlueprintCallable) FItemSlot& GetSlotAt(int Index) { return Slots[Index]; }
+	UFUNCTION(BlueprintCallable) virtual FItemSlot& GetSlotAt(int Index);
 
 	void DropItemsFromSlot(FItemSlot &inSlot, int inCount);
 	void DropItem(const FItemStruct& inItem);
@@ -69,26 +70,6 @@ public:
 	IInventoryListener *InventoryListener = nullptr;
 
 	UPROPERTY() class APrimitiveCharacter* Player = nullptr; // needed to create dropped item actors ???? REFACTOR
-};
 
-
-UCLASS(BlueprintType)
-class UCharacterInventory : public UInventory
-{
-	GENERATED_BODY()
-
-public:
-	UCharacterInventory();
-	UCharacterInventory(const FObjectInitializer& ObjectInitializer);
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) FItemSlot Head;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) FItemSlot Torso;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) FItemSlot Legs;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) FItemSlot Feet;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) FItemSlot Gloves;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) FItemSlot LeftHand;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) FItemSlot RightHand;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) FItemSlot Back;
+	FItemSlot NoneSlot;
 };

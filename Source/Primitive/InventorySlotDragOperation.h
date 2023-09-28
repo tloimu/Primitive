@@ -21,8 +21,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) class UInventorySlot* FromSlot = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) FString SizeText;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) TSoftObjectPtr<UTexture> Icon;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) FVector2D DragOffset;
 };
 
 

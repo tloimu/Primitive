@@ -2,19 +2,37 @@
 
 
 #include "ItemDatabase.h"
+#include "InteractableActor.h"
 #include "ItemStruct.h"
 
 UItemDatabase::UItemDatabase(const FObjectInitializer& Init): UDataAsset(Init)
 {
 }
 
+void
+UItemDatabase::SetupItems()
+{
+	for (auto& spec : ItemSpecs)
+	{
+		if (spec.ItemClass->IsValidLowLevel())
+		{
+			auto o = spec.ItemClass.GetDefaultObject();
+			o->Item.Id = spec.Id;
+			Items.Add(spec.Id, o->Item);
+		}
+	}
+
+	for (auto itemPair : Items)
+	{
+		auto &item = itemPair.Value;
+		item.Icon.LoadSynchronous();
+		UE_LOG(LogTemp, Warning, TEXT("ItemDb: %s %s %s"), *item.Id, *item.Icon.GetAssetName(), *item.ItemClass->GetClass()->GetName());
+	}
+}
+
+
 const FItemStruct*
 UItemDatabase::FindItem(const FString& Id) const
 {
-	for (auto& item : Items)
-	{
-		if (item.Id == Id)
-			return &item;
-	}
-	return nullptr;
+	return Items.Find(Id);
 }

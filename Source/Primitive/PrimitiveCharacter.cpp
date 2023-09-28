@@ -11,7 +11,6 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Blueprint/UserWidget.h"
-#include "InventoryComponent.h"
 #include "GameSettings.h"
 #include "ItemDatabase.h"
 #include "InstancedFoliageActor.h"
@@ -99,19 +98,18 @@ APrimitiveCharacter::APrimitiveCharacter(): DoGenerateFoliage(true), ClockInSecs
 	WorldGeneratorClass = nullptr;
 
 	Inventory = nullptr;
-
-//	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
+	EquippedItems = nullptr;
 }
 
 void APrimitiveCharacter::BeginPlay()
 {
-	// Call the base class  
 	Super::BeginPlay();
 
 	Inventory = NewObject<UInventory>();
 	Inventory->Player = this;
+	EquippedItems = NewObject<UInventory>();
+	EquippedItems->Player = this;
 
-	//Add Input Mapping Context
 	auto pc = GetController<APlayerController>();
 	if (pc)
 	{
@@ -120,22 +118,10 @@ void APrimitiveCharacter::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 
-		if (IsLocallyControlled() && InventoryWidgetClass)
+		if (IsLocallyControlled())
 		{
-			InventoryWidget = CreateWidget<UInventoryWidget>(pc, InventoryWidgetClass);
-			UE_LOG(LogTemp, Warning, TEXT("BeginPlay: CreateInventoryWidget"));
-			check(InventoryWidget);
-			UE_LOG(LogTemp, Warning, TEXT("BeginPlay: CreateInventoryWidget OK"));
-			InventoryWidget->Inventory = Inventory;
-			UE_LOG(LogTemp, Warning, TEXT("BeginPlay: Inventory 1"));
-			Inventory->InventoryListener = InventoryWidget;
-			UE_LOG(LogTemp, Warning, TEXT("BeginPlay: Inventory 2"));
-			Inventory->SetMaxSlots(30);
-			UE_LOG(LogTemp, Warning, TEXT("BeginPlay: Inventory OK"));
-
-			HUDWidget = CreateWidget<UHUDWidget>(pc, HUDWidgetClass);
-			check(HUDWidget);
-			HUDWidget->AddToPlayerScreen();
+			SetupInventoryUI(pc);
+			SetupHUD(pc);
 		}
 	}
 
@@ -146,6 +132,12 @@ void APrimitiveCharacter::BeginPlay()
 
 	GenerateFoilage();
 
+	CheckBeginPlay();
+}
+
+void
+APrimitiveCharacter::CheckBeginPlay()
+{
 	// Some validity checking
 	if (!SunLight)
 	{
@@ -164,11 +156,33 @@ void APrimitiveCharacter::BeginPlay()
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("SunLight actor NOT found"));		
+		UE_LOG(LogTemp, Error, TEXT("SunLight actor NOT found"));
 	}
-
-
 }
+
+void
+APrimitiveCharacter::SetupInventoryUI(APlayerController *pc)
+{
+	if (InventoryWidgetClass)
+	{
+		InventoryWidget = CreateWidget<UInventoryWidget>(pc, InventoryWidgetClass);
+		check(InventoryWidget);
+		InventoryWidget->Setup(Inventory, EquippedItems);
+		Inventory->SetMaxSlots(30);
+	}
+}
+
+void
+APrimitiveCharacter::SetupHUD(APlayerController* pc)
+{
+	if (HUDWidgetClass)
+	{
+		HUDWidget = CreateWidget<UHUDWidget>(pc, HUDWidgetClass);
+		check(HUDWidget);
+		HUDWidget->AddToPlayerScreen();
+	}
+}
+
 
 void
 APrimitiveCharacter::GenerateFoilage()
@@ -234,59 +248,13 @@ APrimitiveCharacter::ReadConfigFiles()
 {
 	if (ItemDb)
 	{
-		for (auto& item : ItemDb->Items)
-		{
-			item.Icon.LoadSynchronous();
-			UE_LOG(LogTemp, Warning, TEXT("ItemDb: %s %s %s"), *item.Id, *item.Icon.GetAssetName(), *item.ItemClass->GetClass()->GetName());
-		}
+		ItemDb->SetupItems();
 	}
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("No Item Database found"));
 	}
 }
-/*
-void
-APrimitiveCharacter::UpdateItemSettingsClass(FItemSettings& item)
-{
-	TSoftClassPtr<AActor> ActorBpClass = TSoftClassPtr<AActor>(FSoftObjectPath(item.className));
-	UClass* LoadedBpAsset = ActorBpClass.LoadSynchronous();
-	if (LoadedBpAsset)
-		LoadedBpAsset->AddToRoot();
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("Cannot find item asset %s"), *item.className);
-	}
-
-	item.ItemClass = LoadedBpAsset;
-
-	item.Icon = item.iconName;
-	item.Icon.LoadSynchronous();
-}
-*/
-/*
-// First we need a reference to the BP at all - yes, hardcoded asset paths are not a nice thing,
-// but it has to come from somewhere....
-
-// ....if your blueprint is in a plugin
-TSoftClassPtr<AActor> ActorBpClass = TSoftClassPtr<AActor>(FSoftObjectPath(TEXT("Blueprint'/PluginModuleName/Some/Path/BP_MyAwesomeActor.BP_MyAwesomeActor_C'")));
-
-// ....if your blueprint is in the normal project content
-TSoftClassPtr<AActor> ActorBpClass = TSoftClassPtr<AActor>(FSoftObjectPath(TEXT("Blueprint'/Game/Some/Path/BP_MyAwesomeActor.BP_MyAwesomeActor_C'")));
-
-// The actual loading
-UClass* LoadedBpAsset = ActorBpClass.LoadSynchronous();
-
-// (Optional, depends on how you continue using it)
-// Make sure GC doesn't steal it away from us, again
-LoadedBpAsset->AddToRoot();
-
-// From here on, it's business as usual, common actor spawning, just using the BP asset we loaded above
-FVector Loc = FVector::ZeroVector;
-FRotator Rot = FRotator::ZeroRotator;
-FActorSpawnParameters SpawnParams = FActorSpawnParameters();
-GetWorld()->SpawnActor(LoadedBpAsset, &Loc, &Rot, SpawnParams);
-*/
 
 void
 APrimitiveCharacter::ReadGameSave()
@@ -314,7 +282,7 @@ APrimitiveCharacter::ReadGameSave()
 			UE_LOG(LogTemp, Warning, TEXT("Game Settings Id= %s, x= %f, y= %f, z=%f"), *item.id, item.location[0], item.location[1], item.location[2]);
 			SpawnItem(item);
 		}
-		if (Inventory)
+		if (Inventory && EquippedItems)
 		{
 			for (const auto& player : game.players)
 			{
@@ -329,6 +297,25 @@ APrimitiveCharacter::ReadGameSave()
 					{
 						if (savedSlot.on == TEXT("back"))
 						{
+							if (EquippedItems)
+							{
+								for (auto &es : EquippedItems->Slots)
+								{
+									if (es.CanOnlyWearIn.Contains(BodyPart::Back))
+									{
+										auto itemSetting = FindItem(savedSlot.id);
+										if (itemSetting && itemSetting->ItemClass->IsValidLowLevel())
+										{
+											es.Item = *itemSetting;
+											es.Count = 1;
+											es.Inventory = EquippedItems;
+											if (EquippedItems->InventoryListener)
+												EquippedItems->InventoryListener->SlotChanged(es);
+										}
+										break;
+									}
+								}
+							}
 							// SetSavedInventorySlot(savedSlot, Inventory->Back);
 						}
 						else if (savedSlot.on == TEXT("head"))
@@ -398,7 +385,6 @@ APrimitiveCharacter::FindItem(const FString& Id) const
 void
 APrimitiveCharacter::SetSavedInventorySlot(const FSavedInventorySlot& saved, FItemSlot &slot)
 {
-	//auto itemSetting = ItemSettings.Find(saved.id);
 	auto itemSetting = FindItem(saved.id);
 	if (itemSetting && itemSetting->ItemClass->IsValidLowLevel())
 	{
@@ -409,8 +395,9 @@ APrimitiveCharacter::SetSavedInventorySlot(const FSavedInventorySlot& saved, FIt
 		slot.Item.MaxHealth = itemSetting->MaxHealth;
 		slot.Item.Weight = itemSetting->Weight;
 		slot.Count = saved.count;
+		slot.Inventory = Inventory;
 		if (Inventory->InventoryListener)
-			Inventory->InventoryListener->SlotChanged(saved.slot, slot);
+			Inventory->InventoryListener->SlotChanged(slot);
 	}
 }
 
@@ -924,7 +911,7 @@ APrimitiveCharacter::HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, 
 					FActorSpawnParameters SpawnInfo;
 					SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;// AdjustIfPossibleButAlwaysSpawn;
 
-					trans.AddToTranslation(FVector(20.0f, 20.f, 20.0f));
+					trans.AddToTranslation(FVector(20.0f, 20.f, 20.0f)); // Some staggering - ???? TODO: Replace with transformation in FoliageResource
 					auto loc = trans.GetLocation();
 					UE_LOG(LogTemp, Warning, TEXT("  - break foliage into %s at (%f, %f, %f)"), *item->ItemClass->GetName(), loc.X, loc.Y, loc.Z);
 					auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(item->ItemClass, trans, SpawnInfo);

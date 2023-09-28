@@ -12,6 +12,16 @@ UInventory::UInventory(const FObjectInitializer& ObjectInitializer): UObject(Obj
 {
 }
 
+FItemSlot&
+UInventory::GetSlotAt(int Index)
+{
+	if (Index >= 0 && Index < Slots.Num())
+		return Slots[Index];
+	else
+		return NoneSlot;
+}
+
+
 bool
 UInventory::CanMergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot) const
 {
@@ -20,7 +30,16 @@ UInventory::CanMergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot) const
 		if (ToSlot.CanOnlyWearIn.IsEmpty())
 			return true;
 
-		if (!ToSlot.CanOnlyWearIn.Intersect(FromSlot.CanOnlyWearIn).IsEmpty())
+		for (auto bp : FromSlot.Item.CanWearIn)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("FromSlot CanWear in %d"), bp);
+		}
+		for (auto bp : ToSlot.CanOnlyWearIn)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("ToSlot CanWear in %d"), bp);
+		}
+
+		if (!ToSlot.CanOnlyWearIn.Intersect(FromSlot.Item.CanWearIn).IsEmpty())
 			return true;
 	}
 	else
@@ -35,6 +54,7 @@ UInventory::CanMergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot) const
 void
 UInventory::MergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot, int Count)
 {
+	UE_LOG(LogTemp, Warning, TEXT("Merge from slot %d to %d items %d"), FromSlot.Index, ToSlot.Index, Count);
 	if (CanMergeWith(ToSlot, FromSlot))
 	{
 		auto n = FMath::Min(FromSlot.Item.MaxStackSize - ToSlot.Count, Count);
@@ -45,8 +65,8 @@ UInventory::MergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot, int Count)
 			FromSlot.Item = FItemStruct();
 		if (InventoryListener)
 		{
-			InventoryListener->SlotChanged(FromSlot.Index, FromSlot);
-			InventoryListener->SlotChanged(ToSlot.Index, ToSlot);
+			InventoryListener->SlotChanged(FromSlot);
+			InventoryListener->SlotChanged(ToSlot);
 		}
 	}
 }
@@ -61,11 +81,13 @@ UInventory::AddItem(const FItemStruct& item, int count)
 	for (int i = 0; i < Slots.Num(); i++)
 	{
 		auto& slot = Slots[i];
+		if (!slot.Inventory)
+			UE_LOG(LogTemp, Error, TEXT("NULL inventory on slot %d"), i);
 		if (slot.Item == item && slot.Item.MaxStackSize >= slot.Count + count)
 		{
 			slot.Count += count;
 			if (InventoryListener)
-				InventoryListener->SlotChanged(i, slot);
+				InventoryListener->SlotChanged(slot);
 			return true;
 		}
 	}
@@ -79,7 +101,7 @@ UInventory::AddItem(const FItemStruct& item, int count)
 			slot.Item = item;
 			slot.Count += count;
 			if (InventoryListener)
-				InventoryListener->SlotChanged(i, slot);
+				InventoryListener->SlotChanged(slot);
 			return true;
 		}
 	}
@@ -97,7 +119,7 @@ UInventory::RemoveItem(const FItemStruct& item, int count)
 		{
 			slot.Count--;
 			if (InventoryListener)
-				InventoryListener->SlotChanged(i, slot);
+				InventoryListener->SlotChanged(slot);
 		}
 	}
 	return false;
@@ -124,6 +146,7 @@ UInventory::SetMaxSlots(int Count)
 	{
 		FItemSlot empty;
 		empty.Index = Slots.Num();
+		empty.Inventory = this;
 		Slots.Add(empty);
 	}
 
@@ -158,7 +181,7 @@ UInventory::Organize()
 	if (InventoryListener)
 	{
 		for (int i = 0; i < Slots.Num(); i++)
-			InventoryListener->SlotChanged(i, Slots[i]);
+			InventoryListener->SlotChanged(Slots[i]);
 	}
 
 }
@@ -185,8 +208,8 @@ UInventory::SplitSlot(int Index)
 					inSlot.Count -= n;
 					if (InventoryListener)
 					{
-						InventoryListener->SlotChanged(Index, inSlot);
-						InventoryListener->SlotChanged(i, slot);
+						InventoryListener->SlotChanged(inSlot);
+						InventoryListener->SlotChanged(slot);
 					}
 					return;
 				}
@@ -213,9 +236,9 @@ UInventory::DropItemsFromSlot(FItemSlot &slot, int inCount)
 		count = slot.Count;
 		if (slot.ShouldRemoveWhenEmpty)
 		{
-			Slots.RemoveSingle(slot);
 			if (InventoryListener)
-				InventoryListener->SlotRemoved(slot.Index);
+				InventoryListener->SlotRemoved(slot);
+			Slots.RemoveSingle(slot);
 		}
 		else
 		{
@@ -236,7 +259,7 @@ UInventory::DropItemsFromSlot(FItemSlot &slot, int inCount)
 		slot.Item = FItemStruct();
 
 	if (InventoryListener)
-		InventoryListener->SlotChanged(slot.Index, slot);
+		InventoryListener->SlotChanged(slot);
 }
 
 void
@@ -244,17 +267,4 @@ UInventory::DropItem(const FItemStruct& inItem)
 {
 	if (Player)
 		Player->CreateDroppedItem(inItem);
-}
-
-
-UCharacterInventory::UCharacterInventory() : UInventory(),
-	Head(BodyPart::Head), Torso(BodyPart::Torso), Legs(BodyPart::Legs),
-	Feet(BodyPart::Feet), Gloves(BodyPart::Hand), LeftHand(BodyPart::Hand), RightHand(BodyPart::Hand), Back(BodyPart::Back)
-{
-}
-
-UCharacterInventory::UCharacterInventory(const FObjectInitializer& ObjectInitializer) : UInventory(ObjectInitializer),
-	Head(BodyPart::Head), Torso(BodyPart::Torso), Legs(BodyPart::Legs),
-	Feet(BodyPart::Feet), Gloves(BodyPart::Hand), LeftHand(BodyPart::Hand), RightHand(BodyPart::Hand), Back(BodyPart::Back)
-{
 }

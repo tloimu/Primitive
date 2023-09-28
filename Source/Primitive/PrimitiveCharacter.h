@@ -154,6 +154,10 @@ protected:
 	void BeginPlay() override;
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
+	void SetupInventoryUI(APlayerController* pc);
+	void SetupHUD(APlayerController* pc);
+	void CheckBeginPlay();
+
 	void ReadConfigFiles();
 	const FItemStruct* FindItem(const FString& Id) const;
 	//void UpdateItemSettingsClass(FItemSettings& item);
@@ -185,7 +189,8 @@ protected:
 	bool ModifierCtrlDown = false;
 
 	// Inventory
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) UInventory	*Inventory;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) UInventory	*Inventory = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) UInventory	*EquippedItems = nullptr;
 	bool ShowingInventory;
 
 	UPROPERTY(EditAnywhere) TSubclassOf<UInventoryWidget> InventoryWidgetClass;

@@ -36,8 +36,10 @@ public:
     void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
     void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
 
-    UPROPERTY() class UInventory* Inventory;
+    UPROPERTY() class UInventory* Inventory = nullptr;
     UPROPERTY() int SlotIndex = 0;
+
+    UPROPERTY(EditAnywhere) BodyPart EquippedIn = BodyPart::None;
 
     UPROPERTY(EditAnywhere) TSubclassOf<UDraggedInventorySlot> DraggedInventorySlotWidgetClass;
 

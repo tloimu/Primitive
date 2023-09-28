@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Interactable.h"
 #include "ItemStruct.h"
+#include "Inventory.h"
 #include "InteractableActor.generated.h"
 
 UCLASS(Blueprintable)
@@ -23,4 +24,6 @@ public:
     UFUNCTION(BlueprintCallable) FItemStruct GetItem() const { return Item; }
 
     UPROPERTY(EditAnywhere) FItemStruct Item;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly) UInventory* Inventory = nullptr;
 };

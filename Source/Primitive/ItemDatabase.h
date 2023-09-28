@@ -7,9 +7,28 @@
 #include "ItemStruct.h"
 #include "ItemDatabase.generated.h"
 
-/**
- * 
- */
+
+USTRUCT(BlueprintType)
+struct FItemSpec
+{
+    GENERATED_BODY()
+
+    FItemSpec() {}
+
+    bool operator== (const FItemSpec rhs) const
+    {
+        if (Id == rhs.Id)
+        {
+            return true;
+        }
+        else return false;
+    }
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) FString Id;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) TSubclassOf<class AInteractableActor> ItemClass;
+};
+
+
 UCLASS()
 class PRIMITIVE_API UItemDatabase : public UDataAsset
 {
@@ -18,7 +37,12 @@ class PRIMITIVE_API UItemDatabase : public UDataAsset
 public:
 	UItemDatabase(const FObjectInitializer& Init);
 
+	void SetupItems();
+
 	const FItemStruct* FindItem(const FString& Id) const;
 
-	UPROPERTY(EditAnywhere) TArray<FItemStruct> Items;
+protected:
+    UPROPERTY(EditAnywhere) TArray<FItemSpec> ItemSpecs;
+
+    TMap<FString, FItemStruct> Items;
 };

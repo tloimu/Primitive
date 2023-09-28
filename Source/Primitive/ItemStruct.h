@@ -66,17 +66,17 @@ struct FItemStruct
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite) FString Id;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) FString Name;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) float Weight;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) float Quality;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) int MaxStackSize;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) int MaxHealth;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) float Weight = 1.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) float Quality = 1.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) int MaxStackSize = 1;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) int MaxHealth = 1;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSet<ItemForm> RequiresStorageFor;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSubclassOf<class AInteractableActor> ItemClass;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSoftObjectPtr<UTexture> Icon;
 
     // Instances
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) int Health;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) int Health = 1;
 
     // Tools and equipment
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSet<BodyPart> CanWearIn;
