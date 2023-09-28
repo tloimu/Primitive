@@ -601,6 +601,10 @@ void APrimitiveCharacter::SetCurrentTarget(AActor* target, UPrimitiveComponent* 
 			UE_LOG(LogTemp, Warning, TEXT("Target REMOVED %s"), *name);
 		}
 
+		CurrentTarget = target;
+		CurrentTargetComponent = Cast<UInstancedStaticMeshComponent>(component);
+		CurrentTargetInstanceId = instanceId;
+
 		if (target)
 		{
 			auto name = target->GetActorNameOrLabel();
@@ -614,9 +618,6 @@ void APrimitiveCharacter::SetCurrentTarget(AActor* target, UPrimitiveComponent* 
 				UE_LOG(LogTemp, Warning, TEXT("Target %s"), *name);
 			}
 		}
-		CurrentTarget = target;
-		CurrentTargetComponent = Cast<UInstancedStaticMeshComponent>(component);
-		CurrentTargetInstanceId = instanceId;
 		
 		if (target != nullptr && UKismetSystemLibrary::DoesImplementInterface(target, UInteractable::StaticClass()))
 			CurrentInteractable = Cast<AInteractableActor>(target);
@@ -630,6 +631,7 @@ void APrimitiveCharacter::SetCurrentTarget(AActor* target, UPrimitiveComponent* 
 
 void APrimitiveCharacter::SetHighlightIfInteractableTarget(AActor* target, bool value)
 {
+	if (CurrentTargetComponent) value = false; // don't highligh the Foliage Actor
 	auto primos = target->GetComponentByClass<UPrimitiveComponent>();
 	if (primos)
 		primos->SetRenderCustomDepth(value);
@@ -923,9 +925,7 @@ APrimitiveCharacter::HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, 
 	}
 
 	inFoliageComponent.RemoveInstance(inInstanceId);
-	CurrentTargetInstanceId = -1;
-	CurrentTargetComponent = nullptr;
-	CurrentTarget = nullptr;
+	SetCurrentTarget(nullptr);
 }
 
 void
