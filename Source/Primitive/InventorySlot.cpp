@@ -142,7 +142,7 @@ bool UInventorySlot::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEv
 		auto& fromSlot = dragged->Inventory->GetSlotAt(dragged->SlotIndex);
 		auto& toSlot = Inventory->GetSlotAt(SlotIndex);
 		auto n = fromSlot.Count;
-		UE_LOG(LogTemp, Warning, TEXT("Slot [%d]: Dropped %d item %s"), SlotIndex, n, *fromSlot.Item.Id);
+		UE_LOG(LogTemp, Warning, TEXT("Slot [%d/%p]: Dropped %d item %s from slot [%d/%p]"), SlotIndex, Inventory, n, *fromSlot.Item.Id, fromSlot.Inventory);
 		if (InDragDropEvent.GetModifierKeys().IsShiftDown())
 			n = 1;
 		if (Inventory->CanMergeWith(toSlot, fromSlot))
@@ -176,7 +176,7 @@ UInventorySlot::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPoin
 void
 UInventorySlot::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Slot [%d]: Mouse enter"));
+	UE_LOG(LogTemp, Warning, TEXT("Slot [%d]: Mouse enter"), SlotIndex);
 	SetHighlight(true);
 	if (Inventory)
 	{

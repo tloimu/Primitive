@@ -279,9 +279,10 @@ APrimitiveCharacter::ReadGameSave()
 		UE_LOG(LogTemp, Warning, TEXT("Game Save Name= %s"), *game.name);
 		for (const auto &item : game.items)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Game Settings Id= %s, x= %f, y= %f, z=%f"), *item.id, item.location[0], item.location[1], item.location[2]);
+			UE_LOG(LogTemp, Warning, TEXT("Saved item Id= %s, x= %f, y= %f, z=%f"), *item.id, item.location[0], item.location[1], item.location[2]);
 			SpawnItem(item);
 		}
+
 		if (Inventory && EquippedItems)
 		{
 			for (const auto& player : game.players)
@@ -333,7 +334,7 @@ APrimitiveCharacter::ReadGameSave()
 	}
 }
 
-void
+AInteractableActor*
 APrimitiveCharacter::SpawnItem(const FSavedItem& item)
 {
 	auto WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
@@ -365,12 +366,26 @@ APrimitiveCharacter::SpawnItem(const FSavedItem& item)
 	if (itemInfo)
 	{
 		if (itemInfo->ItemClass->IsValidLowLevel())
+		{
 			auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(itemInfo->ItemClass, location, rotation, SpawnInfo);
+			check(itemActor);
+			if (itemInfo->ContainedSlots)
+			{
+				auto inv = NewObject<UInventory>();
+				check(inv);
+				itemActor->Inventory = inv;
+				inv->Player = this;
+				// inv->InventoryListener = InventoryWidget;
+				SetSavedContainerSlots(inv, item);
+			}
+			return itemActor;
+		}
 		else
 		{
 			UE_LOG(LogTemp, Error, TEXT("Cannot find item class %s"), *itemInfo->ItemClass->GetName());
 		}
 	}
+	return nullptr;
 }
 
 const FItemStruct*
@@ -388,16 +403,26 @@ APrimitiveCharacter::SetSavedInventorySlot(const FSavedInventorySlot& saved, FIt
 	auto itemSetting = FindItem(saved.id);
 	if (itemSetting && itemSetting->ItemClass->IsValidLowLevel())
 	{
-		slot.Item.Id = itemSetting->Id;
-		slot.Item.ItemClass = itemSetting->ItemClass;
-		slot.Item.Icon = itemSetting->Icon;
-		slot.Item.MaxStackSize = itemSetting->MaxStackSize;
-		slot.Item.MaxHealth = itemSetting->MaxHealth;
-		slot.Item.Weight = itemSetting->Weight;
+		UE_LOG(LogTemp, Warning, TEXT("  - add %d items to slot %d %s"), saved.count, saved.slot, *itemSetting->Id);
+		slot.Item = *itemSetting;
 		slot.Count = saved.count;
-		slot.Inventory = Inventory;
-		if (Inventory->InventoryListener)
-			Inventory->InventoryListener->SlotChanged(slot);
+		if (slot.Inventory->InventoryListener)
+			slot.Inventory->InventoryListener->SlotChanged(slot);
+	}
+}
+
+void
+APrimitiveCharacter::SetSavedContainerSlots(UInventory* inInventory, const FSavedItem& saved)
+{
+	auto containerItem = FindItem(saved.id);
+	if (containerItem)
+	{
+		inInventory->SetMaxSlots(containerItem->ContainedSlots);
+		for (const auto& savedSlot : saved.slots)
+		{
+			auto& slot = inInventory->GetSlotAt(savedSlot.slot);
+			SetSavedInventorySlot(savedSlot, slot);
+		}
 	}
 }
 
@@ -625,7 +650,9 @@ void APrimitiveCharacter::SetCurrentTarget(AActor* target, UPrimitiveComponent* 
 			CurrentInteractable = nullptr;
 
 		if (CurrentInteractable)
+		{
 			UE_LOG(LogTemp, Warning, TEXT("Target Interactable [%s]"), *CurrentInteractable->GetItem().Name);
+		}
 	}
 }
 
@@ -810,6 +837,17 @@ APrimitiveCharacter::Interact(const FInputActionValue& Value)
 	if (CurrentInteractable)
 	{
 		IInteractable::Execute_Interact(CurrentInteractable);
+		if (CurrentInteractable->Inventory)
+		{
+			if (InventoryWidget)
+				InventoryWidget->SetContainer(CurrentInteractable);
+			ToggleInventory(Value);
+		}
+		else
+		{
+			// ???? TODO: Add some "pickable" attribute to item specs as not everything can be interacted with can be picked?
+			Pick(Value);
+		}
 	}
 	else
 	{
@@ -838,6 +876,7 @@ void APrimitiveCharacter::ToggleInventory(const FInputActionValue& Value)
 		ShowingInventory = false;
 		if (InventoryWidget)
 		{
+			InventoryWidget->SetContainer(nullptr);
 			InventoryWidget->RemoveFromParent();
 			if (pc)
 			{

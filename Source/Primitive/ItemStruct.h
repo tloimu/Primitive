@@ -83,6 +83,6 @@ struct FItemStruct
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSet<ToolUtility> UsableFor;
 
     // Containers
-    UPROPERTY(EditAnywhere, BlueprintReadWrite) int ContainedSlots;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) int ContainedSlots = 0;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSet<ItemForm> SlotCapability;
 };

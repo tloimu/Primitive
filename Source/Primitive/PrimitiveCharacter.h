@@ -162,8 +162,9 @@ protected:
 	const FItemStruct* FindItem(const FString& Id) const;
 	//void UpdateItemSettingsClass(FItemSettings& item);
 	void ReadGameSave();
-	void SpawnItem(const FSavedItem& item);
+	AInteractableActor* SpawnItem(const FSavedItem& item);
 	void SetSavedInventorySlot(const FSavedInventorySlot& saved, FItemSlot& slot);
+	void SetSavedContainerSlots(UInventory* inInventory, const FSavedItem& saved);
 
 	//UPROPERTY(EditAnywhere, BlueprintReadOnly) TMap<FString, FItemSettings> ItemSettings;
 

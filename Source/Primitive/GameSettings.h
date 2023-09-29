@@ -15,16 +15,6 @@ struct FGameSettings
 };
 
 USTRUCT(BlueprintType)
-struct FSavedItem
-{
-    GENERATED_BODY()
-
-    UPROPERTY() FString id;
-    UPROPERTY() TArray<float> location;
-    UPROPERTY() TArray<float> rotation;
-};
-
-USTRUCT(BlueprintType)
 struct FSavedInventorySlot
 {
     GENERATED_BODY()
@@ -43,6 +33,17 @@ struct FSavedWearables
     UPROPERTY() FString id;
     UPROPERTY() FString on;
     UPROPERTY() float health;
+};
+
+USTRUCT(BlueprintType)
+struct FSavedItem
+{
+    GENERATED_BODY()
+
+    UPROPERTY() FString id;
+    UPROPERTY() TArray<float> location;
+    UPROPERTY() TArray<float> rotation;
+    UPROPERTY() TArray<FSavedInventorySlot> slots; // for containers
 };
 
 USTRUCT(BlueprintType)

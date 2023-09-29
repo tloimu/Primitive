@@ -36,7 +36,20 @@
         {
             "id": "Box",
             "location": [1060, 1210, 110],
-            "rotation": [0, 0, 90]
+            "rotation": [0, 0, 90],
+            "slots":
+            [
+                {
+                    "slot": 0,
+                    "id": "SmallRock",
+                    "count": 10
+                },
+                {
+                    "slot": 1,
+                    "id": "BackPack",
+                    "count": 1
+                }
+            ]
         },
         {
             "id": "BackPack",

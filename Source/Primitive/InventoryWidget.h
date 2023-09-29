@@ -30,25 +30,34 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void InventorySlotRemoved(UInventorySlot* inSlot);
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void InventorySlotsChanged();
 
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void ContainerOpened(const FString &inName);
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void ContainerClosed();
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void ContainerSlotAdded(UInventorySlot* inSlot);
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void ContainerSlotRemoved(UInventorySlot* inSlot);
+
 	UPROPERTY(EditAnywhere) TArray<UInventorySlot*> Slots;
 	UPROPERTY(EditAnywhere) TArray<UInventorySlot*> EquipmentSlots;
+	UPROPERTY(EditAnywhere) TArray<UInventorySlot*> ContainerSlots;
 
 	UPROPERTY(EditAnywhere) TSubclassOf<UInventorySlot> InventorySlotClass;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) TSoftObjectPtr<UTexture> EmptySlotIcon;
 
-	UInventorySlot* AddNewSlot(UInventory *inInventory, TArray<UInventorySlot*> &ioSlots);
+	UInventorySlot* MakeNewSlot(UInventory *inInventory, int SlotIndex);
+	UInventorySlot* AddNewInventorySlot();
+	UInventorySlot* SetNewEquipmentSlot();
+	UInventorySlot* AddNewContainerSlot();
 	void RemoveSlot(int Index);
 	void DropItemsFromSlot(UInventorySlot* inSlot, int inCount);
+
+	void SetContainer(AInteractableActor* inContainer);
 
 	void NativeOnDragEnter(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 	void NativeOnDragLeave(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 	bool NativeOnDragOver(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 	bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 
-	UPROPERTY() class UInventory *Inventory = nullptr;
-	UPROPERTY() class UInventory *EquippedItems = nullptr;
-	UPROPERTY() class UInventory *ContainerInventory = nullptr;
-
-protected:
+	UPROPERTY(BlueprintReadOnly) class UInventory *Inventory = nullptr;
+	UPROPERTY(BlueprintReadOnly) class UInventory *EquippedItems = nullptr;
+	UPROPERTY(BlueprintReadOnly) class UInventory *ContainerInventory = nullptr;
 
 };

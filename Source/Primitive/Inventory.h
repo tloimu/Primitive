@@ -63,7 +63,7 @@ public:
 	void DropItemsFromSlot(FItemSlot &inSlot, int inCount);
 	void DropItem(const FItemStruct& inItem);
 
-	UPROPERTY(EditAnywhere) TArray<FItemSlot> Slots;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<FItemSlot> Slots;
 	UPROPERTY(EditAnywhere) int MaxSlots;
 	UPROPERTY(EditAnywhere) int CurrentSelectedSlotIndex = -1;
 
