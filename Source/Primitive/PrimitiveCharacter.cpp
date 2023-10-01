@@ -109,6 +109,10 @@ void APrimitiveCharacter::BeginPlay()
 	Inventory->Player = this;
 	EquippedItems = NewObject<UInventory>();
 	EquippedItems->Player = this;
+	HandCrafter = NewObject<UCrafter>();
+	HandCrafter->Inventory = Inventory;
+
+	ReadConfigFiles();
 
 	auto pc = GetController<APlayerController>();
 	if (pc)
@@ -122,12 +126,11 @@ void APrimitiveCharacter::BeginPlay()
 		{
 			SetupInventoryUI(pc);
 			SetupHUD(pc);
+			SetupCrafterUI(pc);
 		}
 	}
 
-	ReadConfigFiles();
 	ReadGameSave();
-
 	EnsureNotUnderGround();
 
 	GenerateFoilage();
@@ -183,6 +186,37 @@ APrimitiveCharacter::SetupHUD(APlayerController* pc)
 	}
 }
 
+void
+APrimitiveCharacter::SetupCrafterUI(APlayerController* pc)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Setup hand crafter ui"));
+	ShowingHandCrafter = false;
+	if (InventoryWidget)
+	{
+		int index = 0;
+		for (auto& r : CraftableRecipies)
+		{
+			auto rec = ItemDb->FindRecipie(r);
+			if (rec)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("  - recipie %s"), *rec->Id);
+				auto item = ItemDb->FindItem(rec->CraftedItemId);
+				if (item)
+				{
+					auto slot = InventoryWidget->AddNewCrafterSlot();
+					slot->Recipie = *rec;
+					slot->Item = *item;
+					if (slot)
+					{
+						UE_LOG(LogTemp, Warning, TEXT("Add hand crafting slot %s item %s"), *rec->Id, *item->Id);
+						InventoryWidget->CraftingSlotAdded(slot, *item);
+						slot->SetSlot(*rec, *item);
+					}
+				}
+			}
+		}
+	}
+}
 
 void
 APrimitiveCharacter::GenerateFoilage()
@@ -375,8 +409,13 @@ APrimitiveCharacter::SpawnItem(const FSavedItem& item)
 				check(inv);
 				itemActor->Inventory = inv;
 				inv->Player = this;
-				// inv->InventoryListener = InventoryWidget;
 				SetSavedContainerSlots(inv, item);
+			}
+			if (!itemInfo->CraftableRecipies.IsEmpty())
+			{
+				auto crafter = NewObject<UCrafter>();
+				check(crafter);
+				itemActor->Crafter = crafter;				
 			}
 			return itemActor;
 		}
@@ -776,13 +815,28 @@ void APrimitiveCharacter::Pick(const FInputActionValue& Value)
 		if (InventoryWidget != nullptr)
 		{
 			auto const& item = CurrentInteractable->GetItem();
-			UE_LOG(LogTemp, Warning, TEXT("Adding item to inventory %s"), *item.Name);
-			//item.Icon.LoadSynchronous(); // Force resolve lazy loading - not sure if this is the best way but seems to make it work. Maybe check icon.IsPending() to see the need to load
-			if (Inventory->AddItem(item))
+			if (CurrentInteractable->CanBePicked())
 			{
-				auto actor = CurrentInteractable;
-				SetCurrentTarget(nullptr);
-				actor->Destroy();
+				UE_LOG(LogTemp, Warning, TEXT("Adding item to inventory %s"), *item.Name);
+				if (Inventory->AddItem(item))
+				{
+					if (CurrentInteractable->Inventory)
+					{
+						// Move container items into inventory if possible
+						for (auto& i : CurrentInteractable->Inventory->Slots)
+						{
+							if (i.Count > 0)
+							{
+								if (!Inventory->AddItem(i.Item, i.Count))
+									return; // cannot fit everything, stop here
+							}
+							i.Count = 0;
+						}
+					}
+					auto actor = CurrentInteractable;
+					SetCurrentTarget(nullptr);
+					actor->Destroy();
+				}
 			}
 		}
 	}
@@ -925,10 +979,12 @@ void APrimitiveCharacter::Back(const FInputActionValue& Value)
 	}
 }
 
-void APrimitiveCharacter::Transfer(const FInputActionValue& Value)
+void
+APrimitiveCharacter::Transfer(const FInputActionValue& Value)
 {
 	// ???? TODO:
 }
+
 
 void
 APrimitiveCharacter::HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, UFoliageResource& inFoliageComponent, int32 inInstanceId)
@@ -991,6 +1047,14 @@ APrimitiveCharacter::CreateDroppedItem(const FItemStruct& Item)
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(Item.ItemClass, end, rotation, SpawnInfo);
+	check(itemActor);
+	if (itemActor->Item.ContainedSlots)
+	{
+		auto inv = NewObject<UInventory>();
+		check(inv);
+		itemActor->Inventory = inv;
+		inv->Player = this;
+	}
 }
 
 TArray<ContainedMaterial>

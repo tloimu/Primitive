@@ -81,6 +81,7 @@ struct FItemStruct
     // Tools and equipment
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSet<BodyPart> CanWearIn;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSet<ToolUtility> UsableFor;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FString> CraftableRecipies;
 
     // Containers
     UPROPERTY(EditAnywhere, BlueprintReadWrite) int ContainedSlots = 0;

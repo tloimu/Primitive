@@ -53,6 +53,7 @@ public:
 	UFUNCTION(BlueprintCallable) bool RemoveItem(const FItemStruct& item, int count = 1);
 	UFUNCTION(BlueprintCallable) bool SetMaxSlots(int Count);
 	UFUNCTION(BlueprintCallable) void Organize();
+	UFUNCTION(BlueprintCallable) bool IsEmpty() const;
 
 	UFUNCTION(BlueprintCallable) bool CanMergeWith(FItemSlot& ToSlot, FItemSlot &FromSlot) const;
 	UFUNCTION(BlueprintCallable) void MergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot, int count);

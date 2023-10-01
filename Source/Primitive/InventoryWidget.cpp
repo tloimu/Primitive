@@ -191,6 +191,28 @@ UInventoryWidget::AddNewContainerSlot()
 	return nullptr;
 }
 
+UCrafterSlot*
+UInventoryWidget::AddNewCrafterSlot()
+{
+	FString name = FString::Format(TEXT("CrafterSlot/{0}"), { CrafterSlots.Num() });
+	auto slot = CreateWidget<UCrafterSlot>(this, CrafterSlotClass, *name);
+	if (slot)
+	{
+		slot->SlotIndex = CrafterSlots.Num();
+		CrafterSlots.Add(slot);
+	}
+	return slot;
+}
+
+void
+UInventoryWidget::CloseCrafter()
+{
+	for (auto slot : CrafterSlots)
+	{
+		slot->SlotRemoved();
+	}
+	CrafterSlots.Empty();
+}
 
 UInventorySlot*
 UInventoryWidget::MakeNewSlot(UInventory* inInventory, int SlotIndex)
@@ -266,6 +288,17 @@ UInventoryWidget::ContainerSlotRemoved_Implementation(UInventorySlot* inSlot)
 	UE_LOG(LogTemp, Warning, TEXT("Removed slot from Container"));
 }
 
+void
+UInventoryWidget::CraftingSlotAdded_Implementation(UCrafterSlot* inSlot, const FItemStruct &inItem)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Added crafting recipie slot"));
+}
+
+void
+UInventoryWidget::CrafterClosed_Implementation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Removed crafting recipie slot"));
+}
 
 // Drag'n'Drop
 

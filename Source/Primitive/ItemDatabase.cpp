@@ -28,6 +28,12 @@ UItemDatabase::SetupItems()
 		item.Icon.LoadSynchronous();
 		UE_LOG(LogTemp, Warning, TEXT("ItemDb: %s %s %s"), *item.Id, *item.Icon.GetAssetName(), *item.ItemClass->GetClass()->GetName());
 	}
+
+	for (auto& spec : RecipieSpecs)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ItemDb: Recipie %s"), *spec.Id);
+		Recipies.Add(spec.Id, spec);
+	}
 }
 
 
@@ -35,4 +41,10 @@ const FItemStruct*
 UItemDatabase::FindItem(const FString& Id) const
 {
 	return Items.Find(Id);
+}
+
+const FCraftRecipie*
+UItemDatabase::FindRecipie(const FString& Id) const
+{
+	return Recipies.Find(Id);
 }

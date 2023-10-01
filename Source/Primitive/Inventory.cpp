@@ -186,6 +186,18 @@ UInventory::Organize()
 
 }
 
+bool
+UInventory::IsEmpty() const
+{
+	for (auto& slot : Slots)
+	{
+		if (slot.Count > 0)
+			return false;
+	}
+	return true;
+}
+
+
 
 void
 UInventory::SplitSlot(int Index)

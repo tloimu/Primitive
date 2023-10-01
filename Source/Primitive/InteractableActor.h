@@ -4,6 +4,7 @@
 #include "Interactable.h"
 #include "ItemStruct.h"
 #include "Inventory.h"
+#include "Craftable.h"
 #include "InteractableActor.generated.h"
 
 UCLASS(Blueprintable)
@@ -22,8 +23,11 @@ public:
     */
 
     UFUNCTION(BlueprintCallable) FItemStruct GetItem() const { return Item; }
+    UFUNCTION(BlueprintCallable) bool IsEmpty() const;
+    UFUNCTION(BlueprintCallable) bool CanBePicked() const;
 
     UPROPERTY(EditAnywhere) FItemStruct Item;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly) UInventory* Inventory = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly) class UInventory* Inventory = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) class UCrafter* Crafter = nullptr;
 };

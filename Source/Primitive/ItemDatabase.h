@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "ItemStruct.h"
+#include "Craftable.h"
 #include "ItemDatabase.generated.h"
 
 
@@ -40,9 +41,12 @@ public:
 	void SetupItems();
 
 	const FItemStruct* FindItem(const FString& Id) const;
+    const FCraftRecipie* FindRecipie(const FString& Id) const;
 
 protected:
     UPROPERTY(EditAnywhere) TArray<FItemSpec> ItemSpecs;
+    UPROPERTY(EditAnywhere) TArray<FCraftRecipie> RecipieSpecs;
 
     TMap<FString, FItemStruct> Items;
+    TMap<FString, FCraftRecipie> Recipies;
 };

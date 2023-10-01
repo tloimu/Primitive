@@ -11,6 +11,7 @@
 #include "HUDWidget.h"
 #include "GameSettings.h"
 #include "Inventory.h"
+#include "Craftable.h"
 #include "FoliageResource.h"
 #include "PrimitiveCharacter.generated.h"
 
@@ -156,6 +157,7 @@ protected:
 
 	void SetupInventoryUI(APlayerController* pc);
 	void SetupHUD(APlayerController* pc);
+	void SetupCrafterUI(APlayerController* pc);
 	void CheckBeginPlay();
 
 	void ReadConfigFiles();
@@ -200,6 +202,10 @@ protected:
 	UPROPERTY(EditAnywhere) TSubclassOf<UHUDWidget> HUDWidgetClass;
 	UPROPERTY() UHUDWidget* HUDWidget;
 
+	UPROPERTY() UCrafter* HandCrafter = nullptr;
+	bool ShowingHandCrafter = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FString> CraftableRecipies;
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) class UItemDatabase* ItemDb;
 
 	// Setting up the Map
