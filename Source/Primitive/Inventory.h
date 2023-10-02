@@ -65,6 +65,7 @@ public:
 	void DropItem(const FItemStruct& inItem);
 
 	const FItemStruct* FindItem(const FString& inId) const;
+	int CountItemsOf(const FString& inId) const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<FItemSlot> Slots;
 	UPROPERTY(EditAnywhere) int MaxSlots;

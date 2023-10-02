@@ -31,6 +31,16 @@ UCrafterSlot::SetProgress_Implementation(float Progress)
 }
 
 void
+UCrafterSlot::SetHelpText_Implementation(const FCraftingHelpInfo& inInfo)
+{
+}
+
+void
+UCrafterSlot::HideHelpText_Implementation()
+{
+}
+
+void
 UCrafterSlot::SetSlot(const FCraftRecipie& inSlot, const FItemStruct& inItem)
 {
 	Recipie = inSlot;
@@ -54,6 +64,7 @@ UCrafterSlot::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointe
 		{
 			if (Crafter->StartCrafting(Recipie, { Inventory }))
 			{
+				SetSlotHelp();
 			}
 		}
 		return FReply::Handled();
@@ -66,6 +77,44 @@ UCrafterSlot::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEven
 {
 	UE_LOG(LogTemp, Warning, TEXT("Crafter Slot [%d]: Mouse enter"), SlotIndex);
 	SetHighlight(true);
+	SetSlotHelp();
+}
+
+void
+UCrafterSlot::SetSlotHelp()
+{
+	FCraftingHelpInfo help;
+	help.CanCraft = (Crafter && Inventory) ? Crafter->CanCraft(Recipie, { Inventory }) : 0;
+	int maxCraftable = 1000;
+	auto craftedItem = Inventory ? Inventory->FindItem(Recipie.CraftedItemId) : nullptr;
+	if (craftedItem)
+		help.Item = *craftedItem;
+	for (auto& i : Recipie.Ingredients)
+	{
+		int count = 0;
+		FCraftingHelpIngredient iHelp;
+		if (Inventory)
+		{
+			count = Inventory->CountItemsOf(i.ItemId);
+			auto item = Inventory->FindItem(i.ItemId);
+			if (item)
+			{
+				iHelp.Name = item->Name;
+			}
+		}
+		if (count == 0)
+			maxCraftable = 0;
+		else
+			maxCraftable = FMath::Min(maxCraftable, count / i.ItemCount);
+
+		iHelp.Available = count;
+		iHelp.Needed = i.ItemCount;
+		iHelp.IsSufficient = (iHelp.Available >= iHelp.Needed);
+		help.AvailableIngredients.Add(iHelp);
+	}
+	help.CanCraft = (maxCraftable > 0);
+	help.CanCraftCount = maxCraftable;
+	SetHelpText(help);
 }
 
 void
@@ -73,5 +122,7 @@ UCrafterSlot::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Crafter Slot [%d]: Mouse leave"), SlotIndex);
 	SetHighlight(false);
+	SetHelpText(FCraftingHelpInfo());
+	HideHelpText();
 }
 

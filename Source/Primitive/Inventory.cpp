@@ -31,6 +31,18 @@ UInventory::FindItem(const FString& inId) const
 	return nullptr;
 }
 
+int
+UInventory::CountItemsOf(const FString& inId) const
+{
+	int count = 0;
+	for (auto& slot : Slots)
+	{
+		if (slot.Count > 0 && slot.Item.Id == inId)
+			count = count + slot.Count;
+	}
+	return count;
+}
+
 bool
 UInventory::CanMergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot) const
 {
@@ -84,11 +96,9 @@ UInventory::MergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot, int Count)
 bool
 UInventory::AddItem(const FItemStruct& item, int count)
 {
-	// First, find slot that already has the same stuff and has room left
 	UE_LOG(LogTemp, Warning, TEXT("Adding %d item %s to slot (slots=%d) icon=%s"), count, *item.ItemClass.Get()->GetName(), Slots.Num(), *item.Icon.GetAssetName());
 
-	// ???? TODO: Fix to allow spreading items into multiple slots if they do not fit into one
-
+	// First, try to fill slots that already has the same stuff and has room left
 	for (int i = 0; i < Slots.Num(); i++)
 	{
 		auto& slot = Slots[i];
@@ -106,7 +116,7 @@ UInventory::AddItem(const FItemStruct& item, int count)
 		}
 	}
 
-	// Then, find an empty slot
+	// Then, start filling empty slots with more items if needed
 	for (int i = 0; i < Slots.Num(); i++)
 	{
 		auto& slot = Slots[i];
