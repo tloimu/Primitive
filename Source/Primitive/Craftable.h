@@ -93,8 +93,8 @@ struct FCraftingWork
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int				Id = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) FCraftRecipie	Recipie;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float			StartedAtGameTime = 0.0f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) float			CompletedAtGameTime = 0.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) class UCrafterSlot	*Slot;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float			GameTimeProgressLeft = 0.0f;
 };
 
 UCLASS(BlueprintType)
@@ -115,7 +115,7 @@ public:
 	bool CanCraft(const FCraftRecipie& inRecipie, TArray<class UInventory*> inIngredientInventories);
 
 	bool StartCrafting(const FCraftRecipie& inRecipie, TArray<class UInventory*> inIngredientInventories);
-	void CheckCrafting();
+	void CheckCrafting(float DeltaGameTimeSecs);
 	void CompleteCrafting(FCraftingWork& inProgress);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FCraftableItem>	CraftableItems;
@@ -130,31 +130,4 @@ public:
 	int NextWorkId = 1;
 
 	static const FString HandCraftingStationItemId;
-};
-
-
-UCLASS(MinimalAPI, Blueprintable)
-class UCrafterSlot : public UUserWidget
-{
-	GENERATED_BODY()
-
-public:
-	UCrafterSlot(const FObjectInitializer& ObjectInitializer);
-
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void SlotSet(const FCraftRecipie& inSlot, const FItemStruct &inItem);
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void SetProgress(float Progress);
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void SetHighlight(bool DoHighlight);
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void SlotRemoved();
-
-	UFUNCTION(BlueprintCallable) void SetSlot(const FCraftRecipie& inSlot, const FItemStruct& inItem);
-
-	FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
-	void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
-	void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
-
-	UPROPERTY() class UInventory* Inventory = nullptr;
-	UPROPERTY() int SlotIndex = 0;
-
-	FCraftRecipie Recipie;
-	FItemStruct Item;
 };

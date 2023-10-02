@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "Runtime/Engine/Classes/Engine/DirectionalLight.h"
 #include "Runtime/Engine/Classes/Engine/SkyLight.h"
+#include <Runtime/Engine/Classes/Sound/SoundCue.h>
 #include "InputActionValue.h"
 #include "InventoryWidget.h"
 #include "HUDWidget.h"
@@ -103,11 +104,13 @@ class APrimitiveCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* CtrlModifierUpAction;
 
-
 public:
 	APrimitiveCharacter();
 	
 	void CreateDroppedItem(const FItemStruct& Item);
+	const FItemStruct* FindItem(const FString& Id) const;
+
+	UPROPERTY(EditAnywhere) USoundCue* HandCraftingSound = nullptr;
 
 protected:
 
@@ -147,7 +150,6 @@ protected:
 	void EquipItem(UInventorySlot& FromSlot, UInventorySlot &ToSlot);
 	void UnequipItem(UInventorySlot& FromSlot, UInventorySlot& ToSlot);
 
-protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
@@ -161,7 +163,6 @@ protected:
 	void CheckBeginPlay();
 
 	void ReadConfigFiles();
-	const FItemStruct* FindItem(const FString& Id) const;
 	//void UpdateItemSettingsClass(FItemSettings& item);
 	void ReadGameSave();
 	AInteractableActor* SpawnItem(const FSavedItem& item);
@@ -226,6 +227,7 @@ protected:
 	void CheckEnvironment();
 	void EnsureNotUnderGround();
 	void CheckSunlight(float DeltaSeconds);
+	void CheckCrafting(float DeltaSeconds);
 
 /*	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	class UInventoryComponent* InventoryComponent;*/

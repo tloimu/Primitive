@@ -64,6 +64,8 @@ public:
 	void DropItemsFromSlot(FItemSlot &inSlot, int inCount);
 	void DropItem(const FItemStruct& inItem);
 
+	const FItemStruct* FindItem(const FString& inId) const;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<FItemSlot> Slots;
 	UPROPERTY(EditAnywhere) int MaxSlots;
 	UPROPERTY(EditAnywhere) int CurrentSelectedSlotIndex = -1;

@@ -2,6 +2,8 @@
 
 
 #include "Craftable.h"
+#include "Kismet/GameplayStatics.h"
+#include "CrafterSlot.h"
 #include "PrimitiveCharacter.h"
 
 const FString UCrafter::HandCraftingStationItemId = "Hand";
@@ -47,94 +49,119 @@ UCrafter::CanCraft(const FCraftRecipie& inRecipie, TArray<UInventory*> inIngredi
 bool
 UCrafter::StartCrafting(const FCraftRecipie& inRecipie, TArray<UInventory*> inIngredientInventories)
 {
+	UE_LOG(LogTemp, Warning, TEXT("Crafter: Check ability to start crafting %s"), *inRecipie.Id);
+
+	if (!Works.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Crafter: Cannot start crafting as there is already a work in progress"), *inRecipie.Id);
+		return false;
+	}
+
+	// Check nearby inventories for ingredients and start the craft if possible
+	auto missingIngredients = inRecipie.Ingredients;
+	TArray<TPair<FItemSlot*, int>> usedSlots;
+	for (auto &ing : missingIngredients)
+	{
+		if (ing.ItemCount > 0)
+		{
+			for (auto inv : inIngredientInventories)
+			{
+				for (auto& slot : inv->Slots)
+				{
+					if (slot.Count > 0 && slot.Item.Id == ing.ItemId && slot.Item.Quality >= ing.MinimumQuality)
+					{
+						int n = slot.Count;
+						if (slot.Count > ing.ItemCount)
+							n = ing.ItemCount;
+						ing.ItemCount -= n;
+						usedSlots.Add({ &slot, n });
+						if (ing.ItemCount == 0)
+							break;
+					}
+				}
+				if (ing.ItemCount == 0)
+					break;
+			}
+		}
+	}
+
+	for (auto& ing : missingIngredients)
+	{
+		if (ing.ItemCount > 0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Crafter: Cannot start crafting, missing at least %d %s"), ing.ItemCount, *ing.ItemId);
+			return false;
+		}
+	}
+
+	for (auto &slot : usedSlots)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Crafter: Used %d %s from slot %d/%p"), slot.Value, *slot.Key->Item.Id, slot.Key->Index, slot.Key->Inventory);
+		slot.Key->Count -= slot.Value;
+		if (slot.Key->Count == 0)
+			slot.Key->Item = FItemStruct();
+		if (slot.Key->Inventory && slot.Key->Inventory->InventoryListener)
+		{
+			slot.Key->Inventory->InventoryListener->SlotChanged(*slot.Key);
+		}
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Crafter: Start crafting %s"), *inRecipie.Id);
 	FCraftingWork work;
 	work.Id = NextWorkId++;
+	work.Recipie = inRecipie;
+	work.GameTimeProgressLeft = inRecipie.CraftingSeconds;
 	Works.Add(work);
 
-	// ???? TODO: Check nearby inventories for ingredients and start the craft if possible
+	if (Inventory && Inventory->Player)
+	{
+		auto player = Cast<APrimitiveCharacter>(Inventory->Player);
+		if (player && player->HandCraftingSound)
+		{
+			UGameplayStatics::PlaySound2D(player->GetWorld(), player->HandCraftingSound);
+		}
+	}
 
 	return true;
 }
 
 void
-UCrafter::CheckCrafting()
+UCrafter::CheckCrafting(float DeltaGameTimeSecs)
 {
-	// ???? TODO: Check if any work has completed - also, send progress events to UI
-}
-
-void
-UCrafter::CompleteCrafting(FCraftingWork& inProgress)
-{
-	// ???? TODO: Create the item and place it into inventory
-}
-
-
-// ---------------------------------------------------------
-// class UCrafterSlot widget
-// ---------------------------------------------------------
-
-
-UCrafterSlot::UCrafterSlot(const FObjectInitializer& ObjectInitializer) : UUserWidget(ObjectInitializer)
-{
-}
-
-void
-UCrafterSlot::SlotSet_Implementation(const FCraftRecipie& inSlot, const FItemStruct& inItem)
-{
-}
-
-void
-UCrafterSlot::SlotRemoved_Implementation()
-{
-}
-
-void
-UCrafterSlot::SetHighlight_Implementation(bool DoHighlight)
-{
-}
-
-void
-UCrafterSlot::SetProgress_Implementation(float Progress)
-{
-}
-
-void
-UCrafterSlot::SetSlot(const FCraftRecipie& inSlot, const FItemStruct& inItem)
-{
-	Recipie = inSlot;
-	Item = inItem;
-	SlotSet(inSlot, inItem);
-}
-
-
-FReply
-UCrafterSlot::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
-{
-	UE_LOG(LogTemp, Warning, TEXT("Crafter Slot [%d]: Mouse down"), SlotIndex);
-	auto reply = Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
-	if (reply.IsEventHandled())
-		return reply;
-
-	if (Inventory && InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton))
+	bool hasCompletion = false;
+	for (int i = Works.Num() - 1; i >= 0; i--)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Crafter Slot [%d]: Start crafting"), SlotIndex);
-		// ???? TODO: Start crafting
-		return FReply::Handled();
+		auto& w = Works[i];
+		if (w.GameTimeProgressLeft <= DeltaGameTimeSecs)
+		{
+			hasCompletion = true;
+			w.GameTimeProgressLeft = 0.0f;
+			CompleteCrafting(w);
+			Works.RemoveAt(i);
+		}
+		else
+		{
+			w.GameTimeProgressLeft -= DeltaGameTimeSecs;
+			if (w.Slot)
+				w.Slot->SetProgress(w.GameTimeProgressLeft / w.Recipie.CraftingSeconds);
+		}
 	}
-	return FReply::Unhandled();
 }
 
 void
-UCrafterSlot::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+UCrafter::CompleteCrafting(FCraftingWork& Work)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Crafter Slot [%d]: Mouse enter"), SlotIndex);
-	SetHighlight(true);
+	UE_LOG(LogTemp, Warning, TEXT("Crafter: Completed crafting %s"), *Work.Recipie.Id);
+	if (Inventory)
+	{
+		auto item = Inventory->FindItem(Work.Recipie.CraftedItemId);
+		if (item)
+		{
+			if (!Inventory->AddItem(*item, Work.Recipie.CraftedItemCount))
+			{
+				for (int i = 0; i < Work.Recipie.CraftedItemCount; i++)
+					Inventory->DropItem(*item);
+			}
+		}
+	}
 }
-
-void
-UCrafterSlot::NativeOnMouseLeave(const FPointerEvent& InMouseEvent)
-{
-	UE_LOG(LogTemp, Warning, TEXT("Crafter Slot [%d]: Mouse leave"), SlotIndex);
-	SetHighlight(false);
-}
-

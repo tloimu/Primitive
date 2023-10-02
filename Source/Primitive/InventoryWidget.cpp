@@ -2,6 +2,7 @@
 #include "InventorySlotDragOperation.h"
 #include "InteractableActor.h"
 #include "Inventory.h"
+#include "CrafterSlot.h"
 #include "Blueprint/WidgetTree.h"
 #include "PrimitiveCharacter.h"
 

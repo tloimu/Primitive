@@ -21,6 +21,15 @@ UInventory::GetSlotAt(int Index)
 		return NoneSlot;
 }
 
+const FItemStruct*
+UInventory::FindItem(const FString& inId) const
+{
+	if (Player)
+	{
+		return Player->FindItem(inId);
+	}
+	return nullptr;
+}
 
 bool
 UInventory::CanMergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot) const
@@ -76,19 +85,24 @@ bool
 UInventory::AddItem(const FItemStruct& item, int count)
 {
 	// First, find slot that already has the same stuff and has room left
-	UE_LOG(LogTemp, Warning, TEXT("Adding item %d * %s to slot (slots=%d) icon=%s"), count, *item.ItemClass.Get()->GetName(), Slots.Num(), *item.Icon.GetAssetName());
+	UE_LOG(LogTemp, Warning, TEXT("Adding %d item %s to slot (slots=%d) icon=%s"), count, *item.ItemClass.Get()->GetName(), Slots.Num(), *item.Icon.GetAssetName());
+
+	// ???? TODO: Fix to allow spreading items into multiple slots if they do not fit into one
 
 	for (int i = 0; i < Slots.Num(); i++)
 	{
 		auto& slot = Slots[i];
 		if (!slot.Inventory)
 			UE_LOG(LogTemp, Error, TEXT("NULL inventory on slot %d"), i);
-		if (slot.Item == item && slot.Item.MaxStackSize >= slot.Count + count)
+		int fitsInSlot = FMath::Min(item.MaxStackSize - slot.Count, count);
+		if (slot.Item == item && fitsInSlot > 0)
 		{
-			slot.Count += count;
+			slot.Count += fitsInSlot;
+			count -= fitsInSlot;
 			if (InventoryListener)
 				InventoryListener->SlotChanged(slot);
-			return true;
+			if (count == 0)
+				return true;
 		}
 	}
 
@@ -96,13 +110,16 @@ UInventory::AddItem(const FItemStruct& item, int count)
 	for (int i = 0; i < Slots.Num(); i++)
 	{
 		auto& slot = Slots[i];
-		if (slot.Count == 0 && slot.Item.MaxStackSize >= slot.Count + count)
+		int fitsInSlot = FMath::Min(item.MaxStackSize - slot.Count, count);
+		if (slot.Count == 0 && fitsInSlot > 0)
 		{
 			slot.Item = item;
-			slot.Count += count;
+			slot.Count += fitsInSlot;
+			count -= fitsInSlot;
 			if (InventoryListener)
 				InventoryListener->SlotChanged(slot);
-			return true;
+			if (count == 0)
+				return true;
 		}
 	}
 

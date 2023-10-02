@@ -17,6 +17,7 @@
 #include <Runtime/Engine/Classes/Kismet/KismetSystemLibrary.h>
 #include <Runtime/JsonUtilities/Public/JsonObjectConverter.h>
 #include <Primitive/Interactable.h>
+#include "CrafterSlot.h"
 #include "WorldGenOne.h"
 #include "PrimitiveGameMode.h"
 #include "Runtime/Engine/Public/EngineUtils.h"
@@ -206,6 +207,8 @@ APrimitiveCharacter::SetupCrafterUI(APlayerController* pc)
 					auto slot = InventoryWidget->AddNewCrafterSlot();
 					slot->Recipie = *rec;
 					slot->Item = *item;
+					slot->Crafter = HandCrafter;
+					slot->Inventory = Inventory;
 					if (slot)
 					{
 						UE_LOG(LogTemp, Warning, TEXT("Add hand crafting slot %s item %s"), *rec->Id, *item->Id);
@@ -492,6 +495,7 @@ void APrimitiveCharacter::Tick(float DeltaSeconds)
 
 	CheckEnvironment();
 	CheckSunlight(DeltaSeconds);
+	CheckCrafting(DeltaSeconds);
 }
 
 void
@@ -537,8 +541,6 @@ APrimitiveCharacter::CheckEnvironment()
 void
 APrimitiveCharacter::CheckSunlight(float DeltaSeconds)
 {
-	Super::Tick(DeltaSeconds);
-
 	// UE_LOG(LogTemp, Warning, TEXT("APrimitiveGameMode::Tick %f"), DeltaSeconds);
 	if (SunLight)
 	{
@@ -565,8 +567,17 @@ APrimitiveCharacter::CheckSunlight(float DeltaSeconds)
 	}
 }
 
+void
+APrimitiveCharacter::CheckCrafting(float DeltaSeconds)
+{
+	if (HandCrafter)
+	{
+		HandCrafter->CheckCrafting(DeltaSeconds * ClockSpeed);
+	}
+}
 
-void APrimitiveCharacter::CheckTarget()
+void
+APrimitiveCharacter::CheckTarget()
 {
 	FHitResult hits;
 	ECollisionChannel channel = ECollisionChannel::ECC_Visibility;
