@@ -62,7 +62,7 @@ UCrafterSlot::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointe
 		UE_LOG(LogTemp, Warning, TEXT("Crafter Slot [%d]: Start crafting"), SlotIndex);
 		if (Crafter)
 		{
-			if (Crafter->StartCrafting(Recipie, { Inventory }))
+			if (Crafter->StartCrafting(Recipie, { Inventory }, this))
 			{
 				SetSlotHelp();
 			}

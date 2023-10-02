@@ -47,7 +47,7 @@ UCrafter::CanCraft(const FCraftRecipie& inRecipie, TArray<UInventory*> inIngredi
 }
 
 bool
-UCrafter::StartCrafting(const FCraftRecipie& inRecipie, TArray<UInventory*> inIngredientInventories)
+UCrafter::StartCrafting(const FCraftRecipie& inRecipie, TArray<UInventory*> inIngredientInventories, UCrafterSlot* inSlot)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Crafter: Check ability to start crafting %s"), *inRecipie.Id);
 
@@ -111,6 +111,7 @@ UCrafter::StartCrafting(const FCraftRecipie& inRecipie, TArray<UInventory*> inIn
 	work.Id = NextWorkId++;
 	work.Recipie = inRecipie;
 	work.GameTimeProgressLeft = inRecipie.CraftingSeconds;
+	work.Slot = inSlot;
 	Works.Add(work);
 
 	if (Inventory && Inventory->Player)
@@ -137,13 +138,19 @@ UCrafter::CheckCrafting(float DeltaGameTimeSecs)
 			hasCompletion = true;
 			w.GameTimeProgressLeft = 0.0f;
 			CompleteCrafting(w);
+			if (w.Slot)
+				w.Slot->SetProgress(0.0f);
 			Works.RemoveAt(i);
 		}
 		else
 		{
 			w.GameTimeProgressLeft -= DeltaGameTimeSecs;
 			if (w.Slot)
-				w.Slot->SetProgress(w.GameTimeProgressLeft / w.Recipie.CraftingSeconds);
+			{
+				auto p = 1.0f - w.GameTimeProgressLeft / w.Recipie.CraftingSeconds;
+				UE_LOG(LogTemp, Warning, TEXT("Crafter: Crafting %s progress %f"), *w.Recipie.Id, p);
+				w.Slot->SetProgress(p);
+			}
 		}
 	}
 }

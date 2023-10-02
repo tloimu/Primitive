@@ -114,7 +114,7 @@ public:
 	
 	bool CanCraft(const FCraftRecipie& inRecipie, TArray<class UInventory*> inIngredientInventories);
 
-	bool StartCrafting(const FCraftRecipie& inRecipie, TArray<class UInventory*> inIngredientInventories);
+	bool StartCrafting(const FCraftRecipie& inRecipie, TArray<class UInventory*> inIngredientInventories, UCrafterSlot* inSlot);
 	void CheckCrafting(float DeltaGameTimeSecs);
 	void CompleteCrafting(FCraftingWork& inProgress);
 
