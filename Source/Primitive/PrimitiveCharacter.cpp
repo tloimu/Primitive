@@ -1,5 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #include "PrimitiveCharacter.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -496,6 +494,7 @@ void APrimitiveCharacter::Tick(float DeltaSeconds)
 	CheckEnvironment();
 	CheckSunlight(DeltaSeconds);
 	CheckCrafting(DeltaSeconds);
+	CheckCurrentPlacedItem();
 }
 
 void
@@ -593,6 +592,10 @@ APrimitiveCharacter::CheckTarget()
 		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), hits.Location, 5, 5, FLinearColor::White);
 
 		auto hit = hits.GetActor();
+
+		if (hit != CurrentPlacedItem)
+			TargetLocation = hits.Location;
+
 		if (hit->Implements<UInteractable>())
 		{
 			SetCurrentTarget(hit);
@@ -611,7 +614,6 @@ APrimitiveCharacter::CheckTarget()
 				if (poses.Num() > 0)
 				{
 					TargetVoxelWorld = voxels;
-					TargetLocation = hits.Location;
 					/*
 					FVoxelMaterial Material;
 					UVoxelDataTools::GetMaterial(Material, voxels, poses[0]);
@@ -659,6 +661,7 @@ APrimitiveCharacter::CheckTarget()
 	}
 	else
 	{
+		TargetLocation = end;
 		UKismetSystemLibrary::DrawDebugLine(GetWorld(), start, end, FLinearColor::Red);
 		UKismetSystemLibrary::DrawDebugSphere(GetWorld(), end, 5, 5, FLinearColor::Red);
 		SetCurrentTarget(nullptr);
@@ -667,6 +670,12 @@ APrimitiveCharacter::CheckTarget()
 
 void APrimitiveCharacter::SetCurrentTarget(AActor* target, UPrimitiveComponent* component, int32 instanceId)
 {
+	if (CurrentPlacedItem)
+	{
+		SetHighlightIfInteractableTarget(CurrentPlacedItem, true);
+		return;
+	}
+
 	if (CurrentTarget != target || CurrentTargetInstanceId != instanceId || CurrentTargetComponent != component)
 	{
 		if (CurrentTarget != nullptr)
@@ -880,6 +889,12 @@ void APrimitiveCharacter::Combine(const FInputActionValue& Value)
 
 void APrimitiveCharacter::Hit(const FInputActionValue& Value)
 {
+	if (CurrentPlacedItem)
+	{
+		CompletePlacingItem();
+		return;
+	}
+
 	if (CurrentInteractable)
 	{
 		IInteractable::Execute_Hit(CurrentInteractable);
@@ -899,38 +914,126 @@ void APrimitiveCharacter::Hit(const FInputActionValue& Value)
 void
 APrimitiveCharacter::Interact(const FInputActionValue& Value)
 {
-	if (CurrentInteractable)
+	if (ShowingInventory)
 	{
-		IInteractable::Execute_Interact(CurrentInteractable);
-		if (CurrentInteractable->Inventory)
-		{
-			if (InventoryWidget)
-				InventoryWidget->SetContainer(CurrentInteractable);
-			ToggleInventory(Value);
-		}
-		else
-		{
-			// ???? TODO: Add some "pickable" attribute to item specs as not everything can be interacted with can be picked?
-			Pick(Value);
-		}
+		Interact_InInventory(Value);
 	}
 	else
 	{
-		if (TargetVoxelWorld)
+		if (CurrentInteractable)
 		{
-			//UE_LOG(LogTemp, Warning, TEXT("Interact Voxels at [%f, %f, %f]"), TargetLocation.X, TargetLocation.Y, TargetLocation.Z);
-			CollectMaterialsFrom(TargetLocation);
+			Interact_Interactable(Value, *CurrentInteractable);
 		}
-		else if (CurrentTarget && CurrentTargetComponent && CurrentTargetInstanceId != -1)
+		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Interact %s instance %ld"), *CurrentTargetComponent->GetName(), CurrentTargetInstanceId);
-			//auto fa = Cast<AInstancedFoliageActor>(CurrentTarget);
-			// fa->SelectInstance(CurrentTargetComponent, CurrentTargetInstanceId, true);
+			if (TargetVoxelWorld)
+			{
+				Interact_Voxel(Value, TargetLocation);
+			}
+			else if (CurrentTarget && CurrentTargetComponent && CurrentTargetInstanceId != -1)
+			{
+				Interact_Foliage(Value, *CurrentTargetComponent, CurrentTargetInstanceId);
+			}
 		}
 	}
 }
 
-void APrimitiveCharacter::ToggleInventory(const FInputActionValue& Value)
+void
+APrimitiveCharacter::Interact_InInventory(const FInputActionValue& Value)
+{
+	auto slotIndex = Inventory ? Inventory->CurrentSelectedSlotIndex : -1;
+	UE_LOG(LogTemp, Warning, TEXT("Interact Inventory Slot %d"), slotIndex);
+	if (slotIndex >= 0)
+	{
+		auto& slot = Inventory->GetSlotAt(slotIndex);
+		if (slot.Count > 0)
+		{
+			// ???? TODO: Consider consumables - need a ItemStruct info for it
+			if (slot.Item.IsConsumable())
+				ConsumeItem(slot);
+			if (!slot.Item.CanWearIn.IsEmpty())
+				WearItem(slot);
+			else
+			{
+				ToggleInventory(Value);
+				PlaceItem(Value, slot);
+			}
+		}
+	}
+}
+
+void
+APrimitiveCharacter::Interact_Voxel(const FInputActionValue& Value, const FVector& inTarget)
+{
+	//UE_LOG(LogTemp, Warning, TEXT("Interact Voxels at [%f, %f, %f]"), inTarget.X, inTarget.Y, inTarget.Z);
+	CollectMaterialsFrom(inTarget);
+}
+
+void
+APrimitiveCharacter::Interact_Interactable(const FInputActionValue& Value, AInteractableActor &inTarget)
+{
+	IInteractable::Execute_Interact(&inTarget);
+	if (inTarget.Inventory)
+	{
+		if (InventoryWidget)
+			InventoryWidget->SetContainer(&inTarget);
+		ToggleInventory(Value);
+	}
+	else
+	{
+		// ???? TODO: Add some "pickable" attribute to item specs as not everything can be interacted with can be picked?
+		Pick(Value);
+	}
+}
+
+void
+APrimitiveCharacter::Interact_Foliage(const FInputActionValue& Value, UInstancedStaticMeshComponent& inFoliageComponent, int32 inInstanceId)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Interact %s instance %ld"), *inFoliageComponent.GetName(), inInstanceId);
+	//auto fa = Cast<AInstancedFoliageActor>(CurrentTarget);
+	// fa->SelectInstance(CurrentTargetComponent, CurrentTargetInstanceId, true);
+}
+
+
+void
+APrimitiveCharacter::WearItem(FItemSlot& fromSlot)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Wear %s from inventory slot %d"), *fromSlot.Item.Name, fromSlot.Index);
+	for (auto& eqSlot : EquippedItems->Slots)
+	{
+		if (fromSlot.CanMergeTo(eqSlot))
+		{
+			if (fromSlot.MergeTo(eqSlot, 1))
+				return;
+		}
+	}
+}
+
+void
+APrimitiveCharacter::ConsumeItem(FItemSlot& fromSlot)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Consume %s from inventory slot %d"), *fromSlot.Item.Name, fromSlot.Index);
+	if (fromSlot.Item.ConsumedWater > 0.0f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Gained %d water"), fromSlot.Item.ConsumedWater);
+	}
+	if (fromSlot.Item.ConsumedFood > 0.0f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Gained %d food"), fromSlot.Item.ConsumedFood);
+	}
+	if (fromSlot.Item.ConsumedAir > 0.0f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Gained %d air"), fromSlot.Item.ConsumedAir);
+	}
+	fromSlot.Count--;
+	// ???? TODO: Alter character stats
+	if (fromSlot.Inventory && fromSlot.Inventory->InventoryListener)
+		fromSlot.Inventory->InventoryListener->SlotChanged(fromSlot);
+}
+
+
+void
+APrimitiveCharacter::ToggleInventory(const FInputActionValue& Value)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory %d"), Value.Get<bool>());
 
@@ -1065,6 +1168,98 @@ APrimitiveCharacter::CreateDroppedItem(const FItemStruct& Item)
 		check(inv);
 		itemActor->Inventory = inv;
 		inv->Player = this;
+	}
+}
+
+// ----------------------------
+// Placing Item
+// ----------------------------
+
+void
+APrimitiveCharacter::PlaceItem(const FInputActionValue& Value, FItemSlot& fromSlot)
+{
+	if (CurrentPlacedItem == nullptr && fromSlot.Count > 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Placing %s from inventory slot %d"), *fromSlot.Item.Name, fromSlot.Index);
+		fromSlot.Count--;
+		CurrentPlacedItem = CreatePlacedItem(fromSlot.Item);
+	}
+}
+
+
+AInteractableActor*
+APrimitiveCharacter::CreatePlacedItem(const FItemStruct& Item)
+{
+	FVector start = GetActorLocation();
+	FVector end = start + FollowCamera->GetForwardVector().GetSafeNormal() * 500.0f;
+	auto rotation = GetActorRotation();
+	FActorSpawnParameters SpawnInfo;
+	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(Item.ItemClass, end, rotation, SpawnInfo);
+	check(itemActor);
+	for (UActorComponent* Component : itemActor->GetComponents())
+	{
+		if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(Component))
+		{
+			UE_LOG(LogTemp, Warning, TEXT(" - component %s"), *PrimComp->GetName());
+			PrimComp->SetSimulatePhysics(false);
+			PrimComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
+	}
+	itemActor->SetActorEnableCollision(false);
+	if (itemActor->Item.ContainedSlots)
+	{
+		auto inv = NewObject<UInventory>();
+		check(inv);
+		itemActor->Inventory = inv;
+		inv->Player = this;
+	}
+	return itemActor;
+}
+
+bool
+APrimitiveCharacter::CheckCurrentPlacedItem()
+{
+	if (CurrentPlacedItem)
+	{
+		FVector pos = TargetLocation;
+
+		auto ok = CurrentPlacedItem->SetActorLocation(pos, false, nullptr, ETeleportType::TeleportPhysics);
+		for (UActorComponent* Component : CurrentPlacedItem->GetComponents())
+		{
+			if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(Component))
+			{
+				UE_LOG(LogTemp, Warning, TEXT(" - component %s"), *PrimComp->GetName());
+				PrimComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+				PrimComp->SetWorldLocation(pos);
+			}
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("Moved placed item %s to [%d, %d, %d] %d"), *CurrentPlacedItem->GetName(), pos.X, pos.Y, pos.Z, ok);
+		return true;
+	}
+	else
+		return false;
+}
+
+void
+APrimitiveCharacter::CompletePlacingItem()
+{
+	if (CurrentPlacedItem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Completed placing item %s"), *CurrentPlacedItem->GetName());
+		CurrentPlacedItem->SetActorEnableCollision(true);
+		for (UActorComponent* Component : CurrentPlacedItem->GetComponents())
+		{
+			if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(Component))
+			{
+				UE_LOG(LogTemp, Warning, TEXT(" - component %s"), *PrimComp->GetName());
+				PrimComp->SetSimulatePhysics(true);
+			}
+		}
+		SetHighlightIfInteractableTarget(CurrentPlacedItem, false);
+		CurrentPlacedItem = nullptr;
 	}
 }
 

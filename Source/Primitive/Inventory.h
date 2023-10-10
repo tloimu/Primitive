@@ -14,14 +14,10 @@ struct FItemSlot
 	FItemSlot() {}
 	FItemSlot(const BodyPart MustWearIn) { CanOnlyWearIn.Add(MustWearIn); }
 
-	bool operator== (const FItemSlot rhs) const
-	{
-		if (Item.Id == rhs.Item.Id && Item.Quality == rhs.Item.Quality)
-		{
-			return true;
-		}
-		else return false;
-	}
+	bool operator== (const FItemSlot rhs) const;
+
+	bool MergeTo(FItemSlot& ToSlot, int inCount);
+	bool CanMergeTo(FItemSlot& ToSlot) const;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int Index = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) FItemStruct Item;

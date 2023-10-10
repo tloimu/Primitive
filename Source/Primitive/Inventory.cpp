@@ -4,6 +4,78 @@
 #include "Inventory.h"
 #include "PrimitiveCharacter.h"
 
+// ===========================================
+// class FItemSlot
+// ===========================================
+
+bool
+FItemSlot::operator== (const FItemSlot rhs) const
+{
+	if (Item.Id == rhs.Item.Id && Item.Quality == rhs.Item.Quality)
+	{
+		return true;
+	}
+	else return false;
+}
+
+bool
+FItemSlot::MergeTo(FItemSlot& ToSlot, int inCount)
+{
+	if (CanMergeTo(ToSlot))
+	{
+		auto n = FMath::Min(Item.MaxStackSize - ToSlot.Count, inCount);
+		if (n > 0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Merge from slot %d to %d items %d"), Index, ToSlot.Index, inCount);
+			ToSlot.Item = Item;
+			ToSlot.Count += n;
+			Count -= n;
+			if (Count == 0)
+				Item = FItemStruct();
+			if (Inventory && Inventory->InventoryListener)
+				Inventory->InventoryListener->SlotChanged(*this);
+			if (ToSlot.Inventory && ToSlot.Inventory->InventoryListener)
+				ToSlot.Inventory->InventoryListener->SlotChanged(ToSlot);
+			return true;
+		}
+	}
+	return false;
+}
+
+bool
+FItemSlot::CanMergeTo(FItemSlot& ToSlot) const
+{
+	if (ToSlot.Count == 0)
+	{
+		if (ToSlot.CanOnlyWearIn.IsEmpty())
+			return true;
+		/*
+		for (auto bp : Item.CanWearIn)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("FromSlot CanWear in %d"), bp);
+		}
+		for (auto bp : ToSlot.CanOnlyWearIn)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("ToSlot CanWear in %d"), bp);
+		}
+		*/
+
+		if (!ToSlot.CanOnlyWearIn.Intersect(Item.CanWearIn).IsEmpty())
+			return true;
+	}
+	else
+	{
+		if (ToSlot.Item == Item)
+			return true;
+	}
+
+	return false;
+}
+
+// ===========================================
+// class UInventory
+// ===========================================
+
 UInventory::UInventory(): UObject(), MaxSlots(1)
 {
 }
@@ -46,50 +118,13 @@ UInventory::CountItemsOf(const FString& inId) const
 bool
 UInventory::CanMergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot) const
 {
-	if (ToSlot.Count == 0)
-	{
-		if (ToSlot.CanOnlyWearIn.IsEmpty())
-			return true;
-
-		for (auto bp : FromSlot.Item.CanWearIn)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("FromSlot CanWear in %d"), bp);
-		}
-		for (auto bp : ToSlot.CanOnlyWearIn)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("ToSlot CanWear in %d"), bp);
-		}
-
-		if (!ToSlot.CanOnlyWearIn.Intersect(FromSlot.Item.CanWearIn).IsEmpty())
-			return true;
-	}
-	else
-	{
-		if (ToSlot.Item == FromSlot.Item)
-			return true;
-	}
-
-	return false;
+	return FromSlot.CanMergeTo(ToSlot);
 }
 
 void
-UInventory::MergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot, int Count)
+UInventory::MergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot, int inCount)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Merge from slot %d to %d items %d"), FromSlot.Index, ToSlot.Index, Count);
-	if (CanMergeWith(ToSlot, FromSlot))
-	{
-		auto n = FMath::Min(FromSlot.Item.MaxStackSize - ToSlot.Count, Count);
-		ToSlot.Item = FromSlot.Item;
-		ToSlot.Count += n;
-		FromSlot.Count -= n;
-		if (FromSlot.Count == 0)
-			FromSlot.Item = FItemStruct();
-		if (InventoryListener)
-		{
-			InventoryListener->SlotChanged(FromSlot);
-			InventoryListener->SlotChanged(ToSlot);
-		}
-	}
+	FromSlot.MergeTo(ToSlot, inCount);
 }
 
 

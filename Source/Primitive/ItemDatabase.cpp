@@ -26,7 +26,14 @@ UItemDatabase::SetupItems()
 	{
 		auto &item = itemPair.Value;
 		item.Icon.LoadSynchronous();
-		UE_LOG(LogTemp, Warning, TEXT("ItemDb: %s %s %s"), *item.Id, *item.Icon.GetAssetName(), *item.ItemClass->GetClass()->GetName());
+		if (item.ItemClass)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("ItemDb: %s %s %s"), *item.Id, *item.Icon.GetAssetName(), *item.ItemClass->GetClass()->GetName());
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("ItemDb: %s Item Class Not Set"), *item.Id);
+		}
 	}
 
 	for (auto& spec : RecipieSpecs)

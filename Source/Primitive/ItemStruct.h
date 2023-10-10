@@ -86,4 +86,11 @@ struct FItemStruct
     // Containers
     UPROPERTY(EditAnywhere, BlueprintReadWrite) int ContainedSlots = 0;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TSet<ItemForm> SlotCapability;
+
+    // Consumables
+    bool IsConsumable() const { return (ConsumedWater > 0.0f || ConsumedFood > 0.0f || ConsumedAir > 0.0f); }
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) float ConsumedWater = 0.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) float ConsumedFood = 0.0f;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) float ConsumedAir = 0.0f;
 };

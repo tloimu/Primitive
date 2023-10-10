@@ -107,10 +107,16 @@ class APrimitiveCharacter : public ACharacter
 public:
 	APrimitiveCharacter();
 	
+	AInteractableActor* CreatePlacedItem(const FItemStruct& Item);
 	void CreateDroppedItem(const FItemStruct& Item);
 	const FItemStruct* FindItem(const FString& Id) const;
 
 	UPROPERTY(EditAnywhere) USoundCue* HandCraftingSound = nullptr;
+	UPROPERTY(EditAnywhere) USoundCue* HitItemSound = nullptr;
+	UPROPERTY(EditAnywhere) USoundCue* PickItemSound = nullptr;
+	UPROPERTY(EditAnywhere) USoundCue* DropItemSound = nullptr;
+	UPROPERTY(EditAnywhere) USoundCue* EquipItemSound = nullptr;
+	UPROPERTY(EditAnywhere) USoundCue* UnequipItemSound = nullptr;
 
 protected:
 
@@ -145,6 +151,16 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "Zoom Transforms", BlueprintReadWrite) TArray<float> ZoomTransforms;
 	uint8 CurrentZoomLevel;
 
+	void Interact_InInventory(const FInputActionValue& Value);
+	void Interact_Voxel(const FInputActionValue& Value, const FVector &inTarget);
+	void Interact_Interactable(const FInputActionValue& Value, AInteractableActor& inTarget);
+	void Interact_Foliage(const FInputActionValue& Value, UInstancedStaticMeshComponent& inFoliageComponent, int32 inInstanceId);
+
+	void PlaceItem(const FInputActionValue& Value, FItemSlot &fromSlot);
+	void WearItem(FItemSlot& fromSlot);
+	void ConsumeItem(FItemSlot& fromSlot);
+
+
 	TArray<ContainedMaterial> CollectMaterialsFrom(const FVector& Location);
 	void HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, UFoliageResource& inFoliageComponent, int32 inInstanceId);
 	void EquipItem(UInventorySlot& FromSlot, UInventorySlot &ToSlot);
@@ -163,23 +179,24 @@ protected:
 	void CheckBeginPlay();
 
 	void ReadConfigFiles();
-	//void UpdateItemSettingsClass(FItemSettings& item);
 	void ReadGameSave();
 	AInteractableActor* SpawnItem(const FSavedItem& item);
 	void SetSavedInventorySlot(const FSavedInventorySlot& saved, FItemSlot& slot);
 	void SetSavedContainerSlots(UInventory* inInventory, const FSavedItem& saved);
 
-	//UPROPERTY(EditAnywhere, BlueprintReadOnly) TMap<FString, FItemSettings> ItemSettings;
-
 	void Tick(float DeltaSeconds) override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) AActor* CurrentTarget;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) AInteractableActor* CurrentInteractable;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) AActor* CurrentTarget = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) AInteractableActor* CurrentInteractable = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) FIntVector CurrentVoxel;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) FVector TargetLocation;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) class AVoxelWorld *TargetVoxelWorld;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 CurrentTargetInstanceId;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) UInstancedStaticMeshComponent* CurrentTargetComponent;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) UInstancedStaticMeshComponent* CurrentTargetComponent = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) AInteractableActor* CurrentPlacedItem = nullptr;
+	bool CheckCurrentPlacedItem(); // return true if placed item is active
+	void CompletePlacingItem();
 
 	void CheckTarget();
 	void SetCurrentTarget(AActor* target, UPrimitiveComponent* component = nullptr, int32 instanceId = -1);
