@@ -118,6 +118,15 @@ public:
 	UPROPERTY(EditAnywhere) USoundCue* EquipItemSound = nullptr;
 	UPROPERTY(EditAnywhere) USoundCue* UnequipItemSound = nullptr;
 
+	// Sounds
+	void PlaySound(USoundCue *inDefaultSound, USoundCue *inOverrideSound = nullptr) const;
+	void PlaySoundCrafting(const FItemStruct& inItem) const;
+	void PlaySoundHit(const FItemStruct &inItem) const;
+	void PlaySoundEquip(const FItemStruct& inItem) const;
+	void PlaySoundUnequip(const FItemStruct& inItem) const;
+	void PlaySoundDropItem(const FItemStruct& inItem) const;
+	void PlaySoundPickItem(const FItemStruct& inItem) const;
+
 protected:
 
 	/** Called for movement input */
@@ -195,6 +204,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) UInstancedStaticMeshComponent* CurrentTargetComponent = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) AInteractableActor* CurrentPlacedItem = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 CurrentPlacedItemElevation = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 CurrentPlacedItemRotation = 0;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 PlacedItemElevationStep = 5;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 PlacedItemRotationStep = 5;
 	bool CheckCurrentPlacedItem(); // return true if placed item is active
 	void CompletePlacingItem();
 

@@ -117,10 +117,8 @@ UCrafter::StartCrafting(const FCraftRecipie& inRecipie, TArray<UInventory*> inIn
 	if (Inventory && Inventory->Player)
 	{
 		auto player = Cast<APrimitiveCharacter>(Inventory->Player);
-		if (player && player->HandCraftingSound)
-		{
-			UGameplayStatics::PlaySound2D(player->GetWorld(), player->HandCraftingSound);
-		}
+		if (player)
+			player->PlaySoundCrafting(inSlot->Item);
 	}
 
 	return true;

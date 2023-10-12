@@ -768,7 +768,62 @@ void APrimitiveCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 
 }
 
-void APrimitiveCharacter::Move(const FInputActionValue& Value)
+// ---------------------------------------------
+// Sounds
+
+void
+APrimitiveCharacter::PlaySound(USoundCue* inDefaultSound, USoundCue* inOverrideSound) const
+{
+	auto sound = inOverrideSound ? inOverrideSound : inDefaultSound;
+	if (sound)
+	{
+		UGameplayStatics::PlaySound2D(GetWorld(), sound);
+	}
+}
+
+
+void
+APrimitiveCharacter::PlaySoundCrafting(const FItemStruct& inItem) const
+{
+	PlaySound(HandCraftingSound);
+}
+
+void
+APrimitiveCharacter::PlaySoundHit(const FItemStruct& inItem) const
+{
+	PlaySound(HitItemSound);
+}
+
+void
+APrimitiveCharacter::PlaySoundEquip(const FItemStruct& inItem) const
+{
+	PlaySound(EquipItemSound);
+}
+
+void
+APrimitiveCharacter::PlaySoundUnequip(const FItemStruct& inItem) const
+{
+	PlaySound(UnequipItemSound);
+}
+
+void
+APrimitiveCharacter::PlaySoundDropItem(const FItemStruct& inItem) const
+{
+	PlaySound(DropItemSound);
+}
+
+void
+APrimitiveCharacter::PlaySoundPickItem(const FItemStruct& inItem) const
+{
+	PlaySound(PickItemSound);
+}
+
+// Sounds
+// ---------------------------------------------
+
+
+void
+APrimitiveCharacter::Move(const FInputActionValue& Value)
 {
 	// input is a Vector2D
 	FVector2D MovementVector = Value.Get<FVector2D>();
@@ -807,20 +862,54 @@ void APrimitiveCharacter::Look(const FInputActionValue& Value)
 
 void APrimitiveCharacter::ZoomIn(const FInputActionValue& Value)
 {
-	if (CurrentZoomLevel <= 1)
-		CurrentZoomLevel = 0;
+	if (ModifierCtrlDown)
+	{
+		if (CurrentPlacedItem)
+		{
+			CurrentPlacedItemElevation += PlacedItemElevationStep;
+		}
+	}
+	else if (ModifierShiftDown)
+	{
+		if (CurrentPlacedItem)
+		{
+			CurrentPlacedItemRotation -= PlacedItemRotationStep;
+		}
+	}
 	else
-		CurrentZoomLevel--;
-	CameraBoom->TargetArmLength = ZoomTransforms[CurrentZoomLevel];
+	{
+		if (CurrentZoomLevel <= 1)
+			CurrentZoomLevel = 0;
+		else
+			CurrentZoomLevel--;
+		CameraBoom->TargetArmLength = ZoomTransforms[CurrentZoomLevel];
+	}
 }
 
 void APrimitiveCharacter::ZoomOut(const FInputActionValue& Value)
 {
-	if (CurrentZoomLevel >= ZoomTransforms.Num() - 2)
-		CurrentZoomLevel = ZoomTransforms.Num() - 1;
+	if (ModifierCtrlDown)
+	{
+		if (CurrentPlacedItem)
+		{
+			CurrentPlacedItemElevation -= PlacedItemElevationStep;
+		}
+	}
+	else if (ModifierShiftDown)
+	{
+		if (CurrentPlacedItem)
+		{
+			CurrentPlacedItemRotation += PlacedItemRotationStep;
+		}
+	}
 	else
-		CurrentZoomLevel++;
-	CameraBoom->TargetArmLength = ZoomTransforms[CurrentZoomLevel];
+	{
+		if (CurrentZoomLevel >= ZoomTransforms.Num() - 2)
+			CurrentZoomLevel = ZoomTransforms.Num() - 1;
+		else
+			CurrentZoomLevel++;
+		CameraBoom->TargetArmLength = ZoomTransforms[CurrentZoomLevel];
+	}
 }
 
 void APrimitiveCharacter::FreeLook(const FInputActionValue& Value)
@@ -1193,6 +1282,7 @@ APrimitiveCharacter::CreatePlacedItem(const FItemStruct& Item)
 	FVector start = GetActorLocation();
 	FVector end = start + FollowCamera->GetForwardVector().GetSafeNormal() * 500.0f;
 	auto rotation = GetActorRotation();
+	rotation.Yaw = FMath::Floor(rotation.Yaw / PlacedItemRotationStep) * PlacedItemElevationStep; // Align with the world coordinates
 	FActorSpawnParameters SpawnInfo;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
@@ -1215,6 +1305,8 @@ APrimitiveCharacter::CreatePlacedItem(const FItemStruct& Item)
 		itemActor->Inventory = inv;
 		inv->Player = this;
 	}
+	CurrentPlacedItemElevation = 0;
+	CurrentPlacedItemRotation = 0;
 	return itemActor;
 }
 
@@ -1224,15 +1316,19 @@ APrimitiveCharacter::CheckCurrentPlacedItem()
 	if (CurrentPlacedItem)
 	{
 		FVector pos = TargetLocation;
+		pos.Z = pos.Z + CurrentPlacedItemElevation;
+		auto rot = CurrentPlacedItem->GetActorRotation();
+		rot.Yaw += CurrentPlacedItemRotation;
+		CurrentPlacedItemRotation = 0; // apply only once
 
-		auto ok = CurrentPlacedItem->SetActorLocation(pos, false, nullptr, ETeleportType::TeleportPhysics);
+		auto ok = CurrentPlacedItem->SetActorLocationAndRotation(pos, rot, false, nullptr, ETeleportType::TeleportPhysics);
 		for (UActorComponent* Component : CurrentPlacedItem->GetComponents())
 		{
 			if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(Component))
 			{
 				UE_LOG(LogTemp, Warning, TEXT(" - component %s"), *PrimComp->GetName());
 				PrimComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-				PrimComp->SetWorldLocation(pos);
+				PrimComp->SetWorldLocationAndRotation(pos, rot);
 			}
 		}
 
