@@ -131,7 +131,8 @@ UInventory::MergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot, int inCount)
 bool
 UInventory::AddItem(const FItemStruct& item, int count)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Adding %d item %s to slot (slots=%d) icon=%s"), count, *item.ItemClass.Get()->GetName(), Slots.Num(), *item.Icon.GetAssetName());
+	FString className = item.ItemClass.Get() ? item.ItemClass.Get()->GetName() : FString("<unknown class>");
+	UE_LOG(LogTemp, Warning, TEXT("Adding %d item %s to slot (slots=%d) icon=%s"), count, *className, Slots.Num(), *item.Icon.GetAssetName());
 
 	// First, try to fill slots that already has the same stuff and has room left
 	for (int i = 0; i < Slots.Num(); i++)

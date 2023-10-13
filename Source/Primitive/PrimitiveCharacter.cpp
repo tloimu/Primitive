@@ -422,7 +422,14 @@ APrimitiveCharacter::SpawnItem(const FSavedItem& item)
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("Cannot find item class %s"), *itemInfo->ItemClass->GetName());
+			if (itemInfo->ItemClass)
+			{
+				UE_LOG(LogTemp, Error, TEXT("Cannot find class %s for item %s"), *itemInfo->ItemClass->GetName(), *item.id);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("Cannot find class for item %s"), *item.id);
+			}
 		}
 	}
 	return nullptr;
@@ -469,6 +476,10 @@ APrimitiveCharacter::SetSavedContainerSlots(UInventory* inInventory, const FSave
 void
 APrimitiveCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	Super::EndPlay(EndPlayReason);
+
+	ClearTimers();
+
 	if (InventoryWidget)
 	{
 		InventoryWidget->RemoveFromParent();
@@ -480,10 +491,7 @@ APrimitiveCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		HUDWidget->RemoveFromParent();
 		HUDWidget = nullptr;
 	}
-
-	Super::EndPlay(EndPlayReason);
 }
-
 
 void APrimitiveCharacter::Tick(float DeltaSeconds)
 {
@@ -789,7 +797,7 @@ APrimitiveCharacter::PlaySoundCrafting(const FItemStruct& inItem) const
 }
 
 void
-APrimitiveCharacter::PlaySoundHit(const FItemStruct& inItem) const
+APrimitiveCharacter::PlaySoundHit(const FItemStruct* inItem, const UFoliageResource* inResource) const
 {
 	PlaySound(HitItemSound);
 }
@@ -816,6 +824,12 @@ void
 APrimitiveCharacter::PlaySoundPickItem(const FItemStruct& inItem) const
 {
 	PlaySound(PickItemSound);
+}
+
+void
+APrimitiveCharacter::PlaySoundHarvest() const
+{
+	PlaySound(HarvestSound);
 }
 
 // Sounds
@@ -929,6 +943,7 @@ void APrimitiveCharacter::Pick(const FInputActionValue& Value)
 				UE_LOG(LogTemp, Warning, TEXT("Adding item to inventory %s"), *item.Name);
 				if (Inventory->AddItem(item))
 				{
+					PlaySoundPickItem(item);
 					if (CurrentInteractable->Inventory)
 					{
 						// Move container items into inventory if possible
@@ -959,6 +974,7 @@ void APrimitiveCharacter::Drop(const FInputActionValue& Value)
 		auto n = slot.Count;
 		if (ModifierShiftDown)
 			n = 1;
+		PlaySoundDropItem(slot.Item);
 		Inventory->DropItemsFromSlot(slot, n);
 	}
 }
@@ -991,14 +1007,41 @@ void APrimitiveCharacter::Hit(const FInputActionValue& Value)
 	else if (CurrentTarget && CurrentTargetComponent && CurrentTargetInstanceId != -1)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Hit %s instance %ld"), *CurrentTargetComponent->GetName(), CurrentTargetInstanceId);
-		auto fa = Cast<AInstancedFoliageActor>(CurrentTarget);
-		auto co = Cast<UFoliageResource>(CurrentTargetComponent);
-		if (fa && co)
-		{
-			HitFoliageInstance(*fa, *co, CurrentTargetInstanceId);
-		}
+		if (!CommittedToAction)
+			CommitToHitAction();
 	}
 }
+
+void
+APrimitiveCharacter::ClearTimers()
+{
+	GetWorldTimerManager().ClearTimer(CommittedActionTimerHandle);
+}
+
+void
+APrimitiveCharacter::CommitToHitAction()
+{
+	CommittedToAction = true;
+	auto HitActionDuration = 1.5f;
+	auto fa = Cast<AInstancedFoliageActor>(CurrentTarget);
+	auto co = Cast<UFoliageResource>(CurrentTargetComponent);
+	int32 i = CurrentTargetInstanceId;
+	if (fa && co)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Commit to Hit %s instance %ld"), *CurrentTargetComponent->GetName(), CurrentTargetInstanceId);
+		PlaySoundHit(nullptr, co);
+		FTimerDelegate caller = FTimerDelegate::CreateUObject(this, &APrimitiveCharacter::HitExecute, fa, co, i);
+		GetWorldTimerManager().SetTimer(CommittedActionTimerHandle, caller, HitActionDuration, false);
+	}
+}
+
+void
+APrimitiveCharacter::HitExecute(AInstancedFoliageActor *inFoliageActor, UFoliageResource *inResourceComponent, int32 inInstanceId)
+{
+	CommittedToAction = false;
+	HitFoliageInstance(*inFoliageActor, *inResourceComponent, inInstanceId);
+}
+
 
 void
 APrimitiveCharacter::Interact(const FInputActionValue& Value)
@@ -1088,6 +1131,7 @@ void
 APrimitiveCharacter::WearItem(FItemSlot& fromSlot)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Wear %s from inventory slot %d"), *fromSlot.Item.Name, fromSlot.Index);
+	PlaySoundEquip(fromSlot.Item);
 	for (auto& eqSlot : EquippedItems->Slots)
 	{
 		if (fromSlot.CanMergeTo(eqSlot))
@@ -1146,6 +1190,10 @@ APrimitiveCharacter::ToggleInventory(const FInputActionValue& Value)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory ON"));
 		ShowingInventory = true;
+		if (CurrentPlacedItem)
+		{
+			CancelPlaceItem();
+		}
 		if (InventoryWidget != nullptr)
 		{
 			InventoryWidget->AddToPlayerScreen();
@@ -1201,6 +1249,7 @@ APrimitiveCharacter::HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, 
 	if (inFoliageComponent.GetInstanceTransform(inInstanceId, trans, true))
 	{
 		// ???? TODO: Perhaps move up a bit to avoid things going underground?
+		PlaySoundHarvest();
 		for (auto& part : inFoliageComponent.BreaksIntoItems)
 		{
 			auto item = FindItem(part.ItemId);
@@ -1257,6 +1306,7 @@ APrimitiveCharacter::CreateDroppedItem(const FItemStruct& Item)
 		check(inv);
 		itemActor->Inventory = inv;
 		inv->Player = this;
+		inv->SetMaxSlots(Item.ContainedSlots);
 	}
 }
 
@@ -1270,8 +1320,20 @@ APrimitiveCharacter::PlaceItem(const FInputActionValue& Value, FItemSlot& fromSl
 	if (CurrentPlacedItem == nullptr && fromSlot.Count > 0)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Placing %s from inventory slot %d"), *fromSlot.Item.Name, fromSlot.Index);
-		fromSlot.Count--;
+		CurrentPlacedItemFromSlot = &fromSlot;
 		CurrentPlacedItem = CreatePlacedItem(fromSlot.Item);
+	}
+}
+
+void
+APrimitiveCharacter::CancelPlaceItem()
+{
+	if (CurrentPlacedItem)
+	{
+		auto item = CurrentPlacedItem;
+		CurrentPlacedItem = nullptr;
+		CurrentPlacedItemFromSlot = nullptr;
+		item->Destroy();
 	}
 }
 
@@ -1304,6 +1366,13 @@ APrimitiveCharacter::CreatePlacedItem(const FItemStruct& Item)
 		check(inv);
 		itemActor->Inventory = inv;
 		inv->Player = this;
+		inv->SetMaxSlots(Item.ContainedSlots);
+	}
+	if (Item.CraftableRecipies.Num())
+	{
+		auto crafter = NewObject<UCrafter>();
+		check(crafter);
+		itemActor->Crafter = crafter;
 	}
 	CurrentPlacedItemElevation = 0;
 	CurrentPlacedItemRotation = 0;
@@ -1355,7 +1424,16 @@ APrimitiveCharacter::CompletePlacingItem()
 			}
 		}
 		SetHighlightIfInteractableTarget(CurrentPlacedItem, false);
+		if (CurrentPlacedItemFromSlot)
+		{
+			CurrentPlacedItemFromSlot->Count--;
+			if (CurrentPlacedItemFromSlot->Count == 0)
+				CurrentPlacedItemFromSlot->Item = FItemStruct(); // ???? TODO: Refactor
+			if (CurrentPlacedItemFromSlot->Inventory && CurrentPlacedItemFromSlot->Inventory->InventoryListener)
+				CurrentPlacedItemFromSlot->Inventory->InventoryListener->SlotChanged(*CurrentPlacedItemFromSlot);
+		}
 		CurrentPlacedItem = nullptr;
+		CurrentPlacedItemFromSlot = nullptr;
 	}
 }
 

@@ -18,8 +18,28 @@
                 },
                 {
                     "slot": 2,
+                    "id": "LongStick",
+                    "count": 3
+                },
+                {
+                    "slot": 3,
                     "id": "SmallRock",
                     "count": 30
+                },
+                {
+                    "slot": 4,
+                    "id": "WoodFoundation",
+                    "count": 3
+                },
+                {
+                    "slot": 5,
+                    "id": "WoodWall",
+                    "count": 3
+                },
+                {
+                    "slot": 7,
+                    "id": "WorkBench",
+                    "count": 1
                 }
             ],
             "wear":

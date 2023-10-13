@@ -6,7 +6,7 @@
 
 
 UENUM(BlueprintType)
-enum class BodyPart : uint8
+enum class BodyPart : uint8 // ???? TODO: Renamve to <EBodyPart>
 {
     None = 0            UMETA(DisplayName = "None"),
     Head = 1            UMETA(DisplayName = "Head"),
@@ -25,7 +25,7 @@ enum class BodyPart : uint8
 
 
 UENUM(BlueprintType)
-enum class ToolUtility : uint8
+enum class ToolUtility : uint8 // ???? TODO: Rename to <EItemUtility>
 {
     None = 0                    UMETA(DisplayName = "None"),
     Cut = 1                     UMETA(DisplayName = "Cut"),
@@ -33,12 +33,13 @@ enum class ToolUtility : uint8
     FarmSoftResource = 11       UMETA(DisplayName = "FarmSoftResource"),
     FarmHardResource = 12       UMETA(DisplayName = "FarmHardResource"),
     FarmVeryHardResource = 13   UMETA(DisplayName = "FarmVeryHardResource"),
-    ContainPowder = 20         UMETA(DisplayName = "ContainLiquid"),
-    ContainLiquid = 20          UMETA(DisplayName = "ContainLiquid")
+    ContainLiquid = 20          UMETA(DisplayName = "ContainLiquid"),
+    ContainPowder = 21          UMETA(DisplayName = "ContainPowder"),
+    Building = 30               UMETA(DisplayName = "Building"),
 };
 
 UENUM(BlueprintType)
-enum class ItemForm : uint8
+enum class ItemForm : uint8 // ???? TODO: Rename to <EItemForm>
 {
     None = 0       UMETA(DisplayName = "None"),
     Long = 1       UMETA(DisplayName = "Long"), // Long itemst that do not fit into backpack, chest etc. e.g. logs or long beams

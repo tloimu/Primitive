@@ -14,21 +14,25 @@ UItemDatabase::SetupItems()
 {
 	for (auto& spec : ItemSpecs)
 	{
-		if (spec.ItemClass->IsValidLowLevel())
+		if (spec.ItemClass && spec.ItemClass->IsValidLowLevel())
 		{
 			auto o = spec.ItemClass.GetDefaultObject();
 			o->Item.Id = spec.Id;
 			Items.Add(spec.Id, o->Item);
 		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("ItemDb: %s Item Class Not Set"), *spec.Id);
+		}
 	}
 
 	for (auto itemPair : Items)
 	{
-		auto &item = itemPair.Value;
-		item.Icon.LoadSynchronous();
-		if (item.ItemClass)
+		auto& item = itemPair.Value;
+		if (item.ItemClass && item.ItemClass->IsValidLowLevel())
 		{
 			UE_LOG(LogTemp, Warning, TEXT("ItemDb: %s %s %s"), *item.Id, *item.Icon.GetAssetName(), *item.ItemClass->GetClass()->GetName());
+			item.Icon.LoadSynchronous();
 		}
 		else
 		{

@@ -117,15 +117,17 @@ public:
 	UPROPERTY(EditAnywhere) USoundCue* DropItemSound = nullptr;
 	UPROPERTY(EditAnywhere) USoundCue* EquipItemSound = nullptr;
 	UPROPERTY(EditAnywhere) USoundCue* UnequipItemSound = nullptr;
+	UPROPERTY(EditAnywhere) USoundCue* HarvestSound = nullptr;
 
 	// Sounds
 	void PlaySound(USoundCue *inDefaultSound, USoundCue *inOverrideSound = nullptr) const;
 	void PlaySoundCrafting(const FItemStruct& inItem) const;
-	void PlaySoundHit(const FItemStruct &inItem) const;
+	void PlaySoundHit(const FItemStruct *inItem, const UFoliageResource *inResource) const;
 	void PlaySoundEquip(const FItemStruct& inItem) const;
 	void PlaySoundUnequip(const FItemStruct& inItem) const;
 	void PlaySoundDropItem(const FItemStruct& inItem) const;
 	void PlaySoundPickItem(const FItemStruct& inItem) const;
+	void PlaySoundHarvest() const;
 
 protected:
 
@@ -166,6 +168,7 @@ protected:
 	void Interact_Foliage(const FInputActionValue& Value, UInstancedStaticMeshComponent& inFoliageComponent, int32 inInstanceId);
 
 	void PlaceItem(const FInputActionValue& Value, FItemSlot &fromSlot);
+	void CancelPlaceItem();
 	void WearItem(FItemSlot& fromSlot);
 	void ConsumeItem(FItemSlot& fromSlot);
 
@@ -181,6 +184,8 @@ protected:
 	// To add mapping context
 	void BeginPlay() override;
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	void ClearTimers();
 
 	void SetupInventoryUI(APlayerController* pc);
 	void SetupHUD(APlayerController* pc);
@@ -204,6 +209,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) UInstancedStaticMeshComponent* CurrentTargetComponent = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) AInteractableActor* CurrentPlacedItem = nullptr;
+	FItemSlot* CurrentPlacedItemFromSlot = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 CurrentPlacedItemElevation = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 CurrentPlacedItemRotation = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 PlacedItemElevationStep = 5;
@@ -258,6 +264,11 @@ protected:
 	void EnsureNotUnderGround();
 	void CheckSunlight(float DeltaSeconds);
 	void CheckCrafting(float DeltaSeconds);
+
+	void CommitToHitAction();
+	void HitExecute(AInstancedFoliageActor* inFoliageActor, UFoliageResource* inResourceComponent, int32 inInstanceId);
+	FTimerHandle CommittedActionTimerHandle;
+	bool CommittedToAction = false;
 
 /*	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
 	class UInventoryComponent* InventoryComponent;*/
