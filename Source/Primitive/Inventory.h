@@ -18,6 +18,9 @@ struct FItemSlot
 
 	bool MergeTo(FItemSlot& ToSlot, int inCount);
 	bool CanMergeTo(FItemSlot& ToSlot) const;
+	FItemSlot& SetCount(int inCount);
+	FItemSlot& ChangeCountBy(int inCount);
+	void NotifyChange() const; // Notify the possible InventoryListener of the changed slot content
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int Index = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) FItemStruct Item;

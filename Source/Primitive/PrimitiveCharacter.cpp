@@ -21,6 +21,7 @@
 #include "Runtime/Engine/Public/EngineUtils.h"
 #include "Runtime/Foliage/Public/InstancedFoliageActor.h"
 #include "Kismet/GameplayStatics.h"
+#include "OmaUtils.h"
 
 #include <Voxel/Public/VoxelTools/Gen/VoxelSphereTools.h>
 #include <Voxel/Public/VoxelWorldInterface.h>
@@ -342,11 +343,9 @@ APrimitiveCharacter::ReadGameSave()
 										auto itemSetting = FindItem(savedSlot.id);
 										if (itemSetting && itemSetting->ItemClass->IsValidLowLevel())
 										{
-											es.Item = *itemSetting;
-											es.Count = 1;
 											es.Inventory = EquippedItems;
-											if (EquippedItems->InventoryListener)
-												EquippedItems->InventoryListener->SlotChanged(es);
+											es.Item = *itemSetting;
+											es.SetCount(1).NotifyChange();
 										}
 										break;
 									}
@@ -452,9 +451,7 @@ APrimitiveCharacter::SetSavedInventorySlot(const FSavedInventorySlot& saved, FIt
 	{
 		UE_LOG(LogTemp, Warning, TEXT("  - add %d items to slot %d %s"), saved.count, saved.slot, *itemSetting->Id);
 		slot.Item = *itemSetting;
-		slot.Count = saved.count;
-		if (slot.Inventory->InventoryListener)
-			slot.Inventory->InventoryListener->SlotChanged(slot);
+		slot.SetCount(saved.count).NotifyChange();
 	}
 }
 
@@ -1158,10 +1155,8 @@ APrimitiveCharacter::ConsumeItem(FItemSlot& fromSlot)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Gained %d air"), fromSlot.Item.ConsumedAir);
 	}
-	fromSlot.Count--;
-	// ???? TODO: Alter character stats
-	if (fromSlot.Inventory && fromSlot.Inventory->InventoryListener)
-		fromSlot.Inventory->InventoryListener->SlotChanged(fromSlot);
+	fromSlot.ChangeCountBy(-1).NotifyChange();
+	// ???? TODO: Alter character stats?
 }
 
 
@@ -1388,21 +1383,10 @@ APrimitiveCharacter::CheckCurrentPlacedItem()
 		pos.Z = pos.Z + CurrentPlacedItemElevation;
 		auto rot = CurrentPlacedItem->GetActorRotation();
 		rot.Yaw += CurrentPlacedItemRotation;
-		CurrentPlacedItemRotation = 0; // apply only once
+		CurrentPlacedItemRotation = 0; // apply rotation only once
 
-		auto ok = CurrentPlacedItem->SetActorLocationAndRotation(pos, rot, false, nullptr, ETeleportType::TeleportPhysics);
-		for (UActorComponent* Component : CurrentPlacedItem->GetComponents())
-		{
-			if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(Component))
-			{
-				UE_LOG(LogTemp, Warning, TEXT(" - component %s"), *PrimComp->GetName());
-				PrimComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-				PrimComp->SetWorldLocationAndRotation(pos, rot);
-			}
-		}
-
-		UE_LOG(LogTemp, Warning, TEXT("Moved placed item %s to [%d, %d, %d] %d"), *CurrentPlacedItem->GetName(), pos.X, pos.Y, pos.Z, ok);
-		return true;
+		auto ok = OmaUtil::TeleportActor(*CurrentPlacedItem, pos, rot);
+		return ok;
 	}
 	else
 		return false;
@@ -1426,11 +1410,7 @@ APrimitiveCharacter::CompletePlacingItem()
 		SetHighlightIfInteractableTarget(CurrentPlacedItem, false);
 		if (CurrentPlacedItemFromSlot)
 		{
-			CurrentPlacedItemFromSlot->Count--;
-			if (CurrentPlacedItemFromSlot->Count == 0)
-				CurrentPlacedItemFromSlot->Item = FItemStruct(); // ???? TODO: Refactor
-			if (CurrentPlacedItemFromSlot->Inventory && CurrentPlacedItemFromSlot->Inventory->InventoryListener)
-				CurrentPlacedItemFromSlot->Inventory->InventoryListener->SlotChanged(*CurrentPlacedItemFromSlot);
+			CurrentPlacedItemFromSlot->ChangeCountBy(-1).NotifyChange();
 		}
 		CurrentPlacedItem = nullptr;
 		CurrentPlacedItemFromSlot = nullptr;

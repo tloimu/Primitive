@@ -64,8 +64,7 @@ UInventoryWidget::SetupEquippedSlots()
 				EquippedItems->Slots.Add(slot);
 				EquipmentSlots.Add(es);
 				UE_LOG(LogTemp, Warning, TEXT("EquipmentSlot [%d] in [%d]: Set"), i, es->EquippedIn);
-				if (EquippedItems->InventoryListener)
-					EquippedItems->InventoryListener->SlotChanged(slot);
+				slot.NotifyChange();
 			}
 			i++;
 		}

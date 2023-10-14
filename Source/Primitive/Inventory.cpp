@@ -28,14 +28,8 @@ FItemSlot::MergeTo(FItemSlot& ToSlot, int inCount)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Merge from slot %d to %d items %d"), Index, ToSlot.Index, inCount);
 			ToSlot.Item = Item;
-			ToSlot.Count += n;
-			Count -= n;
-			if (Count == 0)
-				Item = FItemStruct();
-			if (Inventory && Inventory->InventoryListener)
-				Inventory->InventoryListener->SlotChanged(*this);
-			if (ToSlot.Inventory && ToSlot.Inventory->InventoryListener)
-				ToSlot.Inventory->InventoryListener->SlotChanged(ToSlot);
+			ChangeCountBy(-n).NotifyChange();
+			ToSlot.ChangeCountBy(n).NotifyChange();
 			return true;
 		}
 	}
@@ -66,11 +60,42 @@ FItemSlot::CanMergeTo(FItemSlot& ToSlot) const
 	else
 	{
 		if (ToSlot.Item == Item)
-			return true;
+		{
+			if (ToSlot.Count < ToSlot.Item.MaxStackSize)
+				return true;
+		}
 	}
 
 	return false;
 }
+
+FItemSlot&
+FItemSlot::SetCount(int inCount)
+{
+	Count = inCount;
+	check(Count >= 0);
+	if (Count == 0)
+		Item = FItemStruct();
+	return *this;
+}
+
+FItemSlot&
+FItemSlot::ChangeCountBy(int inCount)
+{
+	Count += inCount;
+	check(Count >= 0);
+	if (Count == 0)
+		Item = FItemStruct();
+	return *this;
+}
+
+void
+FItemSlot::NotifyChange() const
+{
+	if (Inventory && Inventory->InventoryListener)
+		Inventory->InventoryListener->SlotChanged(*this);
+}
+
 
 // ===========================================
 // class UInventory
@@ -143,10 +168,8 @@ UInventory::AddItem(const FItemStruct& item, int count)
 		int fitsInSlot = FMath::Min(item.MaxStackSize - slot.Count, count);
 		if (slot.Item == item && fitsInSlot > 0)
 		{
-			slot.Count += fitsInSlot;
+			slot.ChangeCountBy(fitsInSlot).NotifyChange();
 			count -= fitsInSlot;
-			if (InventoryListener)
-				InventoryListener->SlotChanged(slot);
 			if (count == 0)
 				return true;
 		}
@@ -160,10 +183,8 @@ UInventory::AddItem(const FItemStruct& item, int count)
 		if (slot.Count == 0 && fitsInSlot > 0)
 		{
 			slot.Item = item;
-			slot.Count += fitsInSlot;
+			slot.ChangeCountBy(fitsInSlot).NotifyChange();
 			count -= fitsInSlot;
-			if (InventoryListener)
-				InventoryListener->SlotChanged(slot);
 			if (count == 0)
 				return true;
 		}
@@ -180,9 +201,7 @@ UInventory::RemoveItem(const FItemStruct& item, int count)
 		auto& slot = Slots[i];
 		if (slot.Count > 0 && slot.Item == item)
 		{
-			slot.Count--;
-			if (InventoryListener)
-				InventoryListener->SlotChanged(slot);
+			slot.ChangeCountBy(-1).NotifyChange();
 		}
 	}
 	return false;
@@ -279,13 +298,8 @@ UInventory::SplitSlot(int Index)
 				if (slot.Count == 0)
 				{
 					slot.Item = inSlot.Item;
-					slot.Count = n;
-					inSlot.Count -= n;
-					if (InventoryListener)
-					{
-						InventoryListener->SlotChanged(inSlot);
-						InventoryListener->SlotChanged(slot);
-					}
+					slot.ChangeCountBy(n).NotifyChange();
+					inSlot.ChangeCountBy(-n).NotifyChange();
 					return;
 				}
 			}
@@ -304,37 +318,13 @@ void
 UInventory::DropItemsFromSlot(FItemSlot &slot, int inCount)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Inventory: Dropped %d item %s"), inCount, *slot.Item.Name);
-	auto count = inCount;
-	auto& item = slot.Item;
-	if (inCount >= slot.Count)
-	{
-		count = slot.Count;
-		if (slot.ShouldRemoveWhenEmpty)
-		{
-			if (InventoryListener)
-				InventoryListener->SlotRemoved(slot);
-			Slots.RemoveSingle(slot);
-		}
-		else
-		{
-			slot.Count = 0;
-		}
-	}
-	else
-	{
-		slot.Count -= inCount;
-	}
-
+	auto count = FMath::Min(inCount, slot.Count);
 	for (int i = 0; i < count; i++)
 	{
-		DropItem(item);
+		DropItem(slot.Item);
 	}
 
-	if (slot.Count == 0)
-		slot.Item = FItemStruct();
-
-	if (InventoryListener)
-		InventoryListener->SlotChanged(slot);
+	slot.ChangeCountBy(-count).NotifyChange();
 }
 
 void
