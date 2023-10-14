@@ -1228,14 +1228,12 @@ APrimitiveCharacter::HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, 
 			{
 				for (int i = 0; i < part.Count; i++)
 				{
-					FActorSpawnParameters SpawnInfo;
-					SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;// AdjustIfPossibleButAlwaysSpawn;
-
 					trans.AddToTranslation(FVector(20.0f, 20.f, 20.0f)); // Some staggering - ???? TODO: Replace with transformation in FoliageResource
 					auto loc = trans.GetLocation();
+					auto rot = trans.GetRotation().Rotator();
 					UE_LOG(LogTemp, Warning, TEXT("  - break foliage into %s at (%f, %f, %f)"), *item->ItemClass->GetName(), loc.X, loc.Y, loc.Z);
-					auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(item->ItemClass, trans, SpawnInfo);
-					itemActor->Item = *item;
+					auto itemActor = SpawnItem(*item, loc, rot);
+					check(itemActor);
 					itemActor->Item.Quality = part.Quality;
 				}
 			}
@@ -1292,6 +1290,7 @@ APrimitiveCharacter::SpawnItem(const FItemStruct& Item, const FVector& inLocatio
 	{
 		auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(Item.ItemClass, inLocation, inRotation, SpawnInfo);
 		check(itemActor);
+		itemActor->Item = Item;
 		if (Item.ContainedSlots)
 		{
 			auto inv = NewObject<UInventory>();
@@ -1342,7 +1341,7 @@ APrimitiveCharacter::StartPlacingItem(FItemSlot& fromSlot)
 			CurrentPlacedItemFromSlot = &fromSlot;
 			CurrentPlacedItemElevation = 0;
 			CurrentPlacedItemRotation = 0;
-			OmaUtil::SetNoCollision(*CurrentPlacedItem);
+			OmaUtil::DisablePhysicsAndCollision(*CurrentPlacedItem);
 		}
 	}
 }
@@ -1383,15 +1382,7 @@ APrimitiveCharacter::CompletePlacingItem()
 	if (CurrentPlacedItem)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Completed placing item %s"), *CurrentPlacedItem->GetName());
-		CurrentPlacedItem->SetActorEnableCollision(true);
-		for (UActorComponent* Component : CurrentPlacedItem->GetComponents())
-		{
-			if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(Component))
-			{
-				UE_LOG(LogTemp, Warning, TEXT(" - component %s"), *PrimComp->GetName());
-				PrimComp->SetSimulatePhysics(true);
-			}
-		}
+		OmaUtil::EnablePhysicsAndCollision(*CurrentPlacedItem);
 		SetHighlightIfInteractableTarget(CurrentPlacedItem, false);
 		if (CurrentPlacedItemFromSlot)
 		{

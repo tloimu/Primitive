@@ -3,5 +3,6 @@
 namespace OmaUtil
 {
 	bool TeleportActor(class AActor& inActor, FVector& inLocation, FRotator& inRotation);
-	void SetNoCollision(class AActor& inActor);
+	void DisablePhysicsAndCollision(class AActor& inActor);
+	void EnablePhysicsAndCollision(class AActor& inActor);
 }

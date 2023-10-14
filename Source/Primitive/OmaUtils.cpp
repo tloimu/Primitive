@@ -11,7 +11,6 @@ OmaUtil::TeleportActor(AActor& inActor, FVector& inLocation, FRotator& inRotatio
 		{
 			if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(Component))
 			{
-				PrimComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 				PrimComp->SetWorldLocationAndRotation(inLocation, inRotation);
 			}
 		}
@@ -20,7 +19,7 @@ OmaUtil::TeleportActor(AActor& inActor, FVector& inLocation, FRotator& inRotatio
 }
 
 void
-OmaUtil::SetNoCollision(AActor& inActor)
+OmaUtil::DisablePhysicsAndCollision(AActor& inActor)
 {
 	for (UActorComponent* Component : inActor.GetComponents())
 	{
@@ -32,4 +31,19 @@ OmaUtil::SetNoCollision(AActor& inActor)
 		}
 	}
 	inActor.SetActorEnableCollision(false);
+}
+
+void
+OmaUtil::EnablePhysicsAndCollision(AActor& inActor)
+{
+	for (UActorComponent* Component : inActor.GetComponents())
+	{
+		if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(Component))
+		{
+			UE_LOG(LogTemp, Warning, TEXT(" - component %s"), *PrimComp->GetName());
+			PrimComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+			PrimComp->SetSimulatePhysics(true);
+		}
+	}
+	inActor.SetActorEnableCollision(true);
 }
