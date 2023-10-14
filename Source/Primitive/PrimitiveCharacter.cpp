@@ -316,7 +316,7 @@ APrimitiveCharacter::ReadGameSave()
 		for (const auto &item : game.items)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Saved item Id= %s, x= %f, y= %f, z=%f"), *item.id, item.location[0], item.location[1], item.location[2]);
-			SpawnItem(item);
+			SpawnSavedItem(item);
 		}
 
 		if (Inventory && EquippedItems)
@@ -369,7 +369,7 @@ APrimitiveCharacter::ReadGameSave()
 }
 
 AInteractableActor*
-APrimitiveCharacter::SpawnItem(const FSavedItem& item)
+APrimitiveCharacter::SpawnSavedItem(const FSavedItem& item)
 {
 	auto WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
 	FVector location;
@@ -393,43 +393,19 @@ APrimitiveCharacter::SpawnItem(const FSavedItem& item)
 
 	UE_LOG(LogTemp, Warning, TEXT("Spawn item %s to x= %f, y= %f, z=%f"), *item.id, location.X, location.Y, location.Z);
 
-	FActorSpawnParameters SpawnInfo;
-	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;//  AlwaysSpawn;
 
 	auto itemInfo = FindItem(item.id);
 	if (itemInfo)
 	{
-		if (itemInfo->ItemClass->IsValidLowLevel())
+		auto itemActor = SpawnItem(*itemInfo, location, rotation);
+		if (itemActor && itemActor->Inventory)
 		{
-			auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(itemInfo->ItemClass, location, rotation, SpawnInfo);
-			check(itemActor);
-			if (itemInfo->ContainedSlots)
-			{
-				auto inv = NewObject<UInventory>();
-				check(inv);
-				itemActor->Inventory = inv;
-				inv->Player = this;
-				SetSavedContainerSlots(inv, item);
-			}
-			if (!itemInfo->CraftableRecipies.IsEmpty())
-			{
-				auto crafter = NewObject<UCrafter>();
-				check(crafter);
-				itemActor->Crafter = crafter;				
-			}
-			return itemActor;
+			SetSavedContainerSlots(itemActor->Inventory, item);
 		}
-		else
-		{
-			if (itemInfo->ItemClass)
-			{
-				UE_LOG(LogTemp, Error, TEXT("Cannot find class %s for item %s"), *itemInfo->ItemClass->GetName(), *item.id);
-			}
-			else
-			{
-				UE_LOG(LogTemp, Error, TEXT("Cannot find class for item %s"), *item.id);
-			}
-		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Unknown item ID [%s] in save file"), *item.id);
 	}
 	return nullptr;
 }
@@ -1085,7 +1061,7 @@ APrimitiveCharacter::Interact_InInventory(const FInputActionValue& Value)
 			else
 			{
 				ToggleInventory(Value);
-				PlaceItem(Value, slot);
+				StartPlacingItem(slot);
 			}
 		}
 	}
@@ -1284,25 +1260,14 @@ APrimitiveCharacter::UnequipItem(UInventorySlot& FromSlot, UInventorySlot& ToSlo
 	// ???? TODO:
 }
 
-void
-APrimitiveCharacter::CreateDroppedItem(const FItemStruct& Item)
-{
-	FVector start = GetActorLocation();
-	FVector end = start + FollowCamera->GetForwardVector().GetSafeNormal() * 50.0f;
-	auto rotation = GetActorRotation();
-	FActorSpawnParameters SpawnInfo;
-	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(Item.ItemClass, end, rotation, SpawnInfo);
-	check(itemActor);
-	if (itemActor->Item.ContainedSlots)
-	{
-		auto inv = NewObject<UInventory>();
-		check(inv);
-		itemActor->Inventory = inv;
-		inv->Player = this;
-		inv->SetMaxSlots(Item.ContainedSlots);
-	}
+AInteractableActor*
+APrimitiveCharacter::DropItem(const FItemStruct& Item)
+{
+	FVector location, throwTo;
+	FRotator rotation;
+	GetItemDropPosition(location, rotation, throwTo);
+	return SpawnItem(Item, location, rotation);
 }
 
 // ----------------------------
@@ -1310,13 +1275,75 @@ APrimitiveCharacter::CreateDroppedItem(const FItemStruct& Item)
 // ----------------------------
 
 void
-APrimitiveCharacter::PlaceItem(const FInputActionValue& Value, FItemSlot& fromSlot)
+APrimitiveCharacter::GetItemDropPosition(FVector& outLocation, FRotator& outRotation, FVector& outThrowTowards) const
+{
+	FVector start = GetActorLocation();
+	outLocation = start + FollowCamera->GetForwardVector().GetSafeNormal() * 50.0f;
+	outRotation = GetActorRotation();
+	outThrowTowards = FVector();
+}
+
+AInteractableActor*
+APrimitiveCharacter::SpawnItem(const FItemStruct& Item, const FVector& inLocation, const FRotator& inRotation)
+{
+	FActorSpawnParameters SpawnInfo;
+	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;//  AlwaysSpawn;
+	if (Item.ItemClass->IsValidLowLevel())
+	{
+		auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(Item.ItemClass, inLocation, inRotation, SpawnInfo);
+		check(itemActor);
+		if (Item.ContainedSlots)
+		{
+			auto inv = NewObject<UInventory>();
+			check(inv);
+			itemActor->Inventory = inv;
+			inv->Player = this;
+			inv->SetMaxSlots(Item.ContainedSlots);
+		}
+		if (!Item.CraftableRecipies.IsEmpty())
+		{
+			auto crafter = NewObject<UCrafter>();
+			check(crafter);
+			itemActor->Crafter = crafter;
+		}
+		return itemActor;
+	}
+	else
+	{
+		if (Item.ItemClass)
+		{
+			UE_LOG(LogTemp, Error, TEXT("Cannot find class %s for item %s"), *Item.ItemClass->GetName(), *Item.Id);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Cannot find class for item %s"), *Item.Id);
+		}
+	}
+
+	return nullptr;
+}
+
+
+void
+APrimitiveCharacter::StartPlacingItem(FItemSlot& fromSlot)
 {
 	if (CurrentPlacedItem == nullptr && fromSlot.Count > 0)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Placing %s from inventory slot %d"), *fromSlot.Item.Name, fromSlot.Index);
-		CurrentPlacedItemFromSlot = &fromSlot;
-		CurrentPlacedItem = CreatePlacedItem(fromSlot.Item);
+
+		FVector start = GetActorLocation();
+		FVector location = start + FollowCamera->GetForwardVector().GetSafeNormal() * MaxPlaceItemDistance;
+		auto rotation = GetActorRotation();
+		rotation.Yaw = FMath::Floor(rotation.Yaw / PlacedItemRotationStep) * PlacedItemElevationStep; // Align with the world coordinates
+
+		CurrentPlacedItem = SpawnItem(fromSlot.Item, location, rotation);
+		if (CurrentPlacedItem)
+		{
+			CurrentPlacedItemFromSlot = &fromSlot;
+			CurrentPlacedItemElevation = 0;
+			CurrentPlacedItemRotation = 0;
+			OmaUtil::SetNoCollision(*CurrentPlacedItem);
+		}
 	}
 }
 
@@ -1330,48 +1357,6 @@ APrimitiveCharacter::CancelPlaceItem()
 		CurrentPlacedItemFromSlot = nullptr;
 		item->Destroy();
 	}
-}
-
-
-AInteractableActor*
-APrimitiveCharacter::CreatePlacedItem(const FItemStruct& Item)
-{
-	FVector start = GetActorLocation();
-	FVector end = start + FollowCamera->GetForwardVector().GetSafeNormal() * 500.0f;
-	auto rotation = GetActorRotation();
-	rotation.Yaw = FMath::Floor(rotation.Yaw / PlacedItemRotationStep) * PlacedItemElevationStep; // Align with the world coordinates
-	FActorSpawnParameters SpawnInfo;
-	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-
-	auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(Item.ItemClass, end, rotation, SpawnInfo);
-	check(itemActor);
-	for (UActorComponent* Component : itemActor->GetComponents())
-	{
-		if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(Component))
-		{
-			UE_LOG(LogTemp, Warning, TEXT(" - component %s"), *PrimComp->GetName());
-			PrimComp->SetSimulatePhysics(false);
-			PrimComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		}
-	}
-	itemActor->SetActorEnableCollision(false);
-	if (itemActor->Item.ContainedSlots)
-	{
-		auto inv = NewObject<UInventory>();
-		check(inv);
-		itemActor->Inventory = inv;
-		inv->Player = this;
-		inv->SetMaxSlots(Item.ContainedSlots);
-	}
-	if (Item.CraftableRecipies.Num())
-	{
-		auto crafter = NewObject<UCrafter>();
-		check(crafter);
-		itemActor->Crafter = crafter;
-	}
-	CurrentPlacedItemElevation = 0;
-	CurrentPlacedItemRotation = 0;
-	return itemActor;
 }
 
 bool

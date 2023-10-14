@@ -18,3 +18,18 @@ OmaUtil::TeleportActor(AActor& inActor, FVector& inLocation, FRotator& inRotatio
 	}
 	return ok;
 }
+
+void
+OmaUtil::SetNoCollision(AActor& inActor)
+{
+	for (UActorComponent* Component : inActor.GetComponents())
+	{
+		if (UPrimitiveComponent* PrimComp = Cast<UPrimitiveComponent>(Component))
+		{
+			UE_LOG(LogTemp, Warning, TEXT(" - component %s"), *PrimComp->GetName());
+			PrimComp->SetSimulatePhysics(false);
+			PrimComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
+	}
+	inActor.SetActorEnableCollision(false);
+}

@@ -331,5 +331,5 @@ void
 UInventory::DropItem(const FItemStruct& inItem)
 {
 	if (Player)
-		Player->CreateDroppedItem(inItem);
+		Player->DropItem(inItem);
 }

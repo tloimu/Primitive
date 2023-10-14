@@ -72,7 +72,7 @@ public:
 
 	IInventoryListener *InventoryListener = nullptr;
 
-	UPROPERTY() class APrimitiveCharacter* Player = nullptr; // needed to create dropped item actors ???? REFACTOR
+	UPROPERTY() class APrimitiveCharacter* Player = nullptr; // REFACTOR: Make to an interface that has <ItemDb> or <FindItem> and <DropItem>
 
 	FItemSlot NoneSlot;
 };

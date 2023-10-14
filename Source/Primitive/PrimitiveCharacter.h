@@ -107,10 +107,6 @@ class APrimitiveCharacter : public ACharacter
 public:
 	APrimitiveCharacter();
 	
-	AInteractableActor* CreatePlacedItem(const FItemStruct& Item);
-	void CreateDroppedItem(const FItemStruct& Item);
-	const FItemStruct* FindItem(const FString& Id) const;
-
 	UPROPERTY(EditAnywhere) USoundCue* HandCraftingSound = nullptr;
 	UPROPERTY(EditAnywhere) USoundCue* HitItemSound = nullptr;
 	UPROPERTY(EditAnywhere) USoundCue* PickItemSound = nullptr;
@@ -129,7 +125,20 @@ public:
 	void PlaySoundPickItem(const FItemStruct& inItem) const;
 	void PlaySoundHarvest() const;
 
+	// Items
+	const FItemStruct* FindItem(const FString& Id) const;
+	AInteractableActor* DropItem(const FItemStruct& Item);
+
+	void StartPlacingItem(FItemSlot& fromSlot);
+	void CompletePlacingItem();
+	void CancelPlaceItem();
+	void WearItem(FItemSlot& fromSlot);
+	void ConsumeItem(FItemSlot& fromSlot);
+
 protected:
+	AInteractableActor* SpawnSavedItem(const FSavedItem& Item);
+
+	AInteractableActor* SpawnItem(const FItemStruct& Item, const FVector& inLocation, const FRotator& inRotation);
 
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
@@ -167,11 +176,7 @@ protected:
 	void Interact_Interactable(const FInputActionValue& Value, AInteractableActor& inTarget);
 	void Interact_Foliage(const FInputActionValue& Value, UInstancedStaticMeshComponent& inFoliageComponent, int32 inInstanceId);
 
-	void PlaceItem(const FInputActionValue& Value, FItemSlot &fromSlot);
-	void CancelPlaceItem();
-	void WearItem(FItemSlot& fromSlot);
-	void ConsumeItem(FItemSlot& fromSlot);
-
+	void GetItemDropPosition(FVector& outLocation, FRotator& outRotation, FVector &outThrowTowards) const;
 
 	TArray<ContainedMaterial> CollectMaterialsFrom(const FVector& Location);
 	void HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, UFoliageResource& inFoliageComponent, int32 inInstanceId);
@@ -214,8 +219,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 CurrentPlacedItemRotation = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 PlacedItemElevationStep = 5;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 PlacedItemRotationStep = 5;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float MaxPlaceItemDistance = 500.0f;
 	bool CheckCurrentPlacedItem(); // return true if placed item is active
-	void CompletePlacingItem();
 
 	void CheckTarget();
 	void SetCurrentTarget(AActor* target, UPrimitiveComponent* component = nullptr, int32 instanceId = -1);
