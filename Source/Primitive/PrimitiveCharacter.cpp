@@ -74,7 +74,6 @@ APrimitiveCharacter::APrimitiveCharacter(): DoGenerateFoliage(true), ClockInSecs
 	// Zoom level defaults
 	ZoomTransforms.Add(-200.0f); // Actually, here we should really "zoom" instead of move camera forward
 	ZoomTransforms.Add(-40.0f); // Would be nice to see hands here...
-	ZoomTransforms.Add(80.0f);
 	ZoomTransforms.Add(200.0f);
 	ZoomTransforms.Add(400.0f);
 	ZoomTransforms.Add(600.0f);
