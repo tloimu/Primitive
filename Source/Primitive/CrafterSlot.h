@@ -57,7 +57,6 @@ public:
 	void NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 	void NativeOnMouseLeave(const FPointerEvent& InMouseEvent) override;
 
-	UPROPERTY() class UInventory* Inventory = nullptr;
 	UPROPERTY() int SlotIndex = 0;
 	UPROPERTY() class UCrafter* Crafter = nullptr;
 

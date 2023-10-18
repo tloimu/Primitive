@@ -93,8 +93,15 @@ struct FCraftingWork
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int				Id = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) FCraftRecipie	Recipie;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) class UCrafterSlot	*Slot;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) class UCrafterSlot	*Slot = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float			GameTimeProgressLeft = 0.0f;
+};
+
+class ICrafterListener
+{
+public:
+	virtual void WorkStarted(FCraftingWork &inWork) = 0;
+	virtual void WorkCompleted(int Id) = 0;
 };
 
 UCLASS(BlueprintType)
@@ -118,6 +125,7 @@ public:
 	void CheckCrafting(float DeltaGameTimeSecs);
 	void CompleteCrafting(FCraftingWork& inProgress);
 
+	UPROPERTY(BlueprintReadOnly) FString CrafterName;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FCraftableItem>	CraftableItems;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float			Efficiency = 1.0f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float			Quality = 1.0f;
@@ -130,4 +138,6 @@ public:
 	int NextWorkId = 1;
 
 	static const FString HandCraftingStationItemId;
+
+	ICrafterListener* CrafterListener = nullptr;
 };

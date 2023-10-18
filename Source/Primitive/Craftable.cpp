@@ -66,21 +66,28 @@ UCrafter::StartCrafting(const FCraftRecipie& inRecipie, TArray<UInventory*> inIn
 		{
 			for (auto inv : inIngredientInventories)
 			{
-				for (auto& slot : inv->Slots)
+				if (inv)
 				{
-					if (slot.Count > 0 && slot.Item.Id == ing.ItemId && slot.Item.Quality >= ing.MinimumQuality)
+					for (auto& slot : inv->Slots)
 					{
-						int n = slot.Count;
-						if (slot.Count > ing.ItemCount)
-							n = ing.ItemCount;
-						ing.ItemCount -= n;
-						usedSlots.Add({ &slot, n });
-						if (ing.ItemCount == 0)
-							break;
+						if (slot.Count > 0 && slot.Item.Id == ing.ItemId && slot.Item.Quality >= ing.MinimumQuality)
+						{
+							int n = slot.Count;
+							if (slot.Count > ing.ItemCount)
+								n = ing.ItemCount;
+							ing.ItemCount -= n;
+							usedSlots.Add({ &slot, n });
+							if (ing.ItemCount == 0)
+								break;
+						}
 					}
+					if (ing.ItemCount == 0)
+						break;
 				}
-				if (ing.ItemCount == 0)
-					break;
+				else
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Crafter: Got a null inventory for ingredients"));
+				}
 			}
 		}
 	}
@@ -113,6 +120,8 @@ UCrafter::StartCrafting(const FCraftRecipie& inRecipie, TArray<UInventory*> inIn
 	work.GameTimeProgressLeft = inRecipie.CraftingSeconds;
 	work.Slot = inSlot;
 	Works.Add(work);
+	if (CrafterListener)
+		CrafterListener->WorkStarted(work);
 
 	if (Inventory && Inventory->Player)
 	{
@@ -167,6 +176,8 @@ UCrafter::CompleteCrafting(FCraftingWork& Work)
 				for (int i = 0; i < Work.Recipie.CraftedItemCount; i++)
 					Inventory->DropItem(*item);
 			}
+			if (CrafterListener)
+				CrafterListener->WorkCompleted(Work.Id);
 		}
 	}
 }

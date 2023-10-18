@@ -9,6 +9,7 @@
 #include <Runtime/Engine/Classes/Sound/SoundCue.h>
 #include "InputActionValue.h"
 #include "InventoryWidget.h"
+#include "CrafterWidget.h"
 #include "HUDWidget.h"
 #include "GameSettings.h"
 #include "Inventory.h"
@@ -87,6 +88,9 @@ class APrimitiveCharacter : public ACharacter
 	class UInputAction* ToggleInventoryAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* ToggleCrafterAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* BackAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
@@ -160,6 +164,9 @@ protected:
 	void Drop(const FInputActionValue& Value);
 
 	void ToggleInventory(const FInputActionValue& Value);
+	void ToggleCrafter(const FInputActionValue& Value);
+	void ToggleInventoryUI();
+	void ToggleCrafterUI();
 	void Back(const FInputActionValue& Value);
 	void Transfer(const FInputActionValue& Value);
 
@@ -193,8 +200,8 @@ protected:
 	void ClearTimers();
 
 	void SetupInventoryUI(APlayerController* pc);
-	void SetupHUD(APlayerController* pc);
 	void SetupCrafterUI(APlayerController* pc);
+	void SetupHUD(APlayerController* pc);
 	void CheckBeginPlay();
 
 	void ReadConfigFiles();
@@ -237,9 +244,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) UInventory	*Inventory = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) UInventory	*EquippedItems = nullptr;
 	bool ShowingInventory;
+	bool ShowingCrafter = false;
 
 	UPROPERTY(EditAnywhere) TSubclassOf<UInventoryWidget> InventoryWidgetClass;
 	UPROPERTY() UInventoryWidget* InventoryWidget;
+
+	UPROPERTY(EditAnywhere) TSubclassOf<UCrafterWidget> CrafterWidgetClass;
+	UPROPERTY() UCrafterWidget* CrafterWidget = nullptr;
 
 	UPROPERTY(EditAnywhere) TSubclassOf<UHUDWidget> HUDWidgetClass;
 	UPROPERTY() UHUDWidget* HUDWidget;
@@ -248,8 +259,6 @@ protected:
 	bool ShowingHandCrafter = false;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FString> CraftableRecipies;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) class UItemDatabase* ItemDb;
-
 	// Setting up the Map
 
 	UPROPERTY(EditAnywhere) TSubclassOf<class UHUDWidget> WorldGeneratorClass;

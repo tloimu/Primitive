@@ -6,7 +6,6 @@
 #include "ItemStruct.h"
 #include "InventorySlot.h"
 #include "Inventory.h"
-#include "Craftable.h"
 #include "InventoryWidget.generated.h"
 
 UCLASS(MinimalAPI, Blueprintable)
@@ -36,24 +35,17 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void ContainerSlotAdded(UInventorySlot* inSlot);
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void ContainerSlotRemoved(UInventorySlot* inSlot);
 
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void CraftingSlotAdded(UCrafterSlot* inSlot, const FItemStruct &inItem);
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Blueprintable) void CrafterClosed();
-
 	UPROPERTY(EditAnywhere) TArray<UInventorySlot*> Slots;
 	UPROPERTY(EditAnywhere) TArray<UInventorySlot*> EquipmentSlots;
 	UPROPERTY(EditAnywhere) TArray<UInventorySlot*> ContainerSlots;
-	UPROPERTY(EditAnywhere) TArray<UCrafterSlot*> CrafterSlots;
 
 	UPROPERTY(EditAnywhere) TSubclassOf<UInventorySlot> InventorySlotClass;
-	UPROPERTY(EditAnywhere) TSubclassOf<UCrafterSlot> CrafterSlotClass;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) TSoftObjectPtr<UTexture> EmptySlotIcon;
 
 	UInventorySlot* MakeNewSlot(UInventory *inInventory, int SlotIndex);
 	UInventorySlot* AddNewInventorySlot();
 	UInventorySlot* SetNewEquipmentSlot();
 	UInventorySlot* AddNewContainerSlot();
-	UCrafterSlot* AddNewCrafterSlot();
-	void CloseCrafter();
 	void RemoveSlot(int Index);
 	void DropItemsFromSlot(UInventorySlot* inSlot, int inCount);
 
@@ -67,5 +59,4 @@ public:
 	UPROPERTY(BlueprintReadOnly) class UInventory *Inventory = nullptr;
 	UPROPERTY(BlueprintReadOnly) class UInventory *EquippedItems = nullptr;
 	UPROPERTY(BlueprintReadOnly) class UInventory *ContainerInventory = nullptr;
-
 };

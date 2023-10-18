@@ -91,6 +91,9 @@ APrimitiveCharacter::APrimitiveCharacter(): DoGenerateFoliage(true), ClockInSecs
 	InventoryWidgetClass = nullptr;
 	InventoryWidget = nullptr;
 
+	CrafterWidgetClass = nullptr;
+	CrafterWidget = nullptr;
+
 	HUDWidgetClass = nullptr;
 	HUDWidget = nullptr;
 
@@ -110,6 +113,16 @@ void APrimitiveCharacter::BeginPlay()
 	EquippedItems->Player = this;
 	HandCrafter = NewObject<UCrafter>();
 	HandCrafter->Inventory = Inventory;
+	HandCrafter->CrafterName = "Hand Crafting";
+
+	for (auto& r : CraftableRecipies)
+	{
+		FCraftableItem ci;
+		ci.CraftRecipieId = r;
+		ci.Efficiency = 1.0f;
+		ci.Quality = 1.0f;
+		HandCrafter->CraftableItems.Add(ci);
+	}
 
 	ReadConfigFiles();
 
@@ -124,8 +137,8 @@ void APrimitiveCharacter::BeginPlay()
 		if (IsLocallyControlled())
 		{
 			SetupInventoryUI(pc);
-			SetupHUD(pc);
 			SetupCrafterUI(pc);
+			SetupHUD(pc);
 		}
 	}
 
@@ -170,7 +183,9 @@ APrimitiveCharacter::SetupInventoryUI(APlayerController *pc)
 		InventoryWidget = CreateWidget<UInventoryWidget>(pc, InventoryWidgetClass);
 		check(InventoryWidget);
 		InventoryWidget->Setup(Inventory, EquippedItems);
-		Inventory->SetMaxSlots(30);
+		Inventory->SetMaxSlots(24);
+		InventoryWidget->SetVisibility(ESlateVisibility::Hidden);
+		InventoryWidget->AddToPlayerScreen();
 	}
 }
 
@@ -190,32 +205,14 @@ APrimitiveCharacter::SetupCrafterUI(APlayerController* pc)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Setup hand crafter ui"));
 	ShowingHandCrafter = false;
-	if (InventoryWidget)
+	if (CrafterWidgetClass)
 	{
-		int index = 0;
-		for (auto& r : CraftableRecipies)
-		{
-			auto rec = ItemDb->FindRecipie(r);
-			if (rec)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("  - recipie %s"), *rec->Id);
-				auto item = ItemDb->FindItem(rec->CraftedItemId);
-				if (item)
-				{
-					auto slot = InventoryWidget->AddNewCrafterSlot();
-					slot->Recipie = *rec;
-					slot->Item = *item;
-					slot->Crafter = HandCrafter;
-					slot->Inventory = Inventory;
-					if (slot)
-					{
-						UE_LOG(LogTemp, Warning, TEXT("Add hand crafting slot %s item %s"), *rec->Id, *item->Id);
-						InventoryWidget->CraftingSlotAdded(slot, *item);
-						slot->SetSlot(*rec, *item);
-					}
-				}
-			}
-		}
+		CrafterWidget = CreateWidget<UCrafterWidget>(pc, CrafterWidgetClass);
+		check(CrafterWidget);
+		CrafterWidget->SetCrafter(HandCrafter);
+		CrafterWidget->SetVisibility(ESlateVisibility::Hidden);
+		CrafterWidget->AddToPlayerScreen();
+		ShowingCrafter = false;
 	}
 }
 
@@ -281,6 +278,7 @@ APrimitiveCharacter::EnsureNotUnderGround()
 void
 APrimitiveCharacter::ReadConfigFiles()
 {
+	/*
 	if (ItemDb)
 	{
 		ItemDb->SetupItems();
@@ -289,6 +287,7 @@ APrimitiveCharacter::ReadConfigFiles()
 	{
 		UE_LOG(LogTemp, Error, TEXT("No Item Database found"));
 	}
+	*/
 }
 
 void
@@ -412,8 +411,9 @@ APrimitiveCharacter::SpawnSavedItem(const FSavedItem& item)
 const FItemStruct*
 APrimitiveCharacter::FindItem(const FString& Id) const
 {
-	if (ItemDb)
-		return ItemDb->FindItem(Id);
+	auto db = OmaUtil::GetItemDb(GetGameInstance());
+	if (db)
+		return db->FindItem(Id);
 	else
 		return nullptr;
 }
@@ -456,6 +456,12 @@ APrimitiveCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	{
 		InventoryWidget->RemoveFromParent();
 		InventoryWidget = nullptr;
+	}
+
+	if (CrafterWidget)
+	{
+		CrafterWidget->RemoveFromParent();
+		CrafterWidget = nullptr;
 	}
 
 	if (HUDWidget)
@@ -706,7 +712,8 @@ void APrimitiveCharacter::SetHighlightIfInteractableTarget(AActor* target, bool 
 //////////////////////////////////////////////////////////////////////////
 // Input
 
-void APrimitiveCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
+void
+APrimitiveCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
 	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent)) {
@@ -736,6 +743,7 @@ void APrimitiveCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 		EnhancedInputComponent->BindAction(HitAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::Hit);
 
 		EnhancedInputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::ToggleInventory);
+		EnhancedInputComponent->BindAction(ToggleCrafterAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::ToggleCrafter);
 		EnhancedInputComponent->BindAction(BackAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::Back);
 		EnhancedInputComponent->BindAction(TransferAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::Transfer);
 
@@ -1059,7 +1067,7 @@ APrimitiveCharacter::Interact_InInventory(const FInputActionValue& Value)
 				WearItem(slot);
 			else
 			{
-				ToggleInventory(Value);
+				ToggleInventoryUI();
 				StartPlacingItem(slot);
 			}
 		}
@@ -1081,7 +1089,7 @@ APrimitiveCharacter::Interact_Interactable(const FInputActionValue& Value, AInte
 	{
 		if (InventoryWidget)
 			InventoryWidget->SetContainer(&inTarget);
-		ToggleInventory(Value);
+		ToggleInventoryUI();
 	}
 	else
 	{
@@ -1138,7 +1146,19 @@ APrimitiveCharacter::ConsumeItem(FItemSlot& fromSlot)
 void
 APrimitiveCharacter::ToggleInventory(const FInputActionValue& Value)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory %d"), Value.Get<bool>());
+	ToggleInventoryUI();
+}
+
+void
+APrimitiveCharacter::ToggleCrafter(const FInputActionValue& Value)
+{
+	ToggleCrafterUI();
+}
+
+void
+APrimitiveCharacter::ToggleInventoryUI()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory"));
 
 	auto pc = GetController<APlayerController>();
 	if (ShowingInventory)
@@ -1148,7 +1168,7 @@ APrimitiveCharacter::ToggleInventory(const FInputActionValue& Value)
 		if (InventoryWidget)
 		{
 			InventoryWidget->SetContainer(nullptr);
-			InventoryWidget->RemoveFromParent();
+			InventoryWidget->SetVisibility(ESlateVisibility::Hidden);
 			if (pc)
 			{
 				FInputModeGameOnly mode;
@@ -1159,6 +1179,8 @@ APrimitiveCharacter::ToggleInventory(const FInputActionValue& Value)
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory ON"));
+		if (ShowingCrafter)
+			ToggleCrafterUI();
 		ShowingInventory = true;
 		if (CurrentPlacedItem)
 		{
@@ -1166,7 +1188,7 @@ APrimitiveCharacter::ToggleInventory(const FInputActionValue& Value)
 		}
 		if (InventoryWidget != nullptr)
 		{
-			InventoryWidget->AddToPlayerScreen();
+			InventoryWidget->SetVisibility(ESlateVisibility::Visible);
 			if (pc)
 			{
 				FInputModeGameAndUI mode;
@@ -1184,26 +1206,86 @@ APrimitiveCharacter::ToggleInventory(const FInputActionValue& Value)
 	}
 }
 
+
+void
+APrimitiveCharacter::ToggleCrafterUI()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Toggle Crafter"));
+
+	auto pc = GetController<APlayerController>();
+	if (ShowingCrafter)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Toggle Crafter OFF"));
+		ShowingCrafter = false;
+		if (CrafterWidget)
+		{
+			CrafterWidget->SetCrafter(nullptr);
+			CrafterWidget->SetVisibility(ESlateVisibility::Hidden);
+			if (pc)
+			{
+				FInputModeGameOnly mode;
+				pc->SetInputMode(mode);
+			}
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Toggle Crafter ON"));
+		if (ShowingInventory)
+			ToggleInventoryUI();
+		ShowingCrafter = true;
+		if (CurrentPlacedItem)
+		{
+			CancelPlaceItem();
+		}
+		if (CrafterWidget != nullptr)
+		{
+			if (CurrentInteractable && CurrentInteractable->Crafter)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Setting Target Item Crafter"));
+				CrafterWidget->SetCrafter(CurrentInteractable->Crafter);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Setting Hand Crafter"));
+				CrafterWidget->SetCrafter(HandCrafter);
+			}
+			CrafterWidget->SetVisibility(ESlateVisibility::Visible);
+			if (pc)
+			{
+				FInputModeGameAndUI mode;
+
+				mode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+				mode.SetHideCursorDuringCapture(false);
+				CrafterWidget->SetFocus();// SetUserFocus(pc);
+
+				pc->SetInputMode(mode);
+			}
+		}
+	}
+}
+
 void APrimitiveCharacter::Back(const FInputActionValue& Value)
 {
-	auto pc = GetController<APlayerController>();
 	if (ShowingInventory)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory OFF"));
-		ShowingInventory = false;
-		InventoryWidget->RemoveFromParent();
-		if (pc)
-		{
-			FInputModeGameOnly mode;
-			pc->SetInputMode(mode);
-		}
+		ToggleInventoryUI();
+	}
+	if (ShowingCrafter)
+	{
+		ToggleCrafterUI();
 	}
 }
 
 void
 APrimitiveCharacter::Transfer(const FInputActionValue& Value)
 {
-	// ???? TODO:
+	UE_LOG(LogTemp, Warning, TEXT("Transfer"));
+	if (Inventory && Inventory->CurrentSelectedSlotIndex >= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Transfer from slot %d"), Inventory->CurrentSelectedSlotIndex);
+		// ???? TODO: Transfer items back and forth between player and container inventories
+	}
 }
 
 
@@ -1303,6 +1385,17 @@ APrimitiveCharacter::SpawnItem(const FItemStruct& Item, const FVector& inLocatio
 			auto crafter = NewObject<UCrafter>();
 			check(crafter);
 			itemActor->Crafter = crafter;
+			crafter->CrafterName = Item.Name;
+			if (itemActor->Inventory)
+				crafter->Inventory = itemActor->Inventory;
+			else
+				crafter->Inventory = Inventory; // ???? CHECK: Memory managements - maybe refactor so the player inventory is accessed only when needed
+			for (auto &rid : Item.CraftableRecipies)
+			{
+				FCraftableItem rec;
+				rec.CraftRecipieId = rid;
+				crafter->CraftableItems.Add(rec);
+			}
 		}
 		return itemActor;
 	}

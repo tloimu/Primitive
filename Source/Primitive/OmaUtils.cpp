@@ -1,4 +1,5 @@
 #include "OmaUtils.h"
+#include "PrimitiveGameInstance.h"
 #include <GameFramework/Actor.h>
 
 bool
@@ -46,4 +47,15 @@ OmaUtil::EnablePhysicsAndCollision(AActor& inActor)
 		}
 	}
 	inActor.SetActorEnableCollision(true);
+}
+
+
+UItemDatabase*
+OmaUtil::GetItemDb(UGameInstance* Instance)
+{
+	auto gi = Cast<UPrimitiveGameInstance>(Instance);
+	if (gi)
+		return gi->ItemDb;
+	else
+		return nullptr;
 }

@@ -48,7 +48,6 @@ UCrafterSlot::SetSlot(const FCraftRecipie& inSlot, const FItemStruct& inItem)
 	SlotSet(inSlot, inItem);
 }
 
-
 FReply
 UCrafterSlot::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
@@ -57,12 +56,12 @@ UCrafterSlot::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointe
 	if (reply.IsEventHandled())
 		return reply;
 
-	if (Inventory && InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton))
+	if (Crafter && InMouseEvent.IsMouseButtonDown(EKeys::LeftMouseButton))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Crafter Slot [%d]: Start crafting"), SlotIndex);
 		if (Crafter)
 		{
-			if (Crafter->StartCrafting(Recipie, { Inventory }, this))
+			if (Crafter->StartCrafting(Recipie, { Crafter->Inventory }, this))
 			{
 				SetSlotHelp();
 			}
@@ -83,20 +82,23 @@ UCrafterSlot::NativeOnMouseEnter(const FGeometry& InGeometry, const FPointerEven
 void
 UCrafterSlot::SetSlotHelp()
 {
+	if (Crafter == nullptr || Crafter->Inventory == nullptr)
+		return;
+
 	FCraftingHelpInfo help;
-	help.CanCraft = (Crafter && Inventory) ? Crafter->CanCraft(Recipie, { Inventory }) : 0;
+	help.CanCraft = Crafter->CanCraft(Recipie, { Crafter->Inventory });
 	int maxCraftable = 1000;
-	auto craftedItem = Inventory ? Inventory->FindItem(Recipie.CraftedItemId) : nullptr;
+	auto craftedItem = Crafter->Inventory->FindItem(Recipie.CraftedItemId);
 	if (craftedItem)
 		help.Item = *craftedItem;
 	for (auto& i : Recipie.Ingredients)
 	{
 		int count = 0;
 		FCraftingHelpIngredient iHelp;
-		if (Inventory)
+		if (Crafter->Inventory)
 		{
-			count = Inventory->CountItemsOf(i.ItemId);
-			auto item = Inventory->FindItem(i.ItemId);
+			count = Crafter->Inventory->CountItemsOf(i.ItemId);
+			auto item = Crafter->Inventory->FindItem(i.ItemId);
 			if (item)
 			{
 				iHelp.Name = item->Name;

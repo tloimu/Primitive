@@ -22,6 +22,14 @@ APrimitiveGameMode::APrimitiveGameMode() : AGameModeBase()
 	NavigationConfig.bTabNavigation = false;
 }
 
+void
+APrimitiveGameMode::BeginPlay()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Game Mode: BeginPlay"));
+}
 
-
-
+void
+APrimitiveGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Game Mode: EndPlay"));
+}
