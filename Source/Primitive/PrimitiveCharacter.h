@@ -219,6 +219,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) class AVoxelWorld *TargetVoxelWorld;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 CurrentTargetInstanceId;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) UInstancedStaticMeshComponent* CurrentTargetComponent = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) UBoxComponent* CurrentBuildSnapBox = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) AInteractableActor* CurrentPlacedItem = nullptr;
 	FItemSlot* CurrentPlacedItemFromSlot = nullptr;
@@ -228,6 +229,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 PlacedItemRotationStep = 5;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) float MaxPlaceItemDistance = 500.0f;
 	bool CheckCurrentPlacedItem(); // return true if placed item is active
+	bool AllowPlaceItem(AInteractableActor& inItem, class UBuildingSnapBox *inSnapBox = nullptr) const;
 
 	void CheckTarget();
 	void SetCurrentTarget(AActor* target, UPrimitiveComponent* component = nullptr, int32 instanceId = -1);

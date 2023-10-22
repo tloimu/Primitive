@@ -22,6 +22,7 @@
 #include "Runtime/Foliage/Public/InstancedFoliageActor.h"
 #include "Kismet/GameplayStatics.h"
 #include "OmaUtils.h"
+#include "BuildingSnapBox.h"
 
 #include <Voxel/Public/VoxelTools/Gen/VoxelSphereTools.h>
 #include <Voxel/Public/VoxelWorldInterface.h>
@@ -570,7 +571,43 @@ APrimitiveCharacter::CheckTarget()
 	FVector end = start + FollowCamera->GetForwardVector().GetSafeNormal() * 500.0f;
 
 	FCollisionQueryParams params;
-	GetWorld()->LineTraceSingleByChannel(hits, start, end, channel, params);
+	params.AddIgnoredActor(this);
+	if (CurrentPlacedItem)
+		params.AddIgnoredActor(CurrentPlacedItem);
+	params.bTraceComplex = true;
+	auto ok = GetWorld()->LineTraceSingleByChannel(hits, start, end, channel, params);
+
+	if (CurrentPlacedItem)
+	{
+		FHitResult snapHits;
+		channel = ECollisionChannel::ECC_GameTraceChannel1;
+		GetWorld()->LineTraceSingleByChannel(snapHits, start, end, channel, params);
+		if (snapHits.bBlockingHit)
+		{
+			if (snapHits.GetComponent())
+			{
+				auto buildSnapBox = Cast<UBuildingSnapBox>(snapHits.GetComponent());
+				if (buildSnapBox && AllowPlaceItem(*CurrentPlacedItem, buildSnapBox))
+				{
+					CurrentBuildSnapBox = buildSnapBox;
+					auto cl = buildSnapBox->GetComponentLocation();
+					auto cr = buildSnapBox->GetComponentRotation();
+					TargetLocation = cl;
+					OmaUtil::TeleportActor(*CurrentPlacedItem, cl, cr);
+					return;
+				}
+				else
+				{
+					CurrentBuildSnapBox = nullptr;
+					TargetLocation = hits.Location;
+					auto rot = FRotator(0.0f, 0.0f, 0.0f);
+					OmaUtil::TeleportActor(*CurrentPlacedItem, TargetLocation, rot);
+					return;
+				}
+			}
+		}
+	}
+
 
 	if (hits.bBlockingHit)
 	{
@@ -582,7 +619,7 @@ APrimitiveCharacter::CheckTarget()
 		if (hit != CurrentPlacedItem)
 			TargetLocation = hits.Location;
 
-		if (hit->Implements<UInteractable>())
+		if (hit && hit->Implements<UInteractable>())
 		{
 			SetCurrentTarget(hit);
 		}
@@ -658,7 +695,6 @@ void APrimitiveCharacter::SetCurrentTarget(AActor* target, UPrimitiveComponent* 
 {
 	if (CurrentPlacedItem)
 	{
-		SetHighlightIfInteractableTarget(CurrentPlacedItem, true);
 		return;
 	}
 
@@ -696,7 +732,8 @@ void APrimitiveCharacter::SetCurrentTarget(AActor* target, UPrimitiveComponent* 
 
 		if (CurrentInteractable)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Target Interactable [%s]"), *CurrentInteractable->GetItem().Name);
+			auto loc = CurrentInteractable->GetActorLocation();
+			UE_LOG(LogTemp, Warning, TEXT("Target Interactable [%s] at [%f, %f, %f]"), *CurrentInteractable->GetItem().Name, loc.X, loc.Y, loc.Z);
 		}
 	}
 }
@@ -858,7 +895,7 @@ void APrimitiveCharacter::ZoomIn(const FInputActionValue& Value)
 {
 	if (ModifierCtrlDown)
 	{
-		if (CurrentPlacedItem)
+		if (CurrentPlacedItem && CurrentPlacedItem->IsFoundation)
 		{
 			CurrentPlacedItemElevation += PlacedItemElevationStep;
 		}
@@ -884,7 +921,7 @@ void APrimitiveCharacter::ZoomOut(const FInputActionValue& Value)
 {
 	if (ModifierCtrlDown)
 	{
-		if (CurrentPlacedItem)
+		if (CurrentPlacedItem && CurrentPlacedItem->IsFoundation)
 		{
 			CurrentPlacedItemElevation -= PlacedItemElevationStep;
 		}
@@ -1366,7 +1403,7 @@ AInteractableActor*
 APrimitiveCharacter::SpawnItem(const FItemStruct& Item, const FVector& inLocation, const FRotator& inRotation)
 {
 	FActorSpawnParameters SpawnInfo;
-	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;//  AlwaysSpawn;
+	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;//  AdjustIfPossibleButAlwaysSpawn;
 	if (Item.ItemClass->IsValidLowLevel())
 	{
 		auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(Item.ItemClass, inLocation, inRotation, SpawnInfo);
@@ -1434,6 +1471,7 @@ APrimitiveCharacter::StartPlacingItem(FItemSlot& fromSlot)
 			CurrentPlacedItemElevation = 0;
 			CurrentPlacedItemRotation = 0;
 			OmaUtil::DisablePhysicsAndCollision(*CurrentPlacedItem);
+			SetHighlightIfInteractableTarget(CurrentPlacedItem, true);
 		}
 	}
 }
@@ -1468,13 +1506,36 @@ APrimitiveCharacter::CheckCurrentPlacedItem()
 		return false;
 }
 
+bool
+APrimitiveCharacter::AllowPlaceItem(AInteractableActor& inItem, UBuildingSnapBox* inSnapBox) const
+{
+	if (inItem.RequireFoundation)
+	{
+		if (inSnapBox)
+			return inSnapBox->PlaceStacksUp;
+		else
+			return false;
+	}
+
+	if (inItem.IsFoundation)
+	{
+		if (inSnapBox && inSnapBox->PlaceStacksUp)
+			return false;
+	}
+
+	return true;
+}
+
+
+
 void
 APrimitiveCharacter::CompletePlacingItem()
 {
 	if (CurrentPlacedItem)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Completed placing item %s"), *CurrentPlacedItem->GetName());
-		OmaUtil::EnablePhysicsAndCollision(*CurrentPlacedItem);
+		auto loc = CurrentPlacedItem->GetActorLocation();
+		UE_LOG(LogTemp, Warning, TEXT("Completed placing item %s to [%f, %f, %f]"), *CurrentPlacedItem->GetName(), loc.X, loc.Y, loc.Z);
+		OmaUtil::EnableCollision(*CurrentPlacedItem);
 		SetHighlightIfInteractableTarget(CurrentPlacedItem, false);
 		if (CurrentPlacedItemFromSlot)
 		{
