@@ -125,6 +125,8 @@ public:
 	void CheckCrafting(float DeltaGameTimeSecs);
 	void CompleteCrafting(FCraftingWork& inProgress);
 
+	void PlaySoundCrafting(const UCrafterSlot* inSlot);
+
 	UPROPERTY(BlueprintReadOnly) FString CrafterName;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FCraftableItem>	CraftableItems;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float			Efficiency = 1.0f;

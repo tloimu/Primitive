@@ -6,7 +6,7 @@
 
 UCrafterWidget::UCrafterWidget(const FObjectInitializer& ObjectInitializer) : UUserWidget(ObjectInitializer)
 {
-	bIsFocusable = true;
+	SetIsFocusable(true);
 	CrafterSlotClass = StaticClass();
 }
 

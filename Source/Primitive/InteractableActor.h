@@ -65,5 +65,5 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<AInteractableActor*> SupportsItems;
 
     void AddOnItem(AInteractableActor& inSupport);
-    void RemoveItem();
+    void DestroyItem(); // destroys also what ever this item supports
 };

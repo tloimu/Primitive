@@ -26,7 +26,7 @@ struct ContainedMaterial
 class FWorldGenOneInstance;
 
 UCLASS(config=Game)
-class APrimitiveCharacter : public ACharacter
+class APrimitiveCharacter : public ACharacter, public IInventoryOwner
 {
 	GENERATED_BODY()
 
@@ -121,7 +121,7 @@ public:
 
 	// Sounds
 	void PlaySound(USoundCue *inDefaultSound, USoundCue *inOverrideSound = nullptr) const;
-	void PlaySoundCrafting(const FItemStruct& inItem) const;
+	void PlaySoundCrafting(const FItemStruct& inItem) const override;
 	void PlaySoundHit(const FItemStruct *inItem, const UFoliageResource *inResource) const;
 	void PlaySoundEquip(const FItemStruct& inItem) const;
 	void PlaySoundUnequip(const FItemStruct& inItem) const;
@@ -129,15 +129,16 @@ public:
 	void PlaySoundPickItem(const FItemStruct& inItem) const;
 	void PlaySoundHarvest() const;
 
-	// Items
-	const FItemStruct* FindItem(const FString& Id) const;
-	AInteractableActor* DropItem(const FItemStruct& Item);
+	// Inventory
+	const FItemStruct* FindItem(const FString& Id) const override;
+	AInteractableActor* DropItem(const FItemStruct& Item) override;
+	void WearItem(FItemSlot& fromSlot);
+	void ConsumeItem(FItemSlot& fromSlot);
 
+	// Placing items
 	void StartPlacingItem(FItemSlot& fromSlot);
 	void CompletePlacingItem();
 	void CancelPlaceItem();
-	void WearItem(FItemSlot& fromSlot);
-	void ConsumeItem(FItemSlot& fromSlot);
 
 protected:
 	AInteractableActor* SpawnSavedItem(const FSavedItem& Item);
@@ -187,8 +188,6 @@ protected:
 
 	TArray<ContainedMaterial> CollectMaterialsFrom(const FVector& Location);
 	void HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, UFoliageResource& inFoliageComponent, int32 inInstanceId);
-	void EquipItem(UInventorySlot& FromSlot, UInventorySlot &ToSlot);
-	void UnequipItem(UInventorySlot& FromSlot, UInventorySlot& ToSlot);
 
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -206,7 +205,6 @@ protected:
 
 	void ReadConfigFiles();
 	void ReadGameSave();
-	AInteractableActor* SpawnItem(const FSavedItem& item);
 	void SetSavedInventorySlot(const FSavedInventorySlot& saved, FItemSlot& slot);
 	void SetSavedContainerSlots(UInventory* inInventory, const FSavedItem& saved);
 
@@ -227,7 +225,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 CurrentPlacedItemRotation = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 PlacedItemElevationStep = 5;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 PlacedItemRotationStep = 5;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) float MaxPlaceItemDistance = 500.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) float MaxPlaceItemDistance = 1000.0f;
 	bool CheckCurrentPlacedItem(); // return true if placed item is active
 	bool AllowPlaceItem(AInteractableActor& inItem, class UBuildingSnapBox *inSnapBox = nullptr) const;
 

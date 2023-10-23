@@ -121,9 +121,9 @@ UInventory::GetSlotAt(int Index)
 const FItemStruct*
 UInventory::FindItem(const FString& inId) const
 {
-	if (Player)
+	if (InventoryOwner)
 	{
-		return Player->FindItem(inId);
+		return InventoryOwner->FindItem(inId);
 	}
 	return nullptr;
 }
@@ -330,6 +330,6 @@ UInventory::DropItemsFromSlot(FItemSlot &slot, int inCount)
 void
 UInventory::DropItem(const FItemStruct& inItem)
 {
-	if (Player)
-		Player->DropItem(inItem);
+	if (InventoryOwner)
+		InventoryOwner->DropItem(inItem);
 }

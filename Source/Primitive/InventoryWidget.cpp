@@ -7,7 +7,7 @@
 
 UInventoryWidget::UInventoryWidget(const FObjectInitializer& ObjectInitializer): UUserWidget(ObjectInitializer)
 {
-	bIsFocusable = true;
+	SetIsFocusable(true);
 	InventorySlotClass = StaticClass();
 }
 

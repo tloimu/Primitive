@@ -5,6 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "CrafterSlot.h"
 #include "PrimitiveCharacter.h"
+#include "Inventory.h"
 
 const FString UCrafter::HandCraftingStationItemId = "Hand";
 
@@ -123,14 +124,18 @@ UCrafter::StartCrafting(const FCraftRecipie& inRecipie, TArray<UInventory*> inIn
 	if (CrafterListener)
 		CrafterListener->WorkStarted(work);
 
-	if (Inventory && Inventory->Player)
-	{
-		auto player = Cast<APrimitiveCharacter>(Inventory->Player);
-		if (player)
-			player->PlaySoundCrafting(inSlot->Item);
-	}
+	PlaySoundCrafting(inSlot);
 
 	return true;
+}
+
+void
+UCrafter::PlaySoundCrafting(const UCrafterSlot *inSlot)
+{
+	if (Inventory && Inventory->InventoryOwner)
+	{
+		Inventory->InventoryOwner->PlaySoundCrafting(inSlot->Item);
+	}
 }
 
 void

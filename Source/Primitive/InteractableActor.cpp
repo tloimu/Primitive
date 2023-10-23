@@ -36,7 +36,7 @@ AInteractableActor::AddOnItem(AInteractableActor& inSupport)
 }
 
 void
-AInteractableActor::RemoveItem()
+AInteractableActor::DestroyItem()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Remove item %s"), *GetName());
 
@@ -48,7 +48,7 @@ AInteractableActor::RemoveItem()
 
 	for (auto item : SupportsItems)
 	{
-		item->RemoveItem();
+		item->DestroyItem();
 	}
 
 	Destroy();

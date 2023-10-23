@@ -36,8 +36,21 @@ public:
 	virtual void SlotChanged(const FItemSlot& Slot) = 0;
 	virtual void SlotRemoved(const FItemSlot& Slot) = 0;
 	virtual void MaxSlotsChanged(int MaxSlots) = 0; // Does this need to differentiate between different inventories?
+
+protected:
+	~IInventoryListener() {};
 };
 
+class IInventoryOwner
+{
+public:
+	virtual AInteractableActor* DropItem(const FItemStruct& inItem) = 0;
+	virtual const FItemStruct* FindItem(const FString& inId) const = 0;
+	virtual void PlaySoundCrafting(const FItemStruct& inItem) const = 0; // TODO: Refactor to more logical place instead - currently used by <UCrafter>
+
+protected:
+	~IInventoryOwner() {};
+};
 
 UCLASS(BlueprintType)
 class UInventory : public UObject
@@ -71,8 +84,7 @@ public:
 	UPROPERTY(EditAnywhere) int CurrentSelectedSlotIndex = -1;
 
 	IInventoryListener *InventoryListener = nullptr;
-
-	UPROPERTY() class APrimitiveCharacter* Player = nullptr; // REFACTOR: Make to an interface that has <ItemDb> or <FindItem> and <DropItem>
+	IInventoryOwner* InventoryOwner = nullptr;
 
 	FItemSlot NoneSlot;
 };

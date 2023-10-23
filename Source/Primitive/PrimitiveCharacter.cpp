@@ -109,9 +109,9 @@ void APrimitiveCharacter::BeginPlay()
 	Super::BeginPlay();
 
 	Inventory = NewObject<UInventory>();
-	Inventory->Player = this;
+	Inventory->InventoryOwner = this;
 	EquippedItems = NewObject<UInventory>();
-	EquippedItems->Player = this;
+	EquippedItems->InventoryOwner = this;
 	HandCrafter = NewObject<UCrafter>();
 	HandCrafter->Inventory = Inventory;
 	HandCrafter->CrafterName = "Hand Crafting";
@@ -895,16 +895,13 @@ void APrimitiveCharacter::Look(const FInputActionValue& Value)
 
 void APrimitiveCharacter::ZoomIn(const FInputActionValue& Value)
 {
-	if (ModifierCtrlDown)
+	if (CurrentPlacedItem && !CurrentPlacedItem->RequireFoundation && !CurrentPlacedItem->RequireSnapBox)
 	{
-		if (CurrentPlacedItem && CurrentPlacedItem->IsFoundation)
+		if (ModifierCtrlDown)
 		{
 			CurrentPlacedItemElevation += PlacedItemElevationStep;
 		}
-	}
-	else if (ModifierShiftDown)
-	{
-		if (CurrentPlacedItem)
+		else if (ModifierShiftDown)
 		{
 			CurrentPlacedItemRotation -= PlacedItemRotationStep;
 		}
@@ -921,16 +918,13 @@ void APrimitiveCharacter::ZoomIn(const FInputActionValue& Value)
 
 void APrimitiveCharacter::ZoomOut(const FInputActionValue& Value)
 {
-	if (ModifierCtrlDown)
+	if (CurrentPlacedItem && !CurrentPlacedItem->RequireFoundation && !CurrentPlacedItem->RequireSnapBox)
 	{
-		if (CurrentPlacedItem && CurrentPlacedItem->IsFoundation)
+		if (ModifierCtrlDown)
 		{
 			CurrentPlacedItemElevation -= PlacedItemElevationStep;
 		}
-	}
-	else if (ModifierShiftDown)
-	{
-		if (CurrentPlacedItem)
+		else if (ModifierShiftDown)
 		{
 			CurrentPlacedItemRotation += PlacedItemRotationStep;
 		}
@@ -972,14 +966,14 @@ void APrimitiveCharacter::Pick(const FInputActionValue& Value)
 							{
 								if (!Inventory->AddItem(i.Item, i.Count))
 									return; // cannot fit everything, stop here
+									return; // cannot fit everything, stop here
 							}
 							i.Count = 0;
 						}
 					}
 					auto actor = CurrentInteractable;
 					SetCurrentTarget(nullptr);
-					actor->RemoveItem();
-					//actor->Destroy();
+					actor->DestroyItem();
 				}
 			}
 		}
@@ -1365,20 +1359,6 @@ APrimitiveCharacter::HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, 
 	SetCurrentTarget(nullptr);
 }
 
-void
-APrimitiveCharacter::EquipItem(UInventorySlot& FromSlot, UInventorySlot& ToSlot)
-{
-	UE_LOG(LogTemp, Warning, TEXT("Equip from slot % to slot %d"), FromSlot.SlotIndex, ToSlot.SlotIndex);
-	// ???? TODO:
-}
-
-void
-APrimitiveCharacter::UnequipItem(UInventorySlot& FromSlot, UInventorySlot& ToSlot)
-{
-	UE_LOG(LogTemp, Warning, TEXT("Uneqip from slot % to slot %d"), FromSlot.SlotIndex, ToSlot.SlotIndex);
-	// ???? TODO:
-}
-
 
 AInteractableActor*
 APrimitiveCharacter::DropItem(const FItemStruct& Item)
@@ -1417,7 +1397,7 @@ APrimitiveCharacter::SpawnItem(const FItemStruct& Item, const FVector& inLocatio
 			auto inv = NewObject<UInventory>();
 			check(inv);
 			itemActor->Inventory = inv;
-			inv->Player = this;
+			inv->InventoryOwner = this;
 			inv->SetMaxSlots(Item.ContainedSlots);
 		}
 		if (!Item.CraftableRecipies.IsEmpty())
@@ -1487,6 +1467,7 @@ APrimitiveCharacter::CancelPlaceItem()
 		auto item = CurrentPlacedItem;
 		CurrentPlacedItem = nullptr;
 		CurrentPlacedItemFromSlot = nullptr;
+		CurrentBuildSnapBox = nullptr;
 		item->Destroy();
 	}
 }
