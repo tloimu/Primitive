@@ -138,6 +138,8 @@ public:
 	// Placing items
 	void StartPlacingItem(FItemSlot& fromSlot);
 	void CompletePlacingItem();
+	void FinalizePlacingItem();
+	void StartPlacingNextItemIfPossible(const FString& Id);
 	void CancelPlaceItem();
 
 protected:

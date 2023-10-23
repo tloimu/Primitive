@@ -1060,7 +1060,11 @@ APrimitiveCharacter::HitExecute(AInstancedFoliageActor *inFoliageActor, UFoliage
 void
 APrimitiveCharacter::Interact(const FInputActionValue& Value)
 {
-	if (ShowingInventory)
+	if (CurrentPlacedItem)
+	{
+		CancelPlaceItem();
+	}
+	else if (ShowingInventory)
 	{
 		Interact_InInventory(Value);
 	}
@@ -1524,27 +1528,7 @@ APrimitiveCharacter::CompletePlacingItem()
 		UE_LOG(LogTemp, Warning, TEXT("Completed placing item %s to [%f, %f, %f]"), *CurrentPlacedItem->GetName(), loc.X, loc.Y, loc.Z);
 		if (AllowPlaceItem(*CurrentPlacedItem, CurrentBuildSnapBox))
 		{
-			if (CurrentBuildSnapBox)
-			{
-				if (CurrentBuildSnapBox->PlaceStacksUp)
-				{
-					auto support = Cast<AInteractableActor>(CurrentBuildSnapBox->GetOwner());
-					if (support)
-					{
-						CurrentPlacedItem->AddOnItem(*support);
-						UE_LOG(LogTemp, Warning, TEXT("  - supported by %s"), *support->GetName());
-					}
-				}
-			}
-			OmaUtil::EnableCollision(*CurrentPlacedItem);
-			SetHighlightIfInteractableTarget(CurrentPlacedItem, false);
-			if (CurrentPlacedItemFromSlot)
-			{
-				CurrentPlacedItemFromSlot->ChangeCountBy(-1).NotifyChange();
-			}
-			CurrentPlacedItem = nullptr;
-			CurrentPlacedItemFromSlot = nullptr;
-			CurrentBuildSnapBox = nullptr;
+			FinalizePlacingItem();
 		}
 		else
 		{
@@ -1552,6 +1536,46 @@ APrimitiveCharacter::CompletePlacingItem()
 		}
 	}
 }
+
+void
+APrimitiveCharacter::FinalizePlacingItem()
+{
+	if (CurrentBuildSnapBox)
+	{
+		if (CurrentBuildSnapBox->PlaceStacksUp)
+		{
+			auto support = Cast<AInteractableActor>(CurrentBuildSnapBox->GetOwner());
+			if (support)
+			{
+				CurrentPlacedItem->AddOnItem(*support);
+				UE_LOG(LogTemp, Warning, TEXT("  - supported by %s"), *support->GetName());
+			}
+		}
+	}
+	OmaUtil::EnableCollision(*CurrentPlacedItem);
+	SetHighlightIfInteractableTarget(CurrentPlacedItem, false);
+	if (CurrentPlacedItemFromSlot)
+	{
+		CurrentPlacedItemFromSlot->ChangeCountBy(-1).NotifyChange();
+	}
+	auto itemId = CurrentPlacedItem->Item.Id;
+	CurrentPlacedItem = nullptr;
+	CurrentPlacedItemFromSlot = nullptr;
+	CurrentBuildSnapBox = nullptr;
+	StartPlacingNextItemIfPossible(itemId);
+}
+
+void
+APrimitiveCharacter::StartPlacingNextItemIfPossible(const FString& Id)
+{
+	if (Inventory)
+	{
+		auto slot = Inventory->FindFirstSlotOf(Id);
+		if (slot)
+			StartPlacingItem(*slot);
+	}
+}
+
 
 TArray<ContainedMaterial>
 APrimitiveCharacter::CollectMaterialsFrom(const FVector& Location)

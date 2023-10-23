@@ -207,6 +207,20 @@ UInventory::RemoveItem(const FItemStruct& item, int count)
 	return false;
 }
 
+FItemSlot*
+UInventory::FindFirstSlotOf(const FString& inId)
+{
+	for (auto &slot : Slots)
+	{
+		if (slot.Count > 0 && slot.Item.Id == inId)
+		{
+			return &slot;
+		}
+	}
+	return nullptr;
+}
+
+
 bool
 UInventory::SetMaxSlots(int Count)
 {

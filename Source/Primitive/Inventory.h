@@ -78,6 +78,7 @@ public:
 
 	const FItemStruct* FindItem(const FString& inId) const;
 	int CountItemsOf(const FString& inId) const;
+	FItemSlot* FindFirstSlotOf(const FString& inId);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<FItemSlot> Slots;
 	UPROPERTY(EditAnywhere) int MaxSlots;
