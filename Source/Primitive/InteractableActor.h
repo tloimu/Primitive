@@ -60,4 +60,10 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FBuildSnapBox> BuildSnapBoxes;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) bool IsFoundation = false;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) bool RequireFoundation = false;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) bool RequireSnapBox = false;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly) AInteractableActor* SupportedByItem = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<AInteractableActor*> SupportsItems;
+
+    void AddOnItem(AInteractableActor& inSupport);
+    void RemoveItem();
 };

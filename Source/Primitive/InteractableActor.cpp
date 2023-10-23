@@ -25,3 +25,31 @@ AInteractableActor::CanBePicked() const
 	}
 	return true;
 }
+
+
+void
+AInteractableActor::AddOnItem(AInteractableActor& inSupport)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Add item %s on top of %s"), *GetName(), *inSupport.GetName());
+	SupportedByItem = &inSupport;
+	inSupport.SupportsItems.Add(this);
+}
+
+void
+AInteractableActor::RemoveItem()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Remove item %s"), *GetName());
+
+	if (SupportedByItem)
+	{
+		SupportedByItem->SupportsItems.RemoveSingle(this);
+		SupportedByItem = nullptr;
+	}
+
+	for (auto item : SupportsItems)
+	{
+		item->RemoveItem();
+	}
+
+	Destroy();
+}

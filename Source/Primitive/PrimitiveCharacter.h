@@ -219,7 +219,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) class AVoxelWorld *TargetVoxelWorld;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) int32 CurrentTargetInstanceId;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) UInstancedStaticMeshComponent* CurrentTargetComponent = nullptr;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) UBoxComponent* CurrentBuildSnapBox = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly) class UBuildingSnapBox* CurrentBuildSnapBox = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) AInteractableActor* CurrentPlacedItem = nullptr;
 	FItemSlot* CurrentPlacedItemFromSlot = nullptr;

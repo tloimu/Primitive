@@ -587,7 +587,9 @@ APrimitiveCharacter::CheckTarget()
 			if (snapHits.GetComponent())
 			{
 				auto buildSnapBox = Cast<UBuildingSnapBox>(snapHits.GetComponent());
-				if (buildSnapBox && AllowPlaceItem(*CurrentPlacedItem, buildSnapBox))
+				bool allow = AllowPlaceItem(*CurrentPlacedItem, buildSnapBox);
+				SetHighlightIfInteractableTarget(CurrentPlacedItem, allow);
+				if (buildSnapBox && allow)
 				{
 					CurrentBuildSnapBox = buildSnapBox;
 					auto cl = buildSnapBox->GetComponentLocation();
@@ -600,7 +602,7 @@ APrimitiveCharacter::CheckTarget()
 				{
 					CurrentBuildSnapBox = nullptr;
 					TargetLocation = hits.Location;
-					auto rot = FRotator(0.0f, 0.0f, 0.0f);
+					auto rot = CurrentPlacedItem->GetActorRotation();
 					OmaUtil::TeleportActor(*CurrentPlacedItem, TargetLocation, rot);
 					return;
 				}
@@ -976,7 +978,8 @@ void APrimitiveCharacter::Pick(const FInputActionValue& Value)
 					}
 					auto actor = CurrentInteractable;
 					SetCurrentTarget(nullptr);
-					actor->Destroy();
+					actor->RemoveItem();
+					//actor->Destroy();
 				}
 			}
 		}
@@ -1523,6 +1526,9 @@ APrimitiveCharacter::AllowPlaceItem(AInteractableActor& inItem, UBuildingSnapBox
 			return false;
 	}
 
+	if (inItem.RequireSnapBox)
+		return (inSnapBox != nullptr);
+
 	return true;
 }
 
@@ -1535,14 +1541,34 @@ APrimitiveCharacter::CompletePlacingItem()
 	{
 		auto loc = CurrentPlacedItem->GetActorLocation();
 		UE_LOG(LogTemp, Warning, TEXT("Completed placing item %s to [%f, %f, %f]"), *CurrentPlacedItem->GetName(), loc.X, loc.Y, loc.Z);
-		OmaUtil::EnableCollision(*CurrentPlacedItem);
-		SetHighlightIfInteractableTarget(CurrentPlacedItem, false);
-		if (CurrentPlacedItemFromSlot)
+		if (AllowPlaceItem(*CurrentPlacedItem, CurrentBuildSnapBox))
 		{
-			CurrentPlacedItemFromSlot->ChangeCountBy(-1).NotifyChange();
+			if (CurrentBuildSnapBox)
+			{
+				if (CurrentBuildSnapBox->PlaceStacksUp)
+				{
+					auto support = Cast<AInteractableActor>(CurrentBuildSnapBox->GetOwner());
+					if (support)
+					{
+						CurrentPlacedItem->AddOnItem(*support);
+						UE_LOG(LogTemp, Warning, TEXT("  - supported by %s"), *support->GetName());
+					}
+				}
+			}
+			OmaUtil::EnableCollision(*CurrentPlacedItem);
+			SetHighlightIfInteractableTarget(CurrentPlacedItem, false);
+			if (CurrentPlacedItemFromSlot)
+			{
+				CurrentPlacedItemFromSlot->ChangeCountBy(-1).NotifyChange();
+			}
+			CurrentPlacedItem = nullptr;
+			CurrentPlacedItemFromSlot = nullptr;
+			CurrentBuildSnapBox = nullptr;
 		}
-		CurrentPlacedItem = nullptr;
-		CurrentPlacedItemFromSlot = nullptr;
+		else
+		{
+			CancelPlaceItem();
+		}
 	}
 }
 
