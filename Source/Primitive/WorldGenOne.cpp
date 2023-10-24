@@ -91,9 +91,9 @@ FWorldGenOneInstance::Init(const FVoxelGeneratorInit& InitStruct)
 	CurveMountains.Points.push_back(std::make_pair<float, float>(-1.0f, -1.0f));
 	CurveMountains.Points.push_back(std::make_pair<float, float>(-0.15f, -0.05f));
 	CurveMountains.Points.push_back(std::make_pair<float, float>(-0.10f, -0.02f));
-	CurveMountains.Points.push_back(std::make_pair<float, float>(-0.05f, -0.003f));
+	CurveMountains.Points.push_back(std::make_pair<float, float>(-0.03f, -0.003f));
 	CurveMountains.Points.push_back(std::make_pair<float, float>(0.0f, 0.00f));
-	CurveMountains.Points.push_back(std::make_pair<float, float>(0.05f, 0.003f));
+	CurveMountains.Points.push_back(std::make_pair<float, float>(0.03f, 0.003f));
 	CurveMountains.Points.push_back(std::make_pair<float, float>(0.10f, 0.02f));
 	CurveMountains.Points.push_back(std::make_pair<float, float>(0.15f, 0.05f));
 	CurveMountains.Points.push_back(std::make_pair<float, float>(1.0f, 1.0f));

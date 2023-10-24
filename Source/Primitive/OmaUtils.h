@@ -1,3 +1,5 @@
+#pragma once
+
 #include "CoreMinimal.h"
 #include "ItemDatabase.h"
 #include "Components/Image.h"
