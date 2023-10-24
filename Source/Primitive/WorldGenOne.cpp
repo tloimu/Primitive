@@ -4,6 +4,32 @@
 #include "FastNoise/VoxelFastNoise.inl"
 #include "Runtime/Foliage/Public/InstancedFoliageActor.h"
 #include "VoxelMaterialBuilder.h"
+#include "OmaUtils.h"
+
+float
+Curve::GetValueAt(float inAt) const
+{
+	if (Points.empty())
+		return inAt;
+
+	if (inAt < -1.0f || inAt > 1.0f)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Curve::GetValueAt(%f) exceeded valid input range -1.0..1.0"), inAt);
+	}
+
+	auto *prev = &Points[0];
+	for (size_t i = 1; i < Points.size(); i++)
+	{
+		auto &cur = Points[i];
+		if (inAt >= prev->first && inAt <= cur.first)
+		{
+			auto v = FMath::Lerp(prev->second, cur.second, ((inAt - prev->first) / (cur.first - prev->first)));
+			return v;
+		}
+		prev = &Points[i];
+	}
+	return prev->second;
+}
 
 TVoxelSharedRef<FVoxelGeneratorInstance> UWorldGenOne::GetInstance()
 {
@@ -57,10 +83,29 @@ FWorldGenOneInstance::Init(const FVoxelGeneratorInit& InitStruct)
 	WorldSize = InitStruct.WorldSize;
 	VoxelSize = InitStruct.VoxelSize;
 
-	Noise.SetSeed(Seed);
+	Noise.SetSeed(Seed+1);
 	WaterNoise.SetSeed(Seed + 10);
 	TemperatureNoise.SetSeed(Seed + 100);
 	MoistureNoise.SetSeed(Seed + 500);
+
+	CurveMountains.Points.push_back(std::make_pair<float, float>(-1.0f, -1.0f));
+	CurveMountains.Points.push_back(std::make_pair<float, float>(-0.15f, -0.05f));
+	CurveMountains.Points.push_back(std::make_pair<float, float>(-0.10f, -0.02f));
+	CurveMountains.Points.push_back(std::make_pair<float, float>(-0.05f, -0.003f));
+	CurveMountains.Points.push_back(std::make_pair<float, float>(0.0f, 0.00f));
+	CurveMountains.Points.push_back(std::make_pair<float, float>(0.05f, 0.003f));
+	CurveMountains.Points.push_back(std::make_pair<float, float>(0.10f, 0.02f));
+	CurveMountains.Points.push_back(std::make_pair<float, float>(0.15f, 0.05f));
+	CurveMountains.Points.push_back(std::make_pair<float, float>(1.0f, 1.0f));
+
+	CurveIslands.Points.push_back(std::make_pair<float, float>(-1.0f, -1.0f));
+	CurveIslands.Points.push_back(std::make_pair<float, float>(1.0f, 1.0f));
+
+	CurveLowlands.Points.push_back(std::make_pair<float, float>(-1.0f, -1.0f));
+	CurveLowlands.Points.push_back(std::make_pair<float, float>(1.0f, 1.0f));
+
+	CurveSwamps.Points.push_back(std::make_pair<float, float>(-1.0f, -1.0f));
+	CurveSwamps.Points.push_back(std::make_pair<float, float>(1.0f, 1.0f));
 }
 
 
@@ -97,13 +142,10 @@ FWorldGenOneInstance::GetUpVector(v_flt X, v_flt Y, v_flt Z) const
 float
 FWorldGenOneInstance::GetTerrainHeight(v_flt X, v_flt Y, v_flt Z) const
 {
-	// float ErosionFromMoisture = FMath::Clamp(1.0f - GetMoisture(X, Y, Z) / 110.0f, 0.4f, 1.0f);
-	float flatness = FMath::Clamp(Noise.GetPerlin_2D(X, Y, 0.0001f), 0.3f, 2.0f);
+	int32 octaves = 11;
 
-	int32 octaves = 11 + 2 * Noise.GetPerlin_2D(X, Y, 0.001f);
-
-	return (TerrainHeight * flatness) * (
-		+ Noise.GetSimplexFractal_2D(X, Y, 0.00006f, octaves)
+	return (TerrainHeight) * (
+		+CurveMountains.GetValueAt(Noise.GetPerlinFractal_2D(X, Y, 0.00006f, octaves))
 		);
 }
 
@@ -113,7 +155,9 @@ FWorldGenOneInstance::GetMoisture(v_flt X, v_flt Y, v_flt Z) const
 	float Klat = GetLatitude(Y);
 
 	float Mnoise = (MoistureNoise.GetPerlin_2D(X, Y, MoistureVariationFreq)) * MoistureVariation;
-	float Mraw = EquatorMoisture - (Klat * (EquatorMoisture - PolarMoisture)) + Mnoise - TerrainHeight * 0.01;
+	float Mraw = EquatorMoisture - (Klat * (EquatorMoisture - PolarMoisture)) + Mnoise - Z * 0.001;
+	if (Mraw < 0.0f)
+		Mraw = 0.0f;
 	return Mraw;
 }
 
@@ -121,9 +165,10 @@ float
 FWorldGenOneInstance::GetTemperature(v_flt X, v_flt Y, v_flt Z) const
 {
 	float Klat = GetLatitude(Y);
+	float Theight = Z > 0.0f ? TemperatureHeightCoeff * (Z * VoxelSize / 100) : 0.0f;
 
 	float Tnoise = (TemperatureNoise.GetPerlin_2D(X, Y, TemperatureVariationFreq))* TemperatureVariation;
-	float T = EquatorTemperature - (Klat * (EquatorTemperature - PolarTemperature)) + Tnoise - TemperatureHeightCoeff * (Z * VoxelSize / 100);
+	float T = EquatorTemperature - (Klat * (EquatorTemperature - PolarTemperature)) + Tnoise - Theight;
 
 	return T;
 }
@@ -138,9 +183,9 @@ float
 FWorldGenOneInstance::GetNearLowestTerrainHeight(v_flt X, v_flt Y) const
 {
 	float z = GetTerrainHeight(X, Y, 0);
-	for (int dx = -1; dx < 2; dx++)
+	for (int dx = -1; dx < 2; dx = dx + 2)
 	{
-		for (int dy = -1; dy < 2; dy++)
+		for (int dy = -1; dy < 2; dy = dy + 2)
 		{
 			float nz = GetTerrainHeight(X + dx, Y + dy, 0);
 			if (nz < z)
@@ -318,45 +363,10 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 	return type;
 }
 
-
-class MsTimer
-{
-public:
-	int64 started = 0;
-	int64 checked = 0;
-
-	MsTimer() { Start(); }
-
-	void Start()
-	{
-		started = FDateTime::UtcNow().GetTicks();
-		checked = FDateTime::UtcNow().GetTicks();
-	}
-
-	int32 Check()
-	{
-		auto check = SinceCheck();
-		checked = FDateTime::UtcNow().GetTicks();
-		return check;
-	}
-
-	int32 SinceCheck()
-	{
-		auto now = FDateTime::UtcNow().GetTicks();
-		return (now - checked) / 10000;
-	}
-
-	int32 Total()
-	{
-		auto now = FDateTime::UtcNow().GetTicks();
-		return (now - started) / 10000;
-	}
-};
-
 void
 FWorldGenOneInstance::GenerateFoilage(AInstancedFoliageActor& foliageActor)
 {
-	MsTimer timer;
+	OmaUtil::MsTimer timer;
 
 	TArray<UInstancedStaticMeshComponent*> components;
 	foliageActor.GetComponents<UInstancedStaticMeshComponent>(components);
@@ -476,8 +486,6 @@ FWorldGenOneInstance::GenerateFoilage(AInstancedFoliageActor& foliageActor)
 		UE_LOG(LogTemp, Warning, TEXT("Component: %s, instances %d"), *c->GetName(), NewInstancesPerComponent[ci].Num());
 		ci++;
 	}
-	UE_LOG(LogTemp, Warning, TEXT("Foilage adding time: %d"), timer.Check());
-
-	auto totalMs = FDateTime::UtcNow().GetTicks();
-	UE_LOG(LogTemp, Warning, TEXT("Foilage total time: %d"), timer.Total());
+	timer.LogAndCheck("Foilage adding time");
+	timer.LogTotal("Foilage time");
 }

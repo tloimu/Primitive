@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "FastNoise/VoxelFastNoise.h"
 #include "VoxelGenerators/VoxelGeneratorHelpers.h"
+#include <vector>
 #include "WorldGenOne.generated.h"
 
 UCLASS(Blueprintable)
@@ -14,16 +15,16 @@ class UWorldGenOne : public UVoxelGenerator
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Testing")
-		int32 MaxFoliageInstances = 400000;
+		int32 MaxFoliageInstances = 400000; // Non-zero value sets the maximum total foliage instances to actually be added to the map
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Testing")
-		int32 MaxFoliageRange = 0; // Non-zero value sets the maximum total foliage instances to actually be added to the map
+		int32 MaxFoliageRange = 0; // Non-zero value sets the maximum range from (0, 0) coords where to place foliage
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Terrain")
-		int32 Seed = 1338;
+		int32 Seed = 1337;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Terrain")
-		float TerrainHeight = 3500.0f;
+		float TerrainHeight = 8000.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Climate")
 		float WaterVariation = 10.f;
@@ -61,6 +62,14 @@ public:
 	//~ Begin UWorldGenOne Interface
 	virtual TVoxelSharedRef<FVoxelGeneratorInstance> GetInstance() override;
 	//~ End UWorldGenOne Interface
+};
+
+class Curve
+{
+public:
+	float GetValueAt(float inValue) const;
+
+	std::vector<std::pair<float, float>>	Points;
 };
 
 class FWorldGenOneInstance : public TVoxelGeneratorInstanceHelper<FWorldGenOneInstance, UWorldGenOne>
@@ -113,6 +122,11 @@ public:
 	int32 ID_Tree1 = 3; // Mid-sized tree
 	int32 ID_Tree2 = 4; // Big tree
 	int32 ID_Tree3 = 5; // Small tree
+
+	Curve CurveMountains;
+	Curve CurveIslands;
+	Curve CurveLowlands;
+	Curve CurveSwamps;
 
 private:
 	FVoxelFastNoise Noise, WaterNoise, TemperatureNoise, MoistureNoise;

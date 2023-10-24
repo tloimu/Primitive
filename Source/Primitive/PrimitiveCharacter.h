@@ -14,6 +14,7 @@
 #include "GameSettings.h"
 #include "Inventory.h"
 #include "Craftable.h"
+#include "MapWidget.h"
 #include "FoliageResource.h"
 #include "PrimitiveCharacter.generated.h"
 
@@ -89,6 +90,9 @@ class APrimitiveCharacter : public ACharacter, public IInventoryOwner
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* ToggleCrafterAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* ToggleMapAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* BackAction;
@@ -168,6 +172,7 @@ protected:
 
 	void ToggleInventory(const FInputActionValue& Value);
 	void ToggleCrafter(const FInputActionValue& Value);
+	void ToggleMap(const FInputActionValue& Value);
 	void ToggleInventoryUI();
 	void ToggleCrafterUI();
 	void Back(const FInputActionValue& Value);
@@ -236,6 +241,7 @@ protected:
 	void SetHighlightIfInteractableTarget(AActor* target, bool value);
 
 	// Input state
+	bool ShowingMap = false;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Generator")
 	bool ModifierShiftDown = false;
@@ -245,7 +251,7 @@ protected:
 	// Inventory
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) UInventory	*Inventory = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) UInventory	*EquippedItems = nullptr;
-	bool ShowingInventory;
+	bool ShowingInventory = false;
 	bool ShowingCrafter = false;
 
 	UPROPERTY(EditAnywhere) TSubclassOf<UInventoryWidget> InventoryWidgetClass;
@@ -260,7 +266,10 @@ protected:
 	UPROPERTY() UCrafter* HandCrafter = nullptr;
 	bool ShowingHandCrafter = false;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FString> CraftableRecipies;
-	
+
+	UPROPERTY(EditAnywhere) TSubclassOf<UMapWidget> MapWidgetClass;
+	UPROPERTY() UMapWidget* MapWidget;
+
 	// Setting up the Map
 
 	UPROPERTY(EditAnywhere) TSubclassOf<class UHUDWidget> WorldGeneratorClass;

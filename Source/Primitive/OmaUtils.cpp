@@ -2,6 +2,7 @@
 #include "PrimitiveGameInstance.h"
 #include <GameFramework/Actor.h>
 #include <Components/BoxComponent.h>
+#include "ImageUtils.h"
 
 bool
 OmaUtil::TeleportActor(AActor& inActor, FVector& inLocation, FRotator& inRotation)
@@ -146,4 +147,137 @@ OmaUtil::GetItemDb(UGameInstance* Instance)
 		return gi->ItemDb;
 	else
 		return nullptr;
+}
+
+
+// ----------------------------------------------------------------
+// class <MinMax>
+// ----------------------------------------------------------------
+
+void
+OmaUtil::MinMax::Value(float v)
+{
+	if (v < min)
+		min = v;
+	if (v > max)
+		max = v;
+}
+
+void
+OmaUtil::MinMax::Log(const char* Text)
+{
+	UE_LOG(LogTemp, Warning, TEXT("%s: min [%f], max [%f]"), *FString(Text), min, max);
+}
+
+
+// ----------------------------------------------------------------
+// class <MsTimer>
+// ----------------------------------------------------------------
+
+
+OmaUtil::MsTimer::MsTimer()
+{
+	Start();
+}
+
+void
+OmaUtil::MsTimer::Start()
+{
+	started = FDateTime::UtcNow().GetTicks();
+	checked = FDateTime::UtcNow().GetTicks();
+}
+
+int32
+OmaUtil::MsTimer::Check()
+{
+	auto check = SinceCheck();
+	checked = FDateTime::UtcNow().GetTicks();
+	return check;
+}
+
+int32
+OmaUtil::MsTimer::SinceCheck()
+{
+	auto now = FDateTime::UtcNow().GetTicks();
+	return (now - checked) / 10000;
+}
+
+int32
+OmaUtil::MsTimer::Total()
+{
+	auto now = FDateTime::UtcNow().GetTicks();
+	return (now - started) / 10000;
+}
+
+void
+OmaUtil::MsTimer::LogAndCheck(const char* Text)
+{
+	UE_LOG(LogTemp, Warning, TEXT("%s: Last check %ld ms ago"), *FString(Text), Check());
+}
+
+void
+OmaUtil::MsTimer::LogSinceCheck(const char* Text)
+{
+	UE_LOG(LogTemp, Warning, TEXT("%s: Last check %ld ms ago"), *FString(Text), SinceCheck());
+}
+
+void
+OmaUtil::MsTimer::LogTotal(const char* Text)
+{
+	UE_LOG(LogTemp, Warning, TEXT("%s: Total %ld ms"), *FString(Text), Total());
+}
+
+
+// ----------------------------------------------------------------
+// class <BitmapMaker>
+// ----------------------------------------------------------------
+
+
+void
+OmaUtil::BitmapMaker::Start(uint32 x, uint32 y)
+{
+	DataPtr = nullptr;
+	RowLength = x;
+	Texture = UTexture2D::CreateTransient(x, y);
+	if (Texture)
+	{
+		auto gmm = &Texture->GetPlatformData()->Mips[0];
+		DataPtr = (uint8*)(gmm->BulkData.Lock(LOCK_READ_WRITE));
+	}
+}
+
+void
+OmaUtil::BitmapMaker::Set(uint32 x, uint32 y, const FColor& color)
+{
+	if (DataPtr)
+	{
+		auto pa = &DataPtr[y * RowLength * 4 + 4 * x];
+		pa[0] = color.B;
+		pa[1] = color.G;
+		pa[2] = color.R;
+		pa[3] = color.A;
+	}
+}
+
+UTexture2D*
+OmaUtil::BitmapMaker::Finish()
+{
+	DataPtr = nullptr;
+	if (Texture)
+	{
+		auto gmm = &Texture->GetPlatformData()->Mips[0];
+		gmm->BulkData.Unlock();
+	}
+
+	auto t = Texture;
+	Texture = nullptr;
+	return t;
+}
+
+void
+OmaUtil::BitmapMaker::FinishToImage(UImage& inImage)
+{
+	auto t = Finish();
+	t->UpdateResource();
+	inImage.SetBrushFromSoftTexture(t);
 }
