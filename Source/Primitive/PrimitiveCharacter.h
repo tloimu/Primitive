@@ -178,10 +178,10 @@ protected:
 	void Back(const FInputActionValue& Value);
 	void Transfer(const FInputActionValue& Value);
 
-	void ShiftModifierDown(const FInputActionValue& Value) { ModifierShiftDown = true; }
-	void CtrlModifierDown(const FInputActionValue& Value) { ModifierCtrlDown = true; }
-	void ShiftModifierUp(const FInputActionValue& Value) { ModifierShiftDown = false; }
-	void CtrlModifierUp(const FInputActionValue& Value) { ModifierCtrlDown = false; }
+	void ShiftModifierDown(const FInputActionValue& Value);
+	void CtrlModifierDown(const FInputActionValue& Value);
+	void ShiftModifierUp(const FInputActionValue& Value);
+	void CtrlModifierUp(const FInputActionValue& Value);
 
 	UPROPERTY(EditAnywhere, Category = "Zoom Transforms", BlueprintReadWrite) TArray<float> ZoomTransforms;
 	uint8 CurrentZoomLevel;

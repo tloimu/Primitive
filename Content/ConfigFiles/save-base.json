@@ -37,7 +37,17 @@
                     "count": 3
                 },
                 {
+                    "slot": 6,
+                    "id": "WoodDoorFrame",
+                    "count": 3
+                },
+                {
                     "slot": 7,
+                    "id": "WoodDoor",
+                    "count": 3
+                },
+                {
+                    "slot": 8,
                     "id": "WorkBench",
                     "count": 1
                 }

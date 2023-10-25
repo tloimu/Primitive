@@ -52,7 +52,7 @@ APrimitiveCharacter::APrimitiveCharacter(): DoGenerateFoliage(true), ClockInSecs
 	// instead of recompiling to adjust them
 	GetCharacterMovement()->JumpZVelocity = 700.f;
 	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 5000.f;// 500.f;
+	GetCharacterMovement()->MaxWalkSpeed = 500.f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 
@@ -1358,6 +1358,38 @@ APrimitiveCharacter::Transfer(const FInputActionValue& Value)
 	}
 }
 
+
+void
+APrimitiveCharacter::ShiftModifierDown(const FInputActionValue& Value)
+{
+	ModifierShiftDown = true;
+	GetCharacterMovement()->JumpZVelocity = 10000.f;
+	GetCharacterMovement()->MaxWalkSpeed = 10000.f;
+	GetCharacterMovement()->AirControl = 100.0f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 10000.f;
+}
+
+void
+APrimitiveCharacter::ShiftModifierUp(const FInputActionValue& Value)
+{
+	ModifierShiftDown = false;
+	GetCharacterMovement()->JumpZVelocity = 700.f;
+	GetCharacterMovement()->MaxWalkSpeed = 500.f;
+	GetCharacterMovement()->AirControl = 0.35f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
+}
+
+void
+APrimitiveCharacter::CtrlModifierDown(const FInputActionValue& Value)
+{
+	ModifierCtrlDown = true;
+}
+
+void
+APrimitiveCharacter::CtrlModifierUp(const FInputActionValue& Value)
+{
+	ModifierCtrlDown = false;
+}
 
 void
 APrimitiveCharacter::HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, UFoliageResource& inFoliageComponent, int32 inInstanceId)
