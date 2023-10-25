@@ -29,25 +29,30 @@
                 {
                     "slot": 4,
                     "id": "WoodFoundation",
-                    "count": 3
+                    "count": 10
                 },
                 {
                     "slot": 5,
                     "id": "WoodWall",
-                    "count": 3
+                    "count": 10
                 },
                 {
                     "slot": 6,
                     "id": "WoodDoorFrame",
-                    "count": 3
+                    "count": 10
                 },
                 {
                     "slot": 7,
                     "id": "WoodDoor",
-                    "count": 3
+                    "count": 10
                 },
                 {
-                    "slot": 8,
+                    "slot": 7,
+                    "id": "WoodRoof45",
+                    "count": 10
+                },
+                {
+                    "slot": 9,
                     "id": "WorkBench",
                     "count": 1
                 }
