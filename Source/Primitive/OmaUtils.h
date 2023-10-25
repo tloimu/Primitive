@@ -12,6 +12,8 @@ namespace OmaUtil
 	void DisableCollision(class AActor& inActor);
 	void EnableCollision(class AActor& inActor);
 
+	void RotateActorAroundPoint(class AActor& inActor, const FVector& inPivotPoint, FRotator& inRotation);
+
 	UItemDatabase* GetItemDb(UGameInstance *Instance);
 
 	class MinMax

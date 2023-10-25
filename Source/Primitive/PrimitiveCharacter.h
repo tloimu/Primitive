@@ -26,6 +26,18 @@ struct ContainedMaterial
 
 class FWorldGenOneInstance;
 
+enum FActionType
+{
+	OpenDoor,
+	CloseDoor
+};
+
+class FAction
+{
+	FActionType	Action;
+	AInteractableActor* Target;
+};
+
 UCLASS(config=Game)
 class APrimitiveCharacter : public ACharacter, public IInventoryOwner
 {
@@ -131,6 +143,8 @@ public:
 	void PlaySoundUnequip(const FItemStruct& inItem) const;
 	void PlaySoundDropItem(const FItemStruct& inItem) const;
 	void PlaySoundPickItem(const FItemStruct& inItem) const;
+	void PlaySoundOpenDoor(const FItemStruct& inItem) const;
+	void PlaySoundCloseDoor(const FItemStruct& inItem) const;
 	void PlaySoundHarvest() const;
 
 	// Inventory
@@ -195,6 +209,10 @@ protected:
 
 	TArray<ContainedMaterial> CollectMaterialsFrom(const FVector& Location);
 	void HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, UFoliageResource& inFoliageComponent, int32 inInstanceId);
+
+	void InteractDoor(AInteractableActor& inDoor);
+
+	TArray<FAction> CurrentActions;
 
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -324,3 +342,5 @@ public:
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 };
+
+extern FName GAME_TAG_DOOR;

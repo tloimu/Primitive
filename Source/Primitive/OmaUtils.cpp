@@ -48,6 +48,16 @@ OmaUtil::TeleportActor(AActor& inActor, FVector& inLocation, FRotator& inRotatio
 }
 
 void
+OmaUtil::RotateActorAroundPoint(class AActor& inActor, const FVector& inPivotPoint, FRotator& inRotation)
+{
+	auto &original = inActor.GetTransform();
+	FTransform pivotTransform = FTransform(original.GetRotation(), inPivotPoint);
+	FTransform dPivotToOriginal = original * pivotTransform.Inverse();
+	auto newTf = FTransform(inRotation.GetInverse(), FVector(0, 0, 0)) * dPivotToOriginal * FTransform(inRotation, FVector(0, 0, 0)) * pivotTransform;
+	inActor.SetActorTransform(newTf);
+}
+
+void
 OmaUtil::DisablePhysicsAndCollision(AActor& inActor)
 {
 	for (UActorComponent* Component : inActor.GetComponents())

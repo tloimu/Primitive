@@ -31,6 +31,8 @@
 #include <Voxel/Public/VoxelTools/VoxelDataTools.h>
 
 
+FName GAME_TAG_DOOR("Door");
+
 //////////////////////////////////////////////////////////////////////////
 // APrimitiveCharacter
 
@@ -860,6 +862,18 @@ APrimitiveCharacter::PlaySoundPickItem(const FItemStruct& inItem) const
 }
 
 void
+APrimitiveCharacter::PlaySoundOpenDoor(const FItemStruct& inItem) const
+{
+	PlaySound(PickItemSound);
+}
+
+void
+APrimitiveCharacter::PlaySoundCloseDoor(const FItemStruct& inItem) const
+{
+	PlaySound(PickItemSound);
+}
+
+void
 APrimitiveCharacter::PlaySoundHarvest() const
 {
 	PlaySound(HarvestSound);
@@ -1146,7 +1160,12 @@ APrimitiveCharacter::Interact_Interactable(const FInputActionValue& Value, AInte
 	else
 	{
 		// ???? TODO: Add some "pickable" attribute to item specs as not everything can be interacted with can be picked?
-		Pick(Value);
+		if (CurrentInteractable->ActorHasTag(GAME_TAG_DOOR))
+		{
+			InteractDoor(*CurrentInteractable);
+		}
+		else
+			Pick(Value);
 	}
 }
 
@@ -1158,6 +1177,35 @@ APrimitiveCharacter::Interact_Foliage(const FInputActionValue& Value, UInstanced
 	// fa->SelectInstance(CurrentTargetComponent, CurrentTargetInstanceId, true);
 }
 
+
+void
+APrimitiveCharacter::InteractDoor(AInteractableActor& inDoor)
+{
+	FVector o; FVector box;
+	inDoor.GetActorBounds(true, o, box, false);
+
+	// ???? TODO: Make the door open/close slowly instead of teleporting
+	if (inDoor.CurrentState == 0)
+	{
+		PlaySoundOpenDoor(inDoor.Item);
+		inDoor.OriginalStateTransform = inDoor.GetActorTransform();
+
+		auto a = box.X;
+		auto b = box.X / 1.4;
+		FVector d((a + b), -b, 0);
+		FRotator rot(0, 135, 0);
+		//OmaUtil::RotateActorAroundPoint(inDoor, inDoor.GetActorLocation(), rot);
+		inDoor.AddActorWorldRotation(FRotator(0, 135, 0));
+		inDoor.AddActorWorldOffset(d);
+		inDoor.CurrentState = 1;
+	}
+	else
+	{
+		PlaySoundCloseDoor(inDoor.Item);
+		inDoor.SetActorTransform(inDoor.OriginalStateTransform);
+		inDoor.CurrentState = 0;
+	}
+}
 
 void
 APrimitiveCharacter::WearItem(FItemSlot& fromSlot)

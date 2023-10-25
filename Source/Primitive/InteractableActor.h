@@ -61,6 +61,8 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite) bool IsFoundation = false;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) bool RequireFoundation = false;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) bool RequireSnapBox = false;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) uint8 CurrentState = 0;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite) FTransform OriginalStateTransform;
     UPROPERTY(EditAnywhere, BlueprintReadOnly) AInteractableActor* SupportedByItem = nullptr;
     UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<AInteractableActor*> SupportsItems;
 
