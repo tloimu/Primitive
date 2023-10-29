@@ -15,5 +15,6 @@ public:
 	APrimitiveGameMode();
 
 	void BeginPlay() override;
+	void StartPlay() override;
 	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 };

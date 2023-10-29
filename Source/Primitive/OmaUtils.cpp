@@ -3,6 +3,16 @@
 #include <GameFramework/Actor.h>
 #include <Components/BoxComponent.h>
 #include "ImageUtils.h"
+#include "Framework/Application/NavigationConfig.h"
+
+
+void
+OmaUtil::UseTabNavigationInWidgets(bool DoUse)
+{
+	// Disabling prevent Widgets (like Inventory) to consume Tab-key events
+	FNavigationConfig& NavigationConfig = *FSlateApplication::Get().GetNavigationConfig();
+	NavigationConfig.bTabNavigation = DoUse;
+}
 
 bool
 OmaUtil::TeleportActor(AActor& inActor, FVector& inLocation, FRotator& inRotation)

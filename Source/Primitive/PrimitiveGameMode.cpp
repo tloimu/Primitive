@@ -2,9 +2,10 @@
 
 #include "PrimitiveGameMode.h"
 #include "PrimitiveCharacter.h"
+#include "PrimitiveGameInstance.h"
 #include "CoreFwd.h"
-#include "Framework/Application/NavigationConfig.h"
 #include "UObject/ConstructorHelpers.h"
+#include "OmaUtils.h"
 
 APrimitiveGameMode::APrimitiveGameMode() : AGameModeBase()
 {
@@ -17,19 +18,36 @@ APrimitiveGameMode::APrimitiveGameMode() : AGameModeBase()
 		DefaultPawnClass = PlayerPawnBPClass.Class;
 	}
 
-	// Prevent Widgets (like Inventory) to consume Tab-key events
-	FNavigationConfig& NavigationConfig = *FSlateApplication::Get().GetNavigationConfig();
-	NavigationConfig.bTabNavigation = false;
+	OmaUtil::UseTabNavigationInWidgets(false);
 }
 
 void
 APrimitiveGameMode::BeginPlay()
 {
+	Super::BeginPlay();
+
 	UE_LOG(LogTemp, Warning, TEXT("Game Mode: BeginPlay"));
+}
+
+void
+APrimitiveGameMode::StartPlay()
+{
+	Super::StartPlay();
+
+	UE_LOG(LogTemp, Warning, TEXT("Game Mode: StartPlay"));
+	auto gi = Cast<UPrimitiveGameInstance>(GetGameInstance());
+	if (gi)
+	{
+		gi->GenerateWorld();
+		gi->GenerateFoilage();
+		gi->ReadGameSave();
+	}
 }
 
 void
 APrimitiveGameMode::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	Super::EndPlay(EndPlayReason);
+
 	UE_LOG(LogTemp, Warning, TEXT("Game Mode: EndPlay"));
 }

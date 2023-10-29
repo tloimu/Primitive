@@ -11,6 +11,7 @@ namespace OmaUtil
 	void EnablePhysicsAndCollision(class AActor& inActor);
 	void DisableCollision(class AActor& inActor);
 	void EnableCollision(class AActor& inActor);
+	void UseTabNavigationInWidgets(bool DoUse = true);
 
 	void RotateActorAroundPoint(class AActor& inActor, const FVector& inPivotPoint, FRotator& inRotation);
 

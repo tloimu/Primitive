@@ -9,6 +9,7 @@ Recent state of the game has the following main features implemented at least at
 - some foliage
 - the world has varying temperature and moisture levels contributing to local terrain features and flora
 - swimmable water at sea level
+- third person and first person cameras with zoom in/out
 - day-night cycle
 - player inventory
 - containers like boxes where player can store items

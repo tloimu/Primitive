@@ -4,8 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "Runtime/Engine/Classes/Engine/DirectionalLight.h"
-#include "Runtime/Engine/Classes/Engine/SkyLight.h"
 #include <Runtime/Engine/Classes/Sound/SoundCue.h>
 #include "InputActionValue.h"
 #include "InventoryWidget.h"
@@ -160,9 +158,11 @@ public:
 	void StartPlacingNextItemIfPossible(const FString& Id);
 	void CancelPlaceItem();
 
-protected:
-	AInteractableActor* SpawnSavedItem(const FSavedItem& Item);
+	UInventory* GetInventory() const { return Inventory; }
+	UCrafter* GetCrafter() const { return HandCrafter; }
+	UInventory* GetEquippedItems() const { return EquippedItems; }
 
+protected:
 	AInteractableActor* SpawnItem(const FItemStruct& Item, const FVector& inLocation, const FRotator& inRotation);
 
 	/** Called for movement input */
@@ -228,11 +228,6 @@ protected:
 	void SetupHUD(APlayerController* pc);
 	void CheckBeginPlay();
 
-	void ReadConfigFiles();
-	void ReadGameSave();
-	void SetSavedInventorySlot(const FSavedInventorySlot& saved, FItemSlot& slot);
-	void SetSavedContainerSlots(UInventory* inInventory, const FSavedItem& saved);
-
 	void Tick(float DeltaSeconds) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) AActor* CurrentTarget = nullptr;
@@ -288,53 +283,14 @@ protected:
 	UPROPERTY(EditAnywhere) TSubclassOf<UMapWidget> MapWidgetClass;
 	UPROPERTY() UMapWidget* MapWidget;
 
-	// Setting up the Map
-
-	UPROPERTY(EditAnywhere) TSubclassOf<class UHUDWidget> WorldGeneratorClass;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
-	bool DoGenerateFoliage;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
-	int32 MaxFoliageInstances = 200000;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
-	int32 MaxFoliageRange = 20000;
-
-	void GenerateFoilage();
-
 	void CheckEnvironment();
 	void EnsureNotUnderGround();
-	void CheckSunlight(float DeltaSeconds);
 	void CheckCrafting(float DeltaSeconds);
 
 	void CommitToHitAction();
 	void HitExecute(AInstancedFoliageActor* inFoliageActor, UFoliageResource* inResourceComponent, int32 inInstanceId);
 	FTimerHandle CommittedActionTimerHandle;
 	bool CommittedToAction = false;
-
-/*	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	class UInventoryComponent* InventoryComponent;*/
-
-	// Environmental variables and functionality
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")
-	float ClockInSecs;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")
-	int32 Day;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")
-	int32 DayOfYear;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")
-	float ClockSpeed;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")
-	TSoftObjectPtr<ADirectionalLight> SunLight;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")
-	TSoftObjectPtr<ASkyLight> SkyLight;
 
 public:
 	/** Returns CameraBoom subobject **/

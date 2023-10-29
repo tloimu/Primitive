@@ -9,20 +9,19 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Blueprint/UserWidget.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/GameplayStatics.h"
+
 #include "GameSettings.h"
 #include "ItemDatabase.h"
 #include "InstancedFoliageActor.h"
-#include <Runtime/Engine/Classes/Kismet/KismetSystemLibrary.h>
-#include <Runtime/JsonUtilities/Public/JsonObjectConverter.h>
-#include <Primitive/Interactable.h>
+#include "Interactable.h"
 #include "CrafterSlot.h"
 #include "WorldGenOne.h"
 #include "PrimitiveGameMode.h"
-#include "Runtime/Engine/Public/EngineUtils.h"
-#include "Runtime/Foliage/Public/InstancedFoliageActor.h"
-#include "Kismet/GameplayStatics.h"
 #include "OmaUtils.h"
 #include "BuildingSnapBox.h"
+#include "PrimitiveGameState.h"
 
 #include <Voxel/Public/VoxelTools/Gen/VoxelSphereTools.h>
 #include <Voxel/Public/VoxelWorldInterface.h>
@@ -36,7 +35,7 @@ FName GAME_TAG_DOOR("Door");
 //////////////////////////////////////////////////////////////////////////
 // APrimitiveCharacter
 
-APrimitiveCharacter::APrimitiveCharacter(): DoGenerateFoliage(true), ClockInSecs(12 * 60 * 60.0f), Day(1), DayOfYear(6 * 30), ClockSpeed(600.0f)
+APrimitiveCharacter::APrimitiveCharacter() : ACharacter()
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -100,8 +99,6 @@ APrimitiveCharacter::APrimitiveCharacter(): DoGenerateFoliage(true), ClockInSecs
 	HUDWidgetClass = nullptr;
 	HUDWidget = nullptr;
 
-	WorldGeneratorClass = nullptr;
-
 	Inventory = nullptr;
 	EquippedItems = nullptr;
 }
@@ -127,8 +124,6 @@ void APrimitiveCharacter::BeginPlay()
 		HandCrafter->CraftableItems.Add(ci);
 	}
 
-	ReadConfigFiles();
-
 	auto pc = GetController<APlayerController>();
 	if (pc)
 	{
@@ -145,22 +140,25 @@ void APrimitiveCharacter::BeginPlay()
 		}
 	}
 
-	ReadGameSave();
 	EnsureNotUnderGround();
 
-	GenerateFoilage();
-
-	MapWidget = CreateWidget<UMapWidget>(pc, MapWidgetClass);
-	if (MapWidget)
+	if (MapWidgetClass)
 	{
-		MapWidget->GenerateMap();
-		MapWidget->SetVisibility(ESlateVisibility::Hidden);
-		MapWidget->AddToPlayerScreen();
-		ShowingMap = false;
+		MapWidget = CreateWidget<UMapWidget>(pc, MapWidgetClass);
+		if (MapWidget)
+		{
+			MapWidget->SetVisibility(ESlateVisibility::Hidden);
+			MapWidget->AddToPlayerScreen();
+			ShowingMap = false;
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Failed to create MapWidget"));
+		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("No MapWidget"));
+		UE_LOG(LogTemp, Error, TEXT("No MapWidget Class set"));
 	}
 
 	CheckBeginPlay();
@@ -169,25 +167,9 @@ void APrimitiveCharacter::BeginPlay()
 void
 APrimitiveCharacter::CheckBeginPlay()
 {
-	// Some validity checking
-	if (!SunLight)
+	if (MapWidget)
 	{
-		TArray<AActor*> FoundActors;
-		UGameplayStatics::GetAllActorsOfClass(GetWorld(), ADirectionalLight::StaticClass(), FoundActors);
-		if (FoundActors.Num() > 0)
-		{
-			SunLight = FoundActors[0];
-			UE_LOG(LogTemp, Warning, TEXT("Surrogate SunLight actor found as the first ADirectionalLight in the level"));
-		}
-	}
-
-	if (SunLight)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("SunLight actor found"));
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("SunLight actor NOT found"));
+		MapWidget->GenerateMap();
 	}
 }
 
@@ -233,195 +215,9 @@ APrimitiveCharacter::SetupCrafterUI(APlayerController* pc)
 }
 
 void
-APrimitiveCharacter::GenerateFoilage()
-{
-	auto WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
-	TActorIterator<AInstancedFoliageActor> foliageIterator2(GetWorld());
-	while (foliageIterator2)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("===> FoliageActor: %s"), *(foliageIterator2->GetName()));
-
-		TArray<UInstancedStaticMeshComponent*> components;
-		foliageIterator2->GetComponents<UInstancedStaticMeshComponent>(components);
-		UInstancedStaticMeshComponent* meshComponent = nullptr;
-		if (components.IsEmpty())
-		{
-			UE_LOG(LogTemp, Warning, TEXT("No foilage components found (empty array)"));
-		}
-		else
-		{
-			meshComponent = components[0];
-		}
-
-		for (auto& c : components)
-		{
-			auto cs = c->InstanceStartCullDistance;
-			auto ce = c->InstanceEndCullDistance;
-			UE_LOG(LogTemp, Warning, TEXT("Component: %s, cull %d .. %d"), *c->GetName(), cs, ce);
-		}
-		UE_LOG(LogTemp, Warning, TEXT("<--- FoliageActor: %s"), *(foliageIterator2->GetName()));
-		++foliageIterator2;
-	}
-
-
-	TActorIterator<AInstancedFoliageActor> foliageIterator(GetWorld());
-	if (foliageIterator)
-	{
-		AInstancedFoliageActor* foliageActor = *foliageIterator;
-
-		if (WorldGenInstance)
-		{
-			if (DoGenerateFoliage)
-				WorldGenInstance->GenerateFoilage(*foliageActor);
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("No World Generator Instance found"));
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("No foilage actor found"));
-	}
-}
-
-void
 APrimitiveCharacter::EnsureNotUnderGround()
 {
 	// ???? TODO: move the player on top of the terrain if under ground at startup
-}
-
-void
-APrimitiveCharacter::ReadConfigFiles()
-{
-	/*
-	if (ItemDb)
-	{
-		ItemDb->SetupItems();
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("No Item Database found"));
-	}
-	*/
-}
-
-void
-APrimitiveCharacter::ReadGameSave()
-{
-	const FString JsonFilePath = FPaths::ProjectContentDir() + "ConfigFiles/save-base.json";
-	if (!FPlatformFileManager::Get().GetPlatformFile().FileExists(*JsonFilePath))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("No save-file found in %s"), *JsonFilePath);
-		return;
-	}
-
-	FString JsonString;
-	FFileHelper::LoadFileToString(JsonString, *JsonFilePath);
-
-	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
-	TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(JsonString);
-
-	if (FJsonSerializer::Deserialize(JsonReader, JsonObject) && JsonObject.IsValid())
-	{
-		FGameSave game;
-		FJsonObjectConverter::JsonObjectStringToUStruct<FGameSave>(JsonString, &game, 0, 0);
-		UE_LOG(LogTemp, Warning, TEXT("Game Save Name= %s"), *game.name);
-		for (const auto &item : game.items)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Saved item Id= %s, x= %f, y= %f, z=%f"), *item.id, item.location[0], item.location[1], item.location[2]);
-			SpawnSavedItem(item);
-		}
-
-		if (Inventory && EquippedItems)
-		{
-			for (const auto& player : game.players)
-			{
-				if (player.name.Equals("one"))
-				{
-					for (const auto& savedSlot : player.slots)
-					{
-						auto& slot = Inventory->GetSlotAt(savedSlot.slot);
-						SetSavedInventorySlot(savedSlot, slot);
-					}
-					for (const auto& savedSlot : player.wear)
-					{
-						if (savedSlot.on == TEXT("back"))
-						{
-							if (EquippedItems)
-							{
-								for (auto &es : EquippedItems->Slots)
-								{
-									if (es.CanOnlyWearIn.Contains(BodyPart::Back))
-									{
-										auto itemSetting = FindItem(savedSlot.id);
-										if (itemSetting && itemSetting->ItemClass->IsValidLowLevel())
-										{
-											es.Inventory = EquippedItems;
-											es.Item = *itemSetting;
-											es.SetCount(1).NotifyChange();
-										}
-										break;
-									}
-								}
-							}
-							// SetSavedInventorySlot(savedSlot, Inventory->Back);
-						}
-						else if (savedSlot.on == TEXT("head"))
-						{
-							// SetSavedInventorySlot(savedSlot, Inventory->Head);
-						}
-					}
-				}
-			}
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("Invalid JSON at game save file %s"), *JsonString);
-	}
-}
-
-AInteractableActor*
-APrimitiveCharacter::SpawnSavedItem(const FSavedItem& item)
-{
-	auto WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
-	FVector location;
-	if (item.location.Num() >= 3)
-		location.Set(item.location[0], item.location[1], item.location[2]);
-	FRotator rotation;
-	if (item.rotation.Num() >= 3)
-		rotation.Add(item.rotation[0], item.rotation[1], item.rotation[2]);
-
-	if (WorldGenInstance)
-	{
-		// Ensure not under ground
-		auto l = location / WorldGenInstance->VoxelSize;
-		auto th = WorldGenInstance->GetTerrainHeight(l.X, l.Y, l.Z);
-		location.Z = th * WorldGenInstance->VoxelSize + 120.0f;
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("World Generator not set yet to spawn items to"));
-	}
-
-	UE_LOG(LogTemp, Warning, TEXT("Spawn item %s to x= %f, y= %f, z=%f"), *item.id, location.X, location.Y, location.Z);
-
-
-	auto itemInfo = FindItem(item.id);
-	if (itemInfo)
-	{
-		auto itemActor = SpawnItem(*itemInfo, location, rotation);
-		if (itemActor && itemActor->Inventory)
-		{
-			SetSavedContainerSlots(itemActor->Inventory, item);
-		}
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("Unknown item ID [%s] in save file"), *item.id);
-	}
-	return nullptr;
 }
 
 const FItemStruct*
@@ -432,33 +228,6 @@ APrimitiveCharacter::FindItem(const FString& Id) const
 		return db->FindItem(Id);
 	else
 		return nullptr;
-}
-
-void
-APrimitiveCharacter::SetSavedInventorySlot(const FSavedInventorySlot& saved, FItemSlot &slot)
-{
-	auto itemSetting = FindItem(saved.id);
-	if (itemSetting && itemSetting->ItemClass->IsValidLowLevel())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("  - add %d items to slot %d %s"), saved.count, saved.slot, *itemSetting->Id);
-		slot.Item = *itemSetting;
-		slot.SetCount(saved.count).NotifyChange();
-	}
-}
-
-void
-APrimitiveCharacter::SetSavedContainerSlots(UInventory* inInventory, const FSavedItem& saved)
-{
-	auto containerItem = FindItem(saved.id);
-	if (containerItem)
-	{
-		inInventory->SetMaxSlots(containerItem->ContainedSlots);
-		for (const auto& savedSlot : saved.slots)
-		{
-			auto& slot = inInventory->GetSlotAt(savedSlot.slot);
-			SetSavedInventorySlot(savedSlot, slot);
-		}
-	}
 }
 
 void
@@ -494,7 +263,6 @@ void APrimitiveCharacter::Tick(float DeltaSeconds)
 	CheckTarget();
 
 	CheckEnvironment();
-	CheckSunlight(DeltaSeconds);
 	CheckCrafting(DeltaSeconds);
 	CheckCurrentPlacedItem();
 }
@@ -519,12 +287,15 @@ APrimitiveCharacter::CheckEnvironment()
 
 			auto T = WorldGenInstance->GetTemperature(l.X, l.Y, l.Z);
 			auto M = WorldGenInstance->GetMoisture(l.X, l.Y, l.Z);
-			HUDWidget->SetEnvironment(T, M);
-			float lat = WorldGenInstance->GetLatitude(l.Y);
-			HUDWidget->SetLocation(l, lat);
-			HUDWidget->SetTerrainHeight(th);
-			HUDWidget->SetHealth(99.0f);
-			HUDWidget->SetStamina(92.0f);
+			if (HUDWidget)
+			{
+				HUDWidget->SetEnvironment(T, M);
+				float lat = WorldGenInstance->GetLatitude(l.Y);
+				HUDWidget->SetLocation(l, lat);
+				HUDWidget->SetTerrainHeight(th);
+				HUDWidget->SetHealth(99.0f);
+				HUDWidget->SetStamina(92.0f);
+			}
 		}
 		else
 		{
@@ -540,40 +311,15 @@ APrimitiveCharacter::CheckEnvironment()
 }
 
 void
-APrimitiveCharacter::CheckSunlight(float DeltaSeconds)
-{
-	// UE_LOG(LogTemp, Warning, TEXT("APrimitiveGameMode::Tick %f"), DeltaSeconds);
-	if (SunLight)
-	{
-		float clockAdvance = DeltaSeconds * ClockSpeed;
-		if (FMath::TruncToInt(ClockInSecs / (60 * 60.0f)) != FMath::TruncToInt((ClockInSecs + clockAdvance) / (60 * 60.0f)))
-		{
-			UE_LOG(LogTemp, Warning, TEXT("APrimitiveGameMode::Hour = %d"), FMath::TruncToInt((ClockInSecs + clockAdvance) / (60 * 60.0f)));
-		}
-		ClockInSecs += clockAdvance;
-		if (ClockInSecs > 24 * 60 * 60.0f)
-		{
-			Day++;
-			DayOfYear++;
-			ClockInSecs -= 24 * 60 * 60.0f;
-			UE_LOG(LogTemp, Warning, TEXT("Start of Day %d"), Day);
-		}
-
-		FRotator rot;
-		rot.Pitch = ClockInSecs * 360.0f / (24 * 60 * 60.0f) + 90.0f;
-		SunLight->SetActorRotation(rot);
-		if (SkyLight)
-		{
-		}
-	}
-}
-
-void
 APrimitiveCharacter::CheckCrafting(float DeltaSeconds)
 {
 	if (HandCrafter)
 	{
-		HandCrafter->CheckCrafting(DeltaSeconds * ClockSpeed);
+		auto gs = Cast<APrimitiveGameState>(GetWorld()->GetGameState());
+		if (gs)
+		{
+			HandCrafter->CheckCrafting(DeltaSeconds * gs->ClockSpeed); // ???? TODO: Optimize getting ClockSpeed
+		}
 	}
 }
 
@@ -1712,7 +1458,7 @@ APrimitiveCharacter::CollectMaterialsFrom(const FVector& Location)
 	}
 
 	TArray<FModifiedVoxelValue> modified;
-	UVoxelSphereTools::RemoveSphere(TargetVoxelWorld, Location, 50.0f, &modified);
+	UVoxelSphereTools::RemoveSphere(TargetVoxelWorld, Location, 20.0f, &modified);
 
 	return collected;
 }
