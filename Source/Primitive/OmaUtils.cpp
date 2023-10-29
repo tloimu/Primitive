@@ -50,6 +50,8 @@ OmaUtil::TeleportActor(AActor& inActor, FVector& inLocation, FRotator& inRotatio
 void
 OmaUtil::RotateActorAroundPoint(class AActor& inActor, const FVector& inPivotPoint, FRotator& inRotation)
 {
+	FVector o, box;
+	inActor.GetActorBounds(true, o, box, false);
 	auto &original = inActor.GetTransform();
 	FTransform pivotTransform = FTransform(original.GetRotation(), inPivotPoint);
 	FTransform dPivotToOriginal = original * pivotTransform.Inverse();
