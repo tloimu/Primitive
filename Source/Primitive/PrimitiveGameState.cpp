@@ -33,12 +33,6 @@ APrimitiveGameState::BeginPlay()
 	}
 
 	LastCheckOfDayTimeSince = CheckDayTimeIntervalGameSeconds + 1.0f;
-
-	auto gi = Cast<UPrimitiveGameInstance>(GetGameInstance());
-	if (gi)
-	{
-		gi->ReadGameSave();
-	}
 }
 
 void

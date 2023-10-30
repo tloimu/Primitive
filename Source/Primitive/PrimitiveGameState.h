@@ -24,16 +24,16 @@ public:
 	// Environmental variables and functionality
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")//, Replicated)
-	float ClockInSecs;
+	float ClockInSecs = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")//, Replicated)
-	int32 Day;
+	int32 Day = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")//, Replicated)
-	int32 DayOfYear;
+	int32 DayOfYear = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")//, Replicated)
-	float ClockSpeed;
+	float ClockSpeed = 60.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")
 	TSoftObjectPtr<class ADirectionalLight> SunLight;

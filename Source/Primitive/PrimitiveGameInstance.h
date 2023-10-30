@@ -6,11 +6,11 @@
 #include "Engine/GameInstance.h"
 #include "GameSettings.h"
 #include "Inventory.h"
+#include "PrimitiveSaveGame.h"
+#include "HAL/IConsoleManager.h"
 #include "PrimitiveGameInstance.generated.h"
 
-/**
- * 
- */
+
 UCLASS()
 class PRIMITIVE_API UPrimitiveGameInstance : public UGameInstance
 {
@@ -21,27 +21,32 @@ class PRIMITIVE_API UPrimitiveGameInstance : public UGameInstance
 
 public:
 
+	class APrimitiveCharacter* GetPlayerCharacter() const;
+
 	// Item Database
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) class UItemDatabase* ItemDb = nullptr;
 	const FItemStruct* FindItem(const FString& Id) const;
 
-
 	// Saving and loading game
 
 	void SetupGameConfig();
+	void SetupGame();
 
 	void LoadGame(const FString& inPath);
 	void SaveGame(const FString& inPath);
 
-	void ReadGameSave();
+	UPROPERTY() TObjectPtr<UPrimitiveSaveGame>	SavedGame;
+
 	class AInteractableActor* SpawnSavedItem(const FSavedItem& item);
 	class AInteractableActor* SpawnItem(const FItemStruct& Item, const FVector& inLocation, const FRotator& inRotation, class APrimitiveCharacter *OwningPlayer);
 	void SetSavedInventorySlot(const FSavedInventorySlot& saved, FItemSlot& slot);
+	void SetSavedEquippedSlot(const FSavedWearables& saved, UInventory &inEquippedItems);
 	void SetSavedContainerSlots(UInventory* inInventory, const FSavedItem& saved);
 
-	FString SavedGamePath;
+	void ResetWorldToSavedGame(const FString& inPath);
 
+	FString AutoLoadGamePath;
 
 	// Setting up the Map
 
@@ -57,5 +62,8 @@ public:
 	void GenerateWorld();
 	void GenerateFoilage();
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly) class AVoxelWorld* VoxelWorld = nullptr;
+	UPROPERTY(BlueprintReadOnly) class AVoxelWorld* VoxelWorld = nullptr;
 };
+
+extern const FString DefaultSaveGameName;
+extern const FString QuickSaveGameName;

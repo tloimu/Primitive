@@ -11,6 +11,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "EngineUtils.h"
 
 #include "GameSettings.h"
 #include "ItemDatabase.h"
@@ -22,6 +23,7 @@
 #include "OmaUtils.h"
 #include "BuildingSnapBox.h"
 #include "PrimitiveGameState.h"
+#include "PrimitiveGameInstance.h"
 
 #include <Voxel/Public/VoxelTools/Gen/VoxelSphereTools.h>
 #include <Voxel/Public/VoxelWorldInterface.h>
@@ -553,6 +555,9 @@ APrimitiveCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInpu
 
 		EnhancedInputComponent->BindAction(CtrlModifierDownAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::CtrlModifierDown);
 		EnhancedInputComponent->BindAction(CtrlModifierUpAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::CtrlModifierUp);
+
+		EnhancedInputComponent->BindAction(QuickSaveGameAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::QuickSaveGame);
+		EnhancedInputComponent->BindAction(QuickLoadGameAction, ETriggerEvent::Triggered, this, &APrimitiveCharacter::QuickLoadGame);
 	}
 
 }
@@ -1157,18 +1162,22 @@ void
 APrimitiveCharacter::ShiftModifierDown(const FInputActionValue& Value)
 {
 	ModifierShiftDown = true;
+
 	GetCharacterMovement()->JumpZVelocity = 10000.f;
 	GetCharacterMovement()->MaxWalkSpeed = 10000.f;
+	GetCharacterMovement()->MaxSwimSpeed = 10000.0f;
 	GetCharacterMovement()->AirControl = 100.0f;
-	GetCharacterMovement()->BrakingDecelerationWalking = 10000.f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 20000.f;
 }
 
 void
 APrimitiveCharacter::ShiftModifierUp(const FInputActionValue& Value)
 {
 	ModifierShiftDown = false;
+
 	GetCharacterMovement()->JumpZVelocity = 700.f;
 	GetCharacterMovement()->MaxWalkSpeed = 500.f;
+	GetCharacterMovement()->MaxSwimSpeed = 300.0f;
 	GetCharacterMovement()->AirControl = 0.35f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 }
@@ -1183,6 +1192,38 @@ void
 APrimitiveCharacter::CtrlModifierUp(const FInputActionValue& Value)
 {
 	ModifierCtrlDown = false;
+}
+
+void
+APrimitiveCharacter::QuickSaveGame(const FInputActionValue& Value)
+{
+	auto gi = Cast<UPrimitiveGameInstance>(GetGameInstance());
+	if (gi)
+	{
+		if (ModifierCtrlDown)
+			gi->SaveGame(GetDefaultSaveName());
+		else
+			gi->SaveGame(QuickSaveGameName);
+	}
+}
+
+void
+APrimitiveCharacter::QuickLoadGame(const FInputActionValue& Value)
+{
+	auto gi = Cast<UPrimitiveGameInstance>(GetGameInstance());
+	if (gi)
+	{
+		if (ModifierCtrlDown)
+			gi->ResetWorldToSavedGame(GetDefaultSaveName());
+		else
+			gi->ResetWorldToSavedGame(QuickSaveGameName);
+	}
+}
+
+FString
+APrimitiveCharacter::GetDefaultSaveName() const
+{
+	return DefaultSaveGameName + GetWorld()->GetName();
 }
 
 void
@@ -1461,4 +1502,83 @@ APrimitiveCharacter::CollectMaterialsFrom(const FVector& Location)
 	UVoxelSphereTools::RemoveSphere(TargetVoxelWorld, Location, 20.0f, &modified);
 
 	return collected;
+}
+
+
+// ---------------------------------------------------------------------------
+// Console commands
+// ---------------------------------------------------------------------------
+
+void
+APrimitiveCharacter::priadditem(const FString& Id)
+{
+	CheatAddItems(Id, 1);
+}
+
+void
+APrimitiveCharacter::priadditems(const FString& Id, int Count)
+{
+	CheatAddItems(Id, Count);
+}
+
+void
+APrimitiveCharacter::priresetmap()
+{
+	auto gi = Cast<UPrimitiveGameInstance>(GetGameInstance());
+	if (gi)
+	{
+		gi->GenerateWorld();
+		gi->GenerateFoilage();
+	}
+}
+void
+APrimitiveCharacter::prihelp()
+{
+	UE_LOG(LogTemp, Warning, TEXT("pridestroyallitems - Destroys all items in the map"));
+	UE_LOG(LogTemp, Warning, TEXT("priadditem <ItemId> - Add one item to inventory if possible"));
+	UE_LOG(LogTemp, Warning, TEXT("priadditems <ItemId> <Count> - Add given count of items to inventory if possible"));
+	UE_LOG(LogTemp, Warning, TEXT("priresetmap - Resets the terrain and foliage"));
+}
+
+void
+APrimitiveCharacter::pridestroyallitems()
+{
+	TArray<AActor*> destroyAll;
+
+	for (TActorIterator<AInteractableActor> it(GetWorld()); it; ++it)
+	{
+		destroyAll.Add(*it);
+	}
+	for (auto a : destroyAll)
+		a->Destroy();
+}
+
+
+void
+APrimitiveCharacter::CheatAddItems(const FString &Id, int Count)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Adding %d of %s items to player inventory"), Count, *Id);
+	auto item = FindItem(Id);
+	if (item)
+	{
+		if (Inventory)
+		{
+			if (Inventory->AddItem(*item, Count))
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Added %d of %s items to player inventory"), Count, *item->Id);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("Failed to add item to player inventory"));
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("No player inventory"));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Unknown item: %s"), *Id);
+	}
 }

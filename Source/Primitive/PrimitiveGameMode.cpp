@@ -38,9 +38,7 @@ APrimitiveGameMode::StartPlay()
 	auto gi = Cast<UPrimitiveGameInstance>(GetGameInstance());
 	if (gi)
 	{
-		gi->GenerateWorld();
-		gi->GenerateFoilage();
-		gi->ReadGameSave();
+		gi->SetupGame();
 	}
 }
 

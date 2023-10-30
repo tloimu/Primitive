@@ -122,6 +122,12 @@ class APrimitiveCharacter : public ACharacter, public IInventoryOwner
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* CtrlModifierUpAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* QuickSaveGameAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* QuickLoadGameAction;
+
 public:
 	APrimitiveCharacter();
 	
@@ -162,6 +168,8 @@ public:
 	UCrafter* GetCrafter() const { return HandCrafter; }
 	UInventory* GetEquippedItems() const { return EquippedItems; }
 
+	FString GetDefaultSaveName() const;
+
 protected:
 	AInteractableActor* SpawnItem(const FItemStruct& Item, const FVector& inLocation, const FRotator& inRotation);
 
@@ -197,6 +205,9 @@ protected:
 	void ShiftModifierUp(const FInputActionValue& Value);
 	void CtrlModifierUp(const FInputActionValue& Value);
 
+	void QuickSaveGame(const FInputActionValue& Value);
+	void QuickLoadGame(const FInputActionValue& Value);
+
 	UPROPERTY(EditAnywhere, Category = "Zoom Transforms", BlueprintReadWrite) TArray<float> ZoomTransforms;
 	uint8 CurrentZoomLevel;
 
@@ -211,8 +222,6 @@ protected:
 	void HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, UFoliageResource& inFoliageComponent, int32 inInstanceId);
 
 	void InteractDoor(AInteractableActor& inDoor);
-
-	TArray<FAction> CurrentActions;
 
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -297,6 +306,14 @@ public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	// Console commands
+	UFUNCTION(Exec, Category = ExecFunctions) void priadditem(const FString& Id);
+	UFUNCTION(Exec, Category = ExecFunctions) void priadditems(const FString &Id, int Count);
+	UFUNCTION(Exec, Category = ExecFunctions) void priresetmap();
+	UFUNCTION(Exec, Category = ExecFunctions) void pridestroyallitems();
+	UFUNCTION(Exec, Category = ExecFunctions) void prihelp();
+	void CheatAddItems(const FString& Id, int Count);
 };
 
 extern FName GAME_TAG_DOOR;

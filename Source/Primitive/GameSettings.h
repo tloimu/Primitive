@@ -32,6 +32,7 @@ struct FSavedWearables
 
     UPROPERTY() FString id;
     UPROPERTY() FString on;
+    UPROPERTY() uint32 wearOn;
     UPROPERTY() float health;
 };
 
@@ -41,8 +42,11 @@ struct FSavedItem
     GENERATED_BODY()
 
     UPROPERTY() FString id;
+    UPROPERTY() uint32 itemRefId;
+    UPROPERTY() uint32 supportedBy;
     UPROPERTY() TArray<float> location;
     UPROPERTY() TArray<float> rotation;
+    UPROPERTY() FTransform transform;
     UPROPERTY() TArray<FSavedInventorySlot> slots; // for containers
 };
 
@@ -52,8 +56,12 @@ struct FSavedPlayer
     GENERATED_BODY()
 
     UPROPERTY() FString name;
+    UPROPERTY() FTransform transform;
     UPROPERTY() TArray<FSavedInventorySlot> slots;
     UPROPERTY() TArray<FSavedWearables> wear;
+
+    UPROPERTY() float stamina;
+    UPROPERTY() float health;
 };
 
 USTRUCT(BlueprintType)
