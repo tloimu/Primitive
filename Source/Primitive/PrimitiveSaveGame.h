@@ -16,5 +16,6 @@ public:
 	UPROPERTY() uint32					Version = 0;
 	UPROPERTY() TArray<FSavedPlayer>	Players;
 	UPROPERTY() TArray<FSavedItem>		Items;
+	UPROPERTY() TArray<FSavedResource>	Resources;
 	UPROPERTY() FVoxelCompressedWorldSave Voxels;
 };

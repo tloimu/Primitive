@@ -39,7 +39,7 @@ public:
 	UPROPERTY() TObjectPtr<UPrimitiveSaveGame>	SavedGame;
 
 	class AInteractableActor* SpawnSavedItem(const FSavedItem& item);
-	class AInteractableActor* SpawnItem(const FItemStruct& Item, const FVector& inLocation, const FRotator& inRotation, class APrimitiveCharacter *OwningPlayer);
+	class AInteractableActor* SpawnItem(const FItemStruct& Item, const FTransform& inTransform, class APrimitiveCharacter* OwningPlayer);
 	void SetSavedInventorySlot(const FSavedInventorySlot& saved, FItemSlot& slot);
 	void SetSavedEquippedSlot(const FSavedWearables& saved, UInventory &inEquippedItems);
 	void SetSavedContainerSlots(UInventory* inInventory, const FSavedItem& saved);
@@ -63,6 +63,10 @@ public:
 	void GenerateFoilage();
 
 	UPROPERTY(BlueprintReadOnly) class AVoxelWorld* VoxelWorld = nullptr;
+
+protected:
+
+	TArray<UInstancedStaticMeshComponent*> GetFoliageComponents();
 };
 
 extern const FString DefaultSaveGameName;

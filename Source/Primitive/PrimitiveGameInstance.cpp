@@ -8,6 +8,7 @@
 #include "InteractableActor.h"
 #include "PrimitiveCharacter.h"
 #include "ItemStruct.h"
+#include "OmaUtils.h"
 
 #include <Voxel/Public/VoxelWorldInterface.h>
 #include <Voxel/Public/VoxelWorld.h>
@@ -65,6 +66,20 @@ UPrimitiveGameInstance::GetPlayerCharacter() const
 }
 
 
+TArray<UInstancedStaticMeshComponent*>
+UPrimitiveGameInstance::GetFoliageComponents()
+{
+	TArray<UInstancedStaticMeshComponent*> components;
+	TActorIterator<AInstancedFoliageActor> foliageIterator2(GetWorld());
+	while (foliageIterator2)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("===> FoliageActor: %s"), *(foliageIterator2->GetName()));
+		foliageIterator2->GetComponents<UInstancedStaticMeshComponent>(components);
+		++foliageIterator2;
+	}
+	return components;
+}
+
 void
 UPrimitiveGameInstance::GenerateWorld()
 {
@@ -80,39 +95,18 @@ UPrimitiveGameInstance::GenerateWorld()
 void
 UPrimitiveGameInstance::GenerateFoilage()
 {
-	auto WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
-	TActorIterator<AInstancedFoliageActor> foliageIterator2(GetWorld());
-	while (foliageIterator2)
+	for (auto& c : GetFoliageComponents())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("===> FoliageActor: %s"), *(foliageIterator2->GetName()));
-
-		TArray<UInstancedStaticMeshComponent*> components;
-		foliageIterator2->GetComponents<UInstancedStaticMeshComponent>(components);
-		UInstancedStaticMeshComponent* meshComponent = nullptr;
-		if (components.IsEmpty())
-		{
-			UE_LOG(LogTemp, Warning, TEXT("No foilage components found (empty array)"));
-		}
-		else
-		{
-			meshComponent = components[0];
-		}
-
-		for (auto& c : components)
-		{
-			auto cs = c->InstanceStartCullDistance;
-			auto ce = c->InstanceEndCullDistance;
-			UE_LOG(LogTemp, Warning, TEXT("Component: %s, cull %d .. %d"), *c->GetName(), cs, ce);
-		}
-		UE_LOG(LogTemp, Warning, TEXT("<--- FoliageActor: %s"), *(foliageIterator2->GetName()));
-		++foliageIterator2;
+		auto cs = c->InstanceStartCullDistance;
+		auto ce = c->InstanceEndCullDistance;
+		UE_LOG(LogTemp, Warning, TEXT("Component: %s, cull %d .. %d"), *c->GetName(), cs, ce);
 	}
-
 
 	TActorIterator<AInstancedFoliageActor> foliageIterator(GetWorld());
 	if (foliageIterator)
 	{
 		AInstancedFoliageActor* foliageActor = *foliageIterator;
+		auto WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
 
 		if (WorldGenInstance)
 		{
@@ -134,6 +128,8 @@ UPrimitiveGameInstance::GenerateFoilage()
 void
 UPrimitiveGameInstance::LoadGame(const FString& inPath)
 {
+	OmaUtil::MsTimer timer;
+
 	UE_LOG(LogTemp, Warning, TEXT("Game Instance: LoadGame from %s"), *inPath);
 
 	auto playerCharacter = GetPlayerCharacter();
@@ -146,7 +142,11 @@ UPrimitiveGameInstance::LoadGame(const FString& inPath)
 		SavedGame = Cast<UPrimitiveSaveGame>(UGameplayStatics::LoadGameFromSlot(inPath, 0));
 		if (SavedGame)
 		{
+			timer.LogAndCheck("load data from slot");
+
 			UE_LOG(LogTemp, Warning, TEXT("  Version %d: "), SavedGame->Version);
+
+			// Load terrain
 			if (VoxelWorld)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("  Load Voxels"));
@@ -154,7 +154,9 @@ UPrimitiveGameInstance::LoadGame(const FString& inPath)
 					VoxelWorld->CreateWorld();
 				UVoxelDataTools::LoadFromCompressedSave(VoxelWorld, SavedGame->Voxels);
 			}
+			timer.LogAndCheck("load voxels");
 
+			// Load players
 			for (auto& player : SavedGame->Players)
 			{
 				if (playerCharacter)
@@ -180,12 +182,38 @@ UPrimitiveGameInstance::LoadGame(const FString& inPath)
 					}
 				}
 			}
+			timer.LogAndCheck("load players");
 
+			// Load resources
+			TArray<TArray<FTransform> > NewInstancesPerComponent;
+			for (auto& c : GetFoliageComponents())
+			{
+				NewInstancesPerComponent.AddDefaulted();
+				NewInstancesPerComponent.Reserve(MaxFoliageInstances);
+			}
+			for (auto& i : SavedGame->Resources)
+			{
+				if (i.id < NewInstancesPerComponent.Num())
+				{
+					NewInstancesPerComponent[i.id].Add(i.transform);
+				}
+			}
+			uint32 ci = 0;
+			for (auto& c : GetFoliageComponents())
+			{
+				c->AddInstances(NewInstancesPerComponent[ci], false);
+				ci++;
+			}
+			timer.LogAndCheck("load resources");
+
+			// Load items
 			for (auto& item : SavedGame->Items)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("  Load item %s: "), *item.id);
 				SpawnSavedItem(item);
 			}
+			timer.LogAndCheck("load items");
+			timer.LogTotal("load game");
 		}
 		else
 		{
@@ -196,8 +224,6 @@ UPrimitiveGameInstance::LoadGame(const FString& inPath)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Game Instance: No game save slot to load %s"), *inPath);
 	}
-
-	UE_LOG(LogTemp, Warning, TEXT("Loading game completed"), *inPath);
 }
 
 void
@@ -246,6 +272,8 @@ UPrimitiveGameInstance::ResetWorldToSavedGame(const FString& inPath)
 void
 UPrimitiveGameInstance::SaveGame(const FString& inPath)
 {
+	OmaUtil::MsTimer timer;
+
 	UE_LOG(LogTemp, Warning, TEXT("Game Instance: SaveGame to %s"), *inPath);
 
 	if (!SavedGame)
@@ -315,6 +343,8 @@ UPrimitiveGameInstance::SaveGame(const FString& inPath)
 		SavedGame->Players.Add(savedPlayer);
 	}
 
+	timer.LogAndCheck("save players");
+
 	for (FActorIterator actorIt(GetWorld()); actorIt; ++actorIt)
 	{
 		auto itemActor = Cast<AInteractableActor>(*actorIt);
@@ -348,40 +378,55 @@ UPrimitiveGameInstance::SaveGame(const FString& inPath)
 		}
 	}
 
+	timer.LogAndCheck("save actors");
+
 	if (VoxelWorld)
 	{
 		UVoxelDataTools::GetCompressedSave(VoxelWorld, SavedGame->Voxels);
+		timer.LogAndCheck("save voxels");
 	}
 
+	int32 ci = 0;
+	uint32 icount = 0;
+	for (auto& c : GetFoliageComponents())
+	{
+		FSavedResource saved;
+		saved.id = ci;
+		UE_LOG(LogTemp, Warning, TEXT("  instancemap %d, instances %d"), c->PerInstanceSMData.Num(), c->PerInstanceIds.Num());
+		for (auto i = 0; i < c->PerInstanceSMData.Num(); i++)
+		{
+			if (c->GetInstanceTransform(i, saved.transform))
+			{
+				SavedGame->Resources.Add(saved);
+				icount++;
+			}
+		}
+		ci++;
+	}
+	UE_LOG(LogTemp, Warning, TEXT("Saved %ld resources"), icount);
+
+
+	timer.LogAndCheck("save resources");
+
 	UGameplayStatics::SaveGameToSlot(SavedGame, inPath, 0);
+
+	timer.LogAndCheck("save data to slot");
+
+	timer.LogTotal("save game");
 }
 
 
 AInteractableActor*
 UPrimitiveGameInstance::SpawnSavedItem(const FSavedItem& item)
 {
-	auto WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
-
-	FTransform transform = item.transform;
-
-	FVector location;
-	if (item.location.Num() >= 3)
-		location.Set(item.location[0], item.location[1], item.location[2]);
-	else
-		location = transform.GetLocation();
-	FRotator rotation;
-	if (item.rotation.Num() >= 3)
-		rotation.Add(item.rotation[0], item.rotation[1], item.rotation[2]);
-	else
-		rotation = FRotator(transform.GetRotation());
-
+	auto location = item.transform.GetLocation();
 	UE_LOG(LogTemp, Warning, TEXT("Spawn item %s to x= %f, y= %f, z=%f"), *item.id, location.X, location.Y, location.Z);
 
 	auto playerCharacter = GetPlayerCharacter();
 	auto itemInfo = FindItem(item.id);
 	if (itemInfo)
 	{
-		auto itemActor = SpawnItem(*itemInfo, location, rotation, playerCharacter);
+		auto itemActor = SpawnItem(*itemInfo, item.transform, playerCharacter);
 		if (itemActor && itemActor->Inventory)
 		{
 			SetSavedContainerSlots(itemActor->Inventory, item);
@@ -396,13 +441,13 @@ UPrimitiveGameInstance::SpawnSavedItem(const FSavedItem& item)
 
 
 AInteractableActor*
-UPrimitiveGameInstance::SpawnItem(const FItemStruct& Item, const FVector& inLocation, const FRotator& inRotation, APrimitiveCharacter* OwningPlayer)
+UPrimitiveGameInstance::SpawnItem(const FItemStruct& Item, const FTransform& inTransform, APrimitiveCharacter* OwningPlayer)
 {
 	FActorSpawnParameters SpawnInfo;
 	SpawnInfo.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;//  AdjustIfPossibleButAlwaysSpawn;
-	if (Item.ItemClass->IsValidLowLevel())
+	if (Item.ItemClass->IsValidLowLevelFast())
 	{
-		auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(Item.ItemClass, inLocation, inRotation, SpawnInfo);
+		auto itemActor = GetWorld()->SpawnActor<AInteractableActor>(Item.ItemClass, inTransform, SpawnInfo);
 		check(itemActor);
 		itemActor->Item = Item;
 		if (Item.ContainedSlots)

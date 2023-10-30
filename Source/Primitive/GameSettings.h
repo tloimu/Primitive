@@ -44,11 +44,19 @@ struct FSavedItem
     UPROPERTY() FString id;
     UPROPERTY() uint32 itemRefId;
     UPROPERTY() uint32 supportedBy;
-    UPROPERTY() TArray<float> location;
-    UPROPERTY() TArray<float> rotation;
     UPROPERTY() FTransform transform;
     UPROPERTY() TArray<FSavedInventorySlot> slots; // for containers
 };
+
+USTRUCT(BlueprintType)
+struct FSavedResource
+{
+    GENERATED_BODY()
+
+    UPROPERTY() int32      id;
+    UPROPERTY() FTransform transform;
+};
+
 
 USTRUCT(BlueprintType)
 struct FSavedPlayer
