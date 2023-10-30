@@ -207,12 +207,36 @@ UPrimitiveGameInstance::LoadGame(const FString& inPath)
 			timer.LogAndCheck("load resources");
 
 			// Load items
+			TMap<uint32, TObjectPtr<AInteractableActor>> refIdToItem;
+			refIdToItem.Reserve(SavedGame->Items.Num());
 			for (auto& item : SavedGame->Items)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("  Load item %s: "), *item.id);
-				SpawnSavedItem(item);
+				auto itemActor = SpawnSavedItem(item);
+				if (itemActor)
+					refIdToItem.Add(item.itemRefId, itemActor);
 			}
 			timer.LogAndCheck("load items");
+
+			for (auto& item : SavedGame->Items)
+			{
+				if (item.supportedBy)
+				{
+					auto supportingItem = refIdToItem.Find(item.supportedBy);
+					auto supportedItem = refIdToItem.Find(item.itemRefId);
+					if (supportedItem && supportingItem)
+					{
+						supportedItem->Get()->SupportedByItem = supportingItem->Get();
+						supportingItem->Get()->SupportsItems.Add(supportedItem->Get());
+					}
+					else
+					{
+						UE_LOG(LogTemp, Error, TEXT("  Invalid support info item=%ld supportedBy=%ld: "), item.itemRefId, item.supportedBy);
+					}
+				}
+			}
+
+			timer.LogAndCheck("resolve item references");
 			timer.LogTotal("load game");
 		}
 		else
@@ -431,6 +455,7 @@ UPrimitiveGameInstance::SpawnSavedItem(const FSavedItem& item)
 		{
 			SetSavedContainerSlots(itemActor->Inventory, item);
 		}
+		return itemActor;
 	}
 	else
 	{

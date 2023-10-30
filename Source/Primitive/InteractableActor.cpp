@@ -46,7 +46,8 @@ AInteractableActor::DestroyItem()
 		SupportedByItem = nullptr;
 	}
 
-	for (auto item : SupportsItems)
+	auto supported = SupportsItems;
+	for (auto item : supported)
 	{
 		item->DestroyItem();
 	}
