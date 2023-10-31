@@ -17,6 +17,9 @@ class PRIMITIVE_API APrimitiveGameState : public AGameStateBase
 	GENERATED_BODY()
 	
 public:
+
+	APrimitiveGameState();
+
 	void BeginPlay() override;
 
 	void Tick(float DeltaSeconds) override;
@@ -24,7 +27,7 @@ public:
 	// Environmental variables and functionality
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")//, Replicated)
-	float ClockInSecs = 0.0f;
+	float ClockInSecs = 17*60*60.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Environment")//, Replicated)
 	int32 Day = 1;
@@ -46,4 +49,6 @@ public:
 
 	void CheckSunlight(float DeltaSeconds);
 	void CheckWeather(float DeltaSeconds);
+
+	UFUNCTION(Exec, Category = ExecFunctions) void prisethour(int hour);
 };

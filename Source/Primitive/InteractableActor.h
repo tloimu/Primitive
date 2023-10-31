@@ -54,8 +54,8 @@ public:
 
     UPROPERTY(EditAnywhere) FItemStruct Item;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly) class UInventory* Inventory = nullptr;
-    UPROPERTY(EditAnywhere, BlueprintReadOnly) class UCrafter* Crafter = nullptr;
+    UPROPERTY(BlueprintReadOnly) class UInventory* Inventory = nullptr;
+    UPROPERTY(BlueprintReadOnly) class UCrafter* Crafter = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FBuildSnapBox> BuildSnapBoxes;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) bool IsFoundation = false;
@@ -63,8 +63,8 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite) bool RequireSnapBox = false;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) uint8 CurrentState = 0;
     UPROPERTY(EditAnywhere, BlueprintReadWrite) FTransform OriginalStateTransform;
-    UPROPERTY(EditAnywhere, BlueprintReadOnly) AInteractableActor* SupportedByItem = nullptr;
-    UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<AInteractableActor*> SupportsItems;
+    UPROPERTY(BlueprintReadOnly) AInteractableActor* SupportedByItem = nullptr;
+    UPROPERTY(BlueprintReadOnly) TArray<AInteractableActor*> SupportsItems;
 
     void AddOnItem(AInteractableActor& inSupport);
     void DestroyItem(); // destroys also what ever this item supports

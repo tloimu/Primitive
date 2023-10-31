@@ -39,7 +39,7 @@ public:
     UPROPERTY() class UInventory* Inventory = nullptr;
     UPROPERTY() int SlotIndex = 0;
 
-    UPROPERTY(EditAnywhere) BodyPart EquippedIn = BodyPart::None;
+    UPROPERTY(EditAnywhere) EBodyPart EquippedIn = EBodyPart::None; // ???? TODO: Move this to new <UEquipmentSlot> class
 
     UPROPERTY(EditAnywhere) TSubclassOf<UDraggedInventorySlot> DraggedInventorySlotWidgetClass;
 

@@ -57,3 +57,4 @@ I have excluded some asset packs to save space (over 10+GB), so you need to add 
 - **Procedural Nature Pack**
 - **Animation Starter Pack**
 - **Low Poly Viking World**
+- **Infinity Blade: Effects**

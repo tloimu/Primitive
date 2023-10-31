@@ -43,16 +43,6 @@ FItemSlot::CanMergeTo(FItemSlot& ToSlot) const
 	{
 		if (ToSlot.CanOnlyWearIn.IsEmpty())
 			return true;
-		/*
-		for (auto bp : Item.CanWearIn)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("FromSlot CanWear in %d"), bp);
-		}
-		for (auto bp : ToSlot.CanOnlyWearIn)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("ToSlot CanWear in %d"), bp);
-		}
-		*/
 
 		if (!ToSlot.CanOnlyWearIn.Intersect(Item.CanWearIn).IsEmpty())
 			return true;
@@ -143,6 +133,18 @@ UInventory::CountItemsOf(const FString& inId) const
 bool
 UInventory::CanMergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot) const
 {
+	if (!SlotCapability.IsEmpty())
+	{
+		if (SlotCapability.Intersect(FromSlot.Item.RequiresStorageFor).IsEmpty())
+			return false;
+	}
+
+	if (!SlotUtility.IsEmpty())
+	{
+		if (SlotUtility.Intersect(FromSlot.Item.UsableFor).IsEmpty())
+			return false;
+	}
+
 	return FromSlot.CanMergeTo(ToSlot);
 }
 

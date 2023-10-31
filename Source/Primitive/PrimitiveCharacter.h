@@ -169,6 +169,10 @@ public:
 	UInventory* GetEquippedItems() const { return EquippedItems; }
 
 	FString GetDefaultSaveName() const;
+	FString GetQuickSaveName() const;
+
+	void SetCharacterMovementNormal();
+	void SetCharacterMovementSuperMoves();
 
 protected:
 	AInteractableActor* SpawnItem(const FItemStruct& Item, const FVector& inLocation, const FRotator& inRotation);
@@ -312,8 +316,11 @@ public:
 	UFUNCTION(Exec, Category = ExecFunctions) void priadditems(const FString &Id, int Count);
 	UFUNCTION(Exec, Category = ExecFunctions) void priresetmap();
 	UFUNCTION(Exec, Category = ExecFunctions) void pridestroyallitems();
+	UFUNCTION(Exec, Category = ExecFunctions) void pridestroyallresources();
+	UFUNCTION(Exec, Category = ExecFunctions) void pridestroyall();
 	UFUNCTION(Exec, Category = ExecFunctions) void prihelp();
 	void CheatAddItems(const FString& Id, int Count);
+	void CheatDestroyAll(bool inItems, bool inResources);
 };
 
 extern FName GAME_TAG_DOOR;

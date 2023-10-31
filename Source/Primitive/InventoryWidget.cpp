@@ -56,7 +56,7 @@ UInventoryWidget::SetupEquippedSlots()
 				FItemSlot slot;
 				slot.Index = i;
 				slot.Inventory = EquippedItems;
-				if (es->EquippedIn != BodyPart::None)
+				if (es->EquippedIn != EBodyPart::None)
 					slot.CanOnlyWearIn.Add(es->EquippedIn);
 				es->SlotIndex = i;
 				es->Inventory = EquippedItems;

@@ -83,6 +83,7 @@ UPrimitiveGameInstance::GetFoliageComponents()
 void
 UPrimitiveGameInstance::GenerateWorld()
 {
+	UE_LOG(LogTemp, Warning, TEXT("Generate Voxel World"));
 	if (VoxelWorld)
 	{
 		if (!VoxelWorld->IsCreated())
@@ -95,11 +96,12 @@ UPrimitiveGameInstance::GenerateWorld()
 void
 UPrimitiveGameInstance::GenerateFoilage()
 {
+	UE_LOG(LogTemp, Warning, TEXT("Generate Foliage"));
 	for (auto& c : GetFoliageComponents())
 	{
 		auto cs = c->InstanceStartCullDistance;
 		auto ce = c->InstanceEndCullDistance;
-		UE_LOG(LogTemp, Warning, TEXT("Component: %s, cull %d .. %d"), *c->GetName(), cs, ce);
+		UE_LOG(LogTemp, Warning, TEXT("Component: %s, cull %d .. %d, instances %ld"), *c->GetName(), cs, ce, c->GetInstanceCount());
 	}
 
 	TActorIterator<AInstancedFoliageActor> foliageIterator(GetWorld());
@@ -132,10 +134,6 @@ UPrimitiveGameInstance::LoadGame(const FString& inPath)
 
 	UE_LOG(LogTemp, Warning, TEXT("Game Instance: LoadGame from %s"), *inPath);
 
-	auto playerCharacter = GetPlayerCharacter();
-	UInventory* Inventory = playerCharacter ? playerCharacter->GetInventory() : nullptr;
-	UInventory* EquippedItems = playerCharacter ? playerCharacter->GetEquippedItems() : nullptr;
-
 	if (UGameplayStatics::DoesSaveGameExist(inPath, 0))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Loading game..."), *inPath);
@@ -159,6 +157,10 @@ UPrimitiveGameInstance::LoadGame(const FString& inPath)
 			// Load players
 			for (auto& player : SavedGame->Players)
 			{
+				auto playerCharacter = GetPlayerCharacter(); // TODO: In multiplayer, this should be the individual player in question
+				UInventory* Inventory = playerCharacter ? playerCharacter->GetInventory() : nullptr;
+				UInventory* EquippedItems = playerCharacter ? playerCharacter->GetEquippedItems() : nullptr;
+
 				if (playerCharacter)
 				{
 					UE_LOG(LogTemp, Warning, TEXT("  Load player %s: "), *player.name);
@@ -202,6 +204,7 @@ UPrimitiveGameInstance::LoadGame(const FString& inPath)
 			for (auto& c : GetFoliageComponents())
 			{
 				c->AddInstances(NewInstancesPerComponent[ci], false);
+				UE_LOG(LogTemp, Warning, TEXT("  Loaded %ld resource %s"), NewInstancesPerComponent[ci].Num(), *c->GetName());
 				ci++;
 			}
 			timer.LogAndCheck("load resources");
@@ -481,6 +484,8 @@ UPrimitiveGameInstance::SpawnItem(const FItemStruct& Item, const FTransform& inT
 			check(inv);
 			itemActor->Inventory = inv;
 			inv->InventoryOwner = OwningPlayer;
+			inv->SlotCapability = itemActor->Item.SlotCapability;
+			inv->SlotUtility = itemActor->Item.SlotUtility;
 			inv->SetMaxSlots(Item.ContainedSlots);
 		}
 		if (!Item.CraftableRecipies.IsEmpty())
@@ -537,7 +542,7 @@ UPrimitiveGameInstance::SetSavedEquippedSlot(const FSavedWearables& savedSlot, U
 	{
 		for (auto& es : EquippedItems.Slots)
 		{
-			if (es.CanOnlyWearIn.Contains(BodyPart::Back))
+			if (es.CanOnlyWearIn.Contains(EBodyPart::Back))
 			{
 				auto itemSetting = FindItem(savedSlot.id);
 				if (itemSetting && itemSetting->ItemClass->IsValidLowLevel())

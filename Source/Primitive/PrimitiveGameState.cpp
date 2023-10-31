@@ -5,6 +5,12 @@
 #include "PrimitiveGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 
+APrimitiveGameState::APrimitiveGameState()
+{
+	PrimaryActorTick.bStartWithTickEnabled = true;
+	PrimaryActorTick.bCanEverTick = true;
+}
+
 void
 APrimitiveGameState::BeginPlay()
 {
@@ -50,8 +56,6 @@ APrimitiveGameState::CheckSunlight(float DeltaSeconds)
 	LastCheckOfDayTimeSince += DeltaSeconds;
 	if (LastCheckOfDayTimeSince > CheckDayTimeIntervalGameSeconds)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("APrimitiveGameState::CheckSunLight"));
-
 		if (SunLight)
 		{
 			float clockAdvance = LastCheckOfDayTimeSince * ClockSpeed;
@@ -82,4 +86,10 @@ APrimitiveGameState::CheckSunlight(float DeltaSeconds)
 void
 APrimitiveGameState::CheckWeather(float DeltaSeconds)
 {
+}
+
+void
+APrimitiveGameState::prisethour(int hour)
+{
+	ClockInSecs = hour * 60 * 60.0f;
 }

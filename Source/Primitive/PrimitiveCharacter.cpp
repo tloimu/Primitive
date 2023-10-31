@@ -51,13 +51,7 @@ APrimitiveCharacter::APrimitiveCharacter() : ACharacter()
 	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f); // ...at this rotation rate
 
-	// Note: For faster iteration times these variables, and many more, can be tweaked in the Character Blueprint
-	// instead of recompiling to adjust them
-	GetCharacterMovement()->JumpZVelocity = 700.f;
-	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 500.f;
-	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
-	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
+	SetCharacterMovementNormal();
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -69,8 +63,8 @@ APrimitiveCharacter::APrimitiveCharacter() : ACharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
-	FollowCamera->PostProcessSettings.AutoExposureMaxBrightness = 1.0f;
-	FollowCamera->PostProcessSettings.AutoExposureMinBrightness = 1.0f;
+	FollowCamera->PostProcessSettings.AutoExposureMaxBrightness = 2.0f;
+	FollowCamera->PostProcessSettings.AutoExposureMinBrightness = 0.7f;
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
@@ -104,6 +98,27 @@ APrimitiveCharacter::APrimitiveCharacter() : ACharacter()
 	Inventory = nullptr;
 	EquippedItems = nullptr;
 }
+
+void
+APrimitiveCharacter::SetCharacterMovementNormal()
+{
+	GetCharacterMovement()->JumpZVelocity = 700.f;
+	GetCharacterMovement()->AirControl = 0.35f;
+	GetCharacterMovement()->MaxWalkSpeed = 500.f;
+	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
+}
+
+void
+APrimitiveCharacter::SetCharacterMovementSuperMoves()
+{
+	GetCharacterMovement()->JumpZVelocity = 10000.f;
+	GetCharacterMovement()->MaxWalkSpeed = 10000.f;
+	GetCharacterMovement()->MaxSwimSpeed = 10000.0f;
+	GetCharacterMovement()->AirControl = 100.0f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 20000.f;
+}
+
 
 void APrimitiveCharacter::BeginPlay()
 {
@@ -275,15 +290,15 @@ APrimitiveCharacter::CheckEnvironment()
 	auto WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
 	if (WorldGenInstance)
 	{
-		if (WorldGenInstance->VoxelSize > 1.0f)//TargetVoxelWorld) // ???? TODO: Fix to get a permanenet handle to the "world" - maybe via GameInstance?
+		if (WorldGenInstance->VoxelSize > 1.0f) // ???? Optimize: Easier access to VoxelSize
 		{
-			FIntVector l(GetActorLocation() / WorldGenInstance->VoxelSize);//TargetVoxelWorld->GlobalToLocal(GetActorLocation());
+			FIntVector l(GetActorLocation() / WorldGenInstance->VoxelSize);
 			auto th = WorldGenInstance->GetTerrainHeight(l.X, l.Y, l.Z);
-			if (l.Z < th - 2.0f)// || GetActorLocation().Z < -100000.0f)
+			if (l.Z < th - 50.0f)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("Jumped UP %f"), WorldGenInstance->VoxelSize);
 				FVector up = GetActorLocation();
-				up.Z += FMath::Max(0.0f, th) * WorldGenInstance->VoxelSize + 5000.0f;
+				up.Z += FMath::Max(0.0f, th) * WorldGenInstance->VoxelSize + 500.0f;
 				SetActorLocation(up);
 			}
 
@@ -340,11 +355,13 @@ APrimitiveCharacter::CheckTarget()
 	params.bTraceComplex = true;
 	auto ok = GetWorld()->LineTraceSingleByChannel(hits, start, end, channel, params);
 
-	if (CurrentPlacedItem)
+	if (CurrentPlacedItem && (CurrentPlacedItem->RequireSnapBox || ModifierCtrlDown))
 	{
+		
 		FHitResult snapHits;
 		channel = ECollisionChannel::ECC_GameTraceChannel1;
-		GetWorld()->LineTraceSingleByChannel(snapHits, start, end, channel, params);
+		FVector endPlace = start + FollowCamera->GetForwardVector().GetSafeNormal() * 1000.0f;
+		GetWorld()->LineTraceSingleByChannel(snapHits, start, endPlace, channel, params);
 		if (snapHits.bBlockingHit)
 		{
 			if (snapHits.GetComponent())
@@ -674,7 +691,7 @@ void APrimitiveCharacter::Look(const FInputActionValue& Value)
 
 void APrimitiveCharacter::ZoomIn(const FInputActionValue& Value)
 {
-	if (CurrentPlacedItem && !CurrentPlacedItem->RequireFoundation && !CurrentPlacedItem->RequireSnapBox)
+	if (CurrentPlacedItem && CurrentPlacedItem->IsFoundation)
 	{
 		if (ModifierCtrlDown)
 		{
@@ -697,7 +714,7 @@ void APrimitiveCharacter::ZoomIn(const FInputActionValue& Value)
 
 void APrimitiveCharacter::ZoomOut(const FInputActionValue& Value)
 {
-	if (CurrentPlacedItem && !CurrentPlacedItem->RequireFoundation && !CurrentPlacedItem->RequireSnapBox)
+	if (CurrentPlacedItem && CurrentPlacedItem->IsFoundation)
 	{
 		if (ModifierCtrlDown)
 		{
@@ -1162,12 +1179,7 @@ void
 APrimitiveCharacter::ShiftModifierDown(const FInputActionValue& Value)
 {
 	ModifierShiftDown = true;
-
-	GetCharacterMovement()->JumpZVelocity = 10000.f;
-	GetCharacterMovement()->MaxWalkSpeed = 10000.f;
-	GetCharacterMovement()->MaxSwimSpeed = 10000.0f;
-	GetCharacterMovement()->AirControl = 100.0f;
-	GetCharacterMovement()->BrakingDecelerationWalking = 20000.f;
+	SetCharacterMovementSuperMoves();
 }
 
 void
@@ -1175,11 +1187,7 @@ APrimitiveCharacter::ShiftModifierUp(const FInputActionValue& Value)
 {
 	ModifierShiftDown = false;
 
-	GetCharacterMovement()->JumpZVelocity = 700.f;
-	GetCharacterMovement()->MaxWalkSpeed = 500.f;
-	GetCharacterMovement()->MaxSwimSpeed = 300.0f;
-	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
+	SetCharacterMovementNormal();
 }
 
 void
@@ -1203,7 +1211,7 @@ APrimitiveCharacter::QuickSaveGame(const FInputActionValue& Value)
 		if (ModifierCtrlDown)
 			gi->SaveGame(GetDefaultSaveName());
 		else
-			gi->SaveGame(QuickSaveGameName);
+			gi->SaveGame(GetQuickSaveName());
 	}
 }
 
@@ -1216,7 +1224,7 @@ APrimitiveCharacter::QuickLoadGame(const FInputActionValue& Value)
 		if (ModifierCtrlDown)
 			gi->ResetWorldToSavedGame(GetDefaultSaveName());
 		else
-			gi->ResetWorldToSavedGame(QuickSaveGameName);
+			gi->ResetWorldToSavedGame(GetQuickSaveName());
 	}
 }
 
@@ -1225,6 +1233,13 @@ APrimitiveCharacter::GetDefaultSaveName() const
 {
 	return DefaultSaveGameName + GetWorld()->GetName();
 }
+
+FString
+APrimitiveCharacter::GetQuickSaveName() const
+{
+	return QuickSaveGameName + GetWorld()->GetName();
+}
+
 
 void
 APrimitiveCharacter::HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, UFoliageResource& inFoliageComponent, int32 inInstanceId)
@@ -1527,6 +1542,7 @@ APrimitiveCharacter::priresetmap()
 	auto gi = Cast<UPrimitiveGameInstance>(GetGameInstance());
 	if (gi)
 	{
+		CheatDestroyAll(false, true);
 		gi->GenerateWorld();
 		gi->GenerateFoilage();
 	}
@@ -1538,19 +1554,62 @@ APrimitiveCharacter::prihelp()
 	UE_LOG(LogTemp, Warning, TEXT("priadditem <ItemId> - Add one item to inventory if possible"));
 	UE_LOG(LogTemp, Warning, TEXT("priadditems <ItemId> <Count> - Add given count of items to inventory if possible"));
 	UE_LOG(LogTemp, Warning, TEXT("priresetmap - Resets the terrain and foliage"));
+	UE_LOG(LogTemp, Warning, TEXT("pridestroyallitems - Delete all items"));
+	UE_LOG(LogTemp, Warning, TEXT("pridestroyallresources - Delete all foliage"));
+	UE_LOG(LogTemp, Warning, TEXT("pridestroyall - Delete all items and foliage"));
+	UE_LOG(LogTemp, Warning, TEXT("prisethour <int> - Set the hour of the day"));
 }
 
 void
 APrimitiveCharacter::pridestroyallitems()
 {
-	TArray<AActor*> destroyAll;
+	CheatDestroyAll(true, false);
+}
 
-	for (TActorIterator<AInteractableActor> it(GetWorld()); it; ++it)
+void
+APrimitiveCharacter::pridestroyallresources()
+{
+	CheatDestroyAll(false, true);
+}
+
+void
+APrimitiveCharacter::pridestroyall()
+{
+	CheatDestroyAll(true, true);
+}
+
+void
+APrimitiveCharacter::CheatDestroyAll(bool inItems, bool inResources)
+{
+	if (inResources)
 	{
-		destroyAll.Add(*it);
+		TArray<UInstancedStaticMeshComponent*> components;
+		TActorIterator<AInstancedFoliageActor> foliageIterator2(GetWorld());
+		while (foliageIterator2)
+		{
+			foliageIterator2->GetComponents<UInstancedStaticMeshComponent>(components);
+			++foliageIterator2;
+		}
+		for (auto c : components)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("  - destroying %ld or %s"), c->GetInstanceCount(), *c->GetName());
+			while (c->GetInstanceCount() > 0)
+				c->RemoveInstance(0);
+		}
 	}
-	for (auto a : destroyAll)
-		a->Destroy();
+
+	if (inItems)
+	{
+		TArray<AActor*> destroyAll;
+
+		for (TActorIterator<AInteractableActor> it(GetWorld()); it; ++it)
+		{
+			destroyAll.Add(*it);
+		}
+		UE_LOG(LogTemp, Warning, TEXT("  - destroying %ld items"), destroyAll.Num());
+		for (auto a : destroyAll)
+			a->Destroy();
+	}
 }
 
 

@@ -12,7 +12,7 @@ struct FItemSlot
 	GENERATED_BODY()
 
 	FItemSlot() {}
-	FItemSlot(const BodyPart MustWearIn) { CanOnlyWearIn.Add(MustWearIn); }
+	FItemSlot(const EBodyPart MustWearIn) { CanOnlyWearIn.Add(MustWearIn); }
 
 	bool operator== (const FItemSlot rhs) const;
 
@@ -25,7 +25,7 @@ struct FItemSlot
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int Index = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) FItemStruct Item;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int Count = 0;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite) TSet<BodyPart> CanOnlyWearIn;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) TSet<EBodyPart> CanOnlyWearIn;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) bool ShouldRemoveWhenEmpty = false;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) UInventory* Inventory = nullptr;
 };
@@ -83,6 +83,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly) TArray<FItemSlot> Slots;
 	UPROPERTY(EditAnywhere) int MaxSlots;
 	UPROPERTY(EditAnywhere) int CurrentSelectedSlotIndex = -1;
+	UPROPERTY(BlueprintReadWrite) TSet<EItemForm> SlotCapability;
+	UPROPERTY(BlueprintReadWrite) TSet<EItemUtility> SlotUtility;
 
 	IInventoryListener *InventoryListener = nullptr;
 	IInventoryOwner* InventoryOwner = nullptr;
