@@ -61,7 +61,7 @@ public:
 	UInventory();
 	UInventory(const FObjectInitializer& ObjectInitializer);
 
-	UFUNCTION(BlueprintCallable) bool AddItem(const FItemStruct& item, int count = 1);
+	UFUNCTION(BlueprintCallable) int AddItem(const FItemStruct& item, int count = 1);
 	UFUNCTION(BlueprintCallable) bool RemoveItem(const FItemStruct& item, int count = 1);
 	UFUNCTION(BlueprintCallable) bool SetMaxSlots(int Count);
 	UFUNCTION(BlueprintCallable) void Organize();
@@ -70,8 +70,11 @@ public:
 	UFUNCTION(BlueprintCallable) bool CanMergeWith(FItemSlot& ToSlot, FItemSlot &FromSlot) const;
 	UFUNCTION(BlueprintCallable) void MergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot, int count);
 	UFUNCTION(BlueprintCallable) void SplitSlot(int Index);
+	void MoveItemsFrom(FItemSlot& FromSlot, int count);
 
 	UFUNCTION(BlueprintCallable) virtual FItemSlot& GetSlotAt(int Index);
+
+	FItemSlot* GetSelectedSlot();
 
 	void DropItemsFromSlot(FItemSlot &inSlot, int inCount);
 	void DropItem(const FItemStruct& inItem);

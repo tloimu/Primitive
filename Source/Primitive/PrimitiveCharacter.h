@@ -36,6 +36,17 @@ class FAction
 	AInteractableActor* Target;
 };
 
+USTRUCT(BlueprintType)
+struct FZoomLevelSettings
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float ArmLength = 400.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) float Fov = 90.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) FVector Offset;
+};
+
+
 UCLASS(config=Game)
 class APrimitiveCharacter : public ACharacter, public IInventoryOwner
 {
@@ -174,6 +185,8 @@ public:
 	void SetCharacterMovementNormal();
 	void SetCharacterMovementSuperMoves();
 
+	void UpdateZoomSettings(int Adjust = 0);
+
 protected:
 	AInteractableActor* SpawnItem(const FItemStruct& Item, const FVector& inLocation, const FRotator& inRotation);
 
@@ -212,8 +225,8 @@ protected:
 	void QuickSaveGame(const FInputActionValue& Value);
 	void QuickLoadGame(const FInputActionValue& Value);
 
-	UPROPERTY(EditAnywhere, Category = "Zoom Transforms", BlueprintReadWrite) TArray<float> ZoomTransforms;
-	uint8 CurrentZoomLevel;
+	UPROPERTY(EditAnywhere, Category = "Zoom Transforms", BlueprintReadWrite) TArray<FZoomLevelSettings> ZoomTransforms;
+	int CurrentZoomLevel;
 
 	void Interact_InInventory(const FInputActionValue& Value);
 	void Interact_Voxel(const FInputActionValue& Value, const FVector &inTarget);

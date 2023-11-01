@@ -111,6 +111,15 @@ UInventory::GetSlotAt(int Index)
 	}
 }
 
+FItemSlot*
+UInventory::GetSelectedSlot()
+{
+	if (CurrentSelectedSlotIndex >= 0)
+		return &Slots[CurrentSelectedSlotIndex];
+	else
+		return nullptr;
+}
+
 const FItemStruct*
 UInventory::FindItem(const FString& inId) const
 {
@@ -157,26 +166,38 @@ UInventory::MergeWith(FItemSlot& ToSlot, FItemSlot& FromSlot, int inCount)
 	FromSlot.MergeTo(ToSlot, inCount);
 }
 
+void
+UInventory::MoveItemsFrom(FItemSlot& FromSlot, int count)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Moving %d of %s from slot"), count, *FromSlot.Item.Id);
+	auto movedCount = AddItem(FromSlot.Item, count);
+	if (movedCount)
+	{
+		FromSlot.ChangeCountBy(-movedCount).NotifyChange();
+	}
+}
 
-bool
+
+int
 UInventory::AddItem(const FItemStruct& item, int count)
 {
 	FString className = item.ItemClass.Get() ? item.ItemClass.Get()->GetName() : FString("<unknown class>");
 	UE_LOG(LogTemp, Warning, TEXT("Adding %d item %s to slot (slots=%d) icon=%s"), count, *className, Slots.Num(), *item.Icon.GetAssetName());
 
+	int addCount = 0;
 	// First, try to fill slots that already has the same stuff and has room left
 	for (int i = 0; i < Slots.Num(); i++)
 	{
 		auto& slot = Slots[i];
-		if (!slot.Inventory)
-			UE_LOG(LogTemp, Error, TEXT("NULL inventory on slot %d"), i);
+		check(slot.Inventory);
 		int fitsInSlot = FMath::Min(item.MaxStackSize - slot.Count, count);
 		if (slot.Item == item && fitsInSlot > 0)
 		{
 			slot.ChangeCountBy(fitsInSlot).NotifyChange();
 			count -= fitsInSlot;
+			addCount += fitsInSlot;
 			if (count == 0)
-				return true;
+				return addCount;
 		}
 	}
 
@@ -190,12 +211,13 @@ UInventory::AddItem(const FItemStruct& item, int count)
 			slot.Item = item;
 			slot.ChangeCountBy(fitsInSlot).NotifyChange();
 			count -= fitsInSlot;
+			addCount += fitsInSlot;
 			if (count == 0)
-				return true;
+				return addCount;
 		}
 	}
 
-	return false;
+	return addCount;
 }
 
 bool

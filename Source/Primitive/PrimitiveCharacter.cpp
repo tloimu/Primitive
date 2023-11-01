@@ -69,16 +69,7 @@ APrimitiveCharacter::APrimitiveCharacter() : ACharacter()
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 
-	// Zoom level defaults
-	ZoomTransforms.Add(-200.0f); // Actually, here we should really "zoom" instead of move camera forward
-	ZoomTransforms.Add(-40.0f); // Would be nice to see hands here...
-	ZoomTransforms.Add(200.0f);
-	ZoomTransforms.Add(400.0f);
-	ZoomTransforms.Add(600.0f);
-	ZoomTransforms.Add(800.0f);
-	CurrentZoomLevel = 5;
-	check(CurrentZoomLevel < ZoomTransforms.Num());
-	CameraBoom->TargetArmLength = ZoomTransforms[CurrentZoomLevel];
+	CurrentZoomLevel = 1;
 
 	CurrentTarget = nullptr;
 	CurrentTargetComponent = nullptr;
@@ -123,6 +114,9 @@ APrimitiveCharacter::SetCharacterMovementSuperMoves()
 void APrimitiveCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	CurrentZoomLevel = 1;
+	UpdateZoomSettings();
 
 	Inventory = NewObject<UInventory>();
 	Inventory->InventoryOwner = this;
@@ -345,8 +339,8 @@ APrimitiveCharacter::CheckTarget()
 {
 	FHitResult hits;
 	ECollisionChannel channel = ECollisionChannel::ECC_Visibility;
-	FVector start = GetActorLocation();
-	FVector end = start + FollowCamera->GetForwardVector().GetSafeNormal() * 500.0f;
+	FVector start = FollowCamera->GetComponentTransform().GetLocation();
+	FVector end = start + FollowCamera->GetForwardVector().GetSafeNormal() * (CameraBoom->TargetArmLength + 500.0f);
 
 	FCollisionQueryParams params;
 	params.AddIgnoredActor(this);
@@ -522,10 +516,22 @@ void APrimitiveCharacter::SetCurrentTarget(AActor* target, UPrimitiveComponent* 
 
 void APrimitiveCharacter::SetHighlightIfInteractableTarget(AActor* target, bool value)
 {
-	if (CurrentTargetComponent) value = false; // don't highligh the Foliage Actor
-	auto primos = target->GetComponentByClass<UPrimitiveComponent>();
-	if (primos)
-		primos->SetRenderCustomDepth(value);
+	auto ia = Cast<AInteractableActor>(target);
+	if (ia)
+	{
+		/*
+		auto primos = target->GetComponentByClass<UPrimitiveComponent>();
+		if (primos)
+			primos->SetRenderCustomDepth(value);
+		*/
+		auto primos = target->GetComponents();
+		for (auto p : primos)
+		{
+			auto c = Cast<UPrimitiveComponent>(p);
+			if (c)
+				c->SetRenderCustomDepth(value);
+		}
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -704,11 +710,7 @@ void APrimitiveCharacter::ZoomIn(const FInputActionValue& Value)
 	}
 	else
 	{
-		if (CurrentZoomLevel <= 1)
-			CurrentZoomLevel = 0;
-		else
-			CurrentZoomLevel--;
-		CameraBoom->TargetArmLength = ZoomTransforms[CurrentZoomLevel];
+		UpdateZoomSettings(-1);
 	}
 }
 
@@ -727,12 +729,26 @@ void APrimitiveCharacter::ZoomOut(const FInputActionValue& Value)
 	}
 	else
 	{
-		if (CurrentZoomLevel >= ZoomTransforms.Num() - 2)
-			CurrentZoomLevel = ZoomTransforms.Num() - 1;
-		else
-			CurrentZoomLevel++;
-		CameraBoom->TargetArmLength = ZoomTransforms[CurrentZoomLevel];
+		UpdateZoomSettings(1);
 	}
+}
+
+void
+APrimitiveCharacter::UpdateZoomSettings(int Adjust)
+{
+	CurrentZoomLevel += Adjust;
+
+	if (CurrentZoomLevel < 0)
+		CurrentZoomLevel = 0;
+
+	if (CurrentZoomLevel >= ZoomTransforms.Num())
+		CurrentZoomLevel = ZoomTransforms.Num() - 1;
+
+	auto& z = ZoomTransforms[CurrentZoomLevel];
+
+	CameraBoom->TargetArmLength = z.ArmLength;
+	CameraBoom->SocketOffset = z.Offset;
+	FollowCamera->SetFieldOfView(z.Fov);
 }
 
 void APrimitiveCharacter::FreeLook(const FInputActionValue& Value)
@@ -1176,10 +1192,22 @@ APrimitiveCharacter::Transfer(const FInputActionValue& Value)
 
 	if (ShowingInventory)
 	{
-		if (Inventory && Inventory->CurrentSelectedSlotIndex >= 0)
+		if (Inventory && CurrentInteractable && CurrentInteractable->Inventory)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Transfer from slot %d"), Inventory->CurrentSelectedSlotIndex);
-			// ???? TODO: Transfer items back and forth between player and container inventories
+			// Transfer items back and forth between player and container inventories
+			auto playerSlot = Inventory->GetSelectedSlot();
+			auto containerSlot = CurrentInteractable->Inventory->GetSelectedSlot();
+			auto containerInventory = CurrentInteractable->Inventory;
+			if (playerSlot)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Transfer from slot %d to container"), playerSlot->Index);
+				containerInventory->MoveItemsFrom(*playerSlot, playerSlot->Count);
+			}
+			else if (containerSlot)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Transfer from container slot %d to player"), containerSlot->Index);
+				Inventory->MoveItemsFrom(*containerSlot, containerSlot->Count);
+			}
 		}
 	}
 	else
