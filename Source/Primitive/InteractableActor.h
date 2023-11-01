@@ -40,8 +40,8 @@ class AInteractableActor : public AActor, public IInteractable
 
 public:
 
-    void Interact_Implementation() override;
-    void Hit_Implementation() override;
+    bool Interact_Implementation() override;
+    bool Hit_Implementation() override;
     void Consume_Implementation() override;
     /*
     UFUNCTION(BlueprintCallable) UItemSpecs* GetItemSpecs() const;
@@ -68,4 +68,8 @@ public:
 
     void AddOnItem(AInteractableActor& inSupport);
     void DestroyItem(); // destroys also what ever this item supports
+
+    virtual void OnLoaded() {}
+
+    float GetClockSpeed() const;
 };

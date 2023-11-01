@@ -918,7 +918,9 @@ APrimitiveCharacter::Interact_Voxel(const FInputActionValue& Value, const FVecto
 void
 APrimitiveCharacter::Interact_Interactable(const FInputActionValue& Value, AInteractableActor &inTarget)
 {
-	IInteractable::Execute_Interact(&inTarget);
+	if (IInteractable::Execute_Interact(&inTarget))
+		return;
+
 	if (inTarget.Inventory)
 	{
 		if (InventoryWidget)
@@ -1581,37 +1583,12 @@ APrimitiveCharacter::pridestroyall()
 void
 APrimitiveCharacter::CheatDestroyAll(bool inItems, bool inResources)
 {
-	if (inResources)
+	auto gi = GetGameInstance<UPrimitiveGameInstance>();
+	if (gi)
 	{
-		TArray<UInstancedStaticMeshComponent*> components;
-		TActorIterator<AInstancedFoliageActor> foliageIterator2(GetWorld());
-		while (foliageIterator2)
-		{
-			foliageIterator2->GetComponents<UInstancedStaticMeshComponent>(components);
-			++foliageIterator2;
-		}
-		for (auto c : components)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("  - destroying %ld or %s"), c->GetInstanceCount(), *c->GetName());
-			while (c->GetInstanceCount() > 0)
-				c->RemoveInstance(0);
-		}
-	}
-
-	if (inItems)
-	{
-		TArray<AActor*> destroyAll;
-
-		for (TActorIterator<AInteractableActor> it(GetWorld()); it; ++it)
-		{
-			destroyAll.Add(*it);
-		}
-		UE_LOG(LogTemp, Warning, TEXT("  - destroying %ld items"), destroyAll.Num());
-		for (auto a : destroyAll)
-			a->Destroy();
+		gi->DestroyAllItemsAndResources(inItems, inResources);
 	}
 }
-
 
 void
 APrimitiveCharacter::CheatAddItems(const FString &Id, int Count)

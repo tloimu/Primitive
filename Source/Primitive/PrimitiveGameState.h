@@ -45,7 +45,7 @@ public:
 	TSoftObjectPtr<class ASkyLight> SkyLight;
 
 	float LastCheckOfDayTimeSince = 0.0f;
-	float CheckDayTimeIntervalGameSeconds = 0.5f;
+	float CheckDayTimeIntervalGameSeconds = 0.25f;
 
 	void CheckSunlight(float DeltaSeconds);
 	void CheckWeather(float DeltaSeconds);

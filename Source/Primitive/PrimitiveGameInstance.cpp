@@ -97,6 +97,8 @@ void
 UPrimitiveGameInstance::GenerateFoilage()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Generate Foliage"));
+	DestroyAllItemsAndResources(false, true);
+
 	for (auto& c : GetFoliageComponents())
 	{
 		auto cs = c->InstanceStartCullDistance;
@@ -137,7 +139,7 @@ UPrimitiveGameInstance::LoadGame(const FString& inPath)
 	if (UGameplayStatics::DoesSaveGameExist(inPath, 0))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Loading game..."), *inPath);
-		SavedGame = Cast<UPrimitiveSaveGame>(UGameplayStatics::LoadGameFromSlot(inPath, 0));
+		auto SavedGame = Cast<UPrimitiveSaveGame>(UGameplayStatics::LoadGameFromSlot(inPath, 0));
 		if (SavedGame)
 		{
 			timer.LogAndCheck("load data from slot");
@@ -188,11 +190,14 @@ UPrimitiveGameInstance::LoadGame(const FString& inPath)
 
 			// Load resources
 			TArray<TArray<FTransform> > NewInstancesPerComponent;
-			for (auto& c : GetFoliageComponents())
+			auto foliageComponents = GetFoliageComponents();
+			for (auto& c : foliageComponents)
 			{
 				NewInstancesPerComponent.AddDefaulted();
 				NewInstancesPerComponent.Reserve(MaxFoliageInstances);
 			}
+
+			UE_LOG(LogTemp, Warning, TEXT("  Loading %ld resources"), SavedGame->Resources.Num());			
 			for (auto& i : SavedGame->Resources)
 			{
 				if (i.id < NewInstancesPerComponent.Num())
@@ -201,7 +206,7 @@ UPrimitiveGameInstance::LoadGame(const FString& inPath)
 				}
 			}
 			uint32 ci = 0;
-			for (auto& c : GetFoliageComponents())
+			for (auto& c : foliageComponents)
 			{
 				c->AddInstances(NewInstancesPerComponent[ci], false);
 				UE_LOG(LogTemp, Warning, TEXT("  Loaded %ld resource %s"), NewInstancesPerComponent[ci].Num(), *c->GetName());
@@ -240,6 +245,17 @@ UPrimitiveGameInstance::LoadGame(const FString& inPath)
 			}
 
 			timer.LogAndCheck("resolve item references");
+
+			for (auto& item : refIdToItem)
+			{
+				if (item.Value)
+				{
+					item.Value->OnLoaded();
+				}
+			}
+
+			timer.LogAndCheck("OnLoaded called");
+
 			timer.LogTotal("load game");
 		}
 		else
@@ -297,14 +313,49 @@ UPrimitiveGameInstance::ResetWorldToSavedGame(const FString& inPath)
 
 
 void
+UPrimitiveGameInstance::DestroyAllItemsAndResources(bool inItems, bool inResources)
+{
+	if (inResources)
+	{
+		TArray<UInstancedStaticMeshComponent*> components;
+		TActorIterator<AInstancedFoliageActor> foliageIterator2(GetWorld());
+		while (foliageIterator2)
+		{
+			foliageIterator2->GetComponents<UInstancedStaticMeshComponent>(components);
+			++foliageIterator2;
+		}
+		for (auto c : components)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("  - destroying %ld or %s"), c->GetInstanceCount(), *c->GetName());
+			while (c->GetInstanceCount() > 0)
+				c->RemoveInstance(0);
+		}
+	}
+
+	if (inItems)
+	{
+		TArray<AActor*> destroyAll;
+
+		for (TActorIterator<AInteractableActor> it(GetWorld()); it; ++it)
+		{
+			destroyAll.Add(*it);
+		}
+		UE_LOG(LogTemp, Warning, TEXT("  - destroying %ld items"), destroyAll.Num());
+		for (auto a : destroyAll)
+			a->Destroy();
+	}
+}
+
+
+void
 UPrimitiveGameInstance::SaveGame(const FString& inPath)
 {
 	OmaUtil::MsTimer timer;
 
 	UE_LOG(LogTemp, Warning, TEXT("Game Instance: SaveGame to %s"), *inPath);
 
-	if (!SavedGame)
-		SavedGame = Cast<UPrimitiveSaveGame>(UGameplayStatics::CreateSaveGameObject(UPrimitiveSaveGame::StaticClass()));
+	//if (!SavedGame)
+	auto SavedGame = Cast<UPrimitiveSaveGame>(UGameplayStatics::CreateSaveGameObject(UPrimitiveSaveGame::StaticClass()));
 
 	SavedGame->Players.Empty();
 	SavedGame->Items.Empty();
@@ -381,6 +432,7 @@ UPrimitiveGameInstance::SaveGame(const FString& inPath)
 			savedItem.id = itemActor->Item.Id;
 			savedItem.itemRefId = itemActor->GetUniqueID();
 			savedItem.transform = itemActor->GetActorTransform();
+			savedItem.state = itemActor->CurrentState;
 			if (itemActor->Inventory)
 			{
 				for (auto& slot : itemActor->Inventory->Slots)
@@ -454,6 +506,8 @@ UPrimitiveGameInstance::SpawnSavedItem(const FSavedItem& item)
 	if (itemInfo)
 	{
 		auto itemActor = SpawnItem(*itemInfo, item.transform, playerCharacter);
+		if (itemActor)
+			itemActor->CurrentState = item.state;
 		if (itemActor && itemActor->Inventory)
 		{
 			SetSavedContainerSlots(itemActor->Inventory, item);

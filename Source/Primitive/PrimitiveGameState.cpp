@@ -9,6 +9,8 @@ APrimitiveGameState::APrimitiveGameState()
 {
 	PrimaryActorTick.bStartWithTickEnabled = true;
 	PrimaryActorTick.bCanEverTick = true;
+
+	SetActorTickInterval(0.3f);
 }
 
 void
@@ -70,6 +72,11 @@ APrimitiveGameState::CheckSunlight(float DeltaSeconds)
 				DayOfYear++;
 				ClockInSecs -= 24 * 60 * 60.0f;
 				UE_LOG(LogTemp, Warning, TEXT("Start of Day %d"), Day);
+				if (DayOfYear > 365)
+				{
+					DayOfYear = 1;
+					UE_LOG(LogTemp, Warning, TEXT("New Year"));
+				}
 			}
 
 			FRotator rot;

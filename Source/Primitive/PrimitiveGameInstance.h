@@ -36,7 +36,7 @@ public:
 	void LoadGame(const FString& inPath);
 	void SaveGame(const FString& inPath);
 
-	UPROPERTY() TObjectPtr<UPrimitiveSaveGame>	SavedGame;
+	//UPROPERTY() TObjectPtr<UPrimitiveSaveGame>	SavedGame;
 
 	class AInteractableActor* SpawnSavedItem(const FSavedItem& item);
 	class AInteractableActor* SpawnItem(const FItemStruct& Item, const FTransform& inTransform, class APrimitiveCharacter* OwningPlayer);
@@ -45,6 +45,8 @@ public:
 	void SetSavedContainerSlots(UInventory* inInventory, const FSavedItem& saved);
 
 	void ResetWorldToSavedGame(const FString& inPath);
+
+	void DestroyAllItemsAndResources(bool inItems, bool inResources);
 
 	FString AutoLoadGamePath;
 

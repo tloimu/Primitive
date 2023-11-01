@@ -1,7 +1,8 @@
 #include "InteractableActor.h"
+#include "PrimitiveGameState.h"
 
-void AInteractableActor::Interact_Implementation() {}
-void AInteractableActor::Hit_Implementation() {}
+bool AInteractableActor::Interact_Implementation() { return false; }
+bool AInteractableActor::Hit_Implementation() { return false; }
 void AInteractableActor::Consume_Implementation() {}
 
 bool
@@ -53,4 +54,14 @@ AInteractableActor::DestroyItem()
 	}
 
 	Destroy();
+}
+
+float
+AInteractableActor::GetClockSpeed() const
+{
+	auto gs = GetWorld()->GetGameState<APrimitiveGameState>();
+	if (gs)
+		return gs->ClockSpeed;
+	else
+		return 60.0f;
 }

@@ -42,10 +42,11 @@ struct FSavedItem
     GENERATED_BODY()
 
     UPROPERTY() FString id;
-    UPROPERTY() uint32 itemRefId;
-    UPROPERTY() uint32 supportedBy;
+    UPROPERTY() uint32 itemRefId = 0;
+    UPROPERTY() uint32 supportedBy = 0;
     UPROPERTY() FTransform transform;
     UPROPERTY() TArray<FSavedInventorySlot> slots; // for containers
+    UPROPERTY() int state = 0;
 };
 
 USTRUCT(BlueprintType)
