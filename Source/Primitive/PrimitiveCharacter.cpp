@@ -934,6 +934,10 @@ APrimitiveCharacter::Interact_Interactable(const FInputActionValue& Value, AInte
 		{
 			InteractDoor(*CurrentInteractable);
 		}
+		else if (CurrentInteractable->Item.UsableFor.Contains(EItemUtility::Building))
+		{
+			// no picking up of building components
+		}
 		else
 			Pick(Value);
 	}
@@ -1169,10 +1173,26 @@ void
 APrimitiveCharacter::Transfer(const FInputActionValue& Value)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Transfer"));
-	if (Inventory && Inventory->CurrentSelectedSlotIndex >= 0)
+
+	if (ShowingInventory)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Transfer from slot %d"), Inventory->CurrentSelectedSlotIndex);
-		// ???? TODO: Transfer items back and forth between player and container inventories
+		if (Inventory && Inventory->CurrentSelectedSlotIndex >= 0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Transfer from slot %d"), Inventory->CurrentSelectedSlotIndex);
+			// ???? TODO: Transfer items back and forth between player and container inventories
+		}
+	}
+	else
+	{
+		if (CurrentInteractable)
+		{
+			if (CurrentInteractable->Inventory)
+			{
+				if (InventoryWidget)
+					InventoryWidget->SetContainer(CurrentInteractable);
+				ToggleInventoryUI();
+			}
+		}
 	}
 }
 

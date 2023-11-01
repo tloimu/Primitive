@@ -10,6 +10,7 @@ AFirePlaceItem::AFirePlaceItem(const FObjectInitializer& Initializer)
 	PrimaryActorTick.bStartWithTickEnabled = false;
 	PrimaryActorTick.bCanEverTick = true;
 	SetActorTickInterval(1.0f);
+	SetActorTickEnabled(true);
 }
 
 bool
@@ -32,7 +33,7 @@ AFirePlaceItem::CheckFireEffect()
 {
 	if (!FireEffect && FireEffectSystem)
 	{
-		FireEffect = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), FireEffectSystem, GetActorLocation());
+		FireEffect = UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), FireEffectSystem, GetActorLocation(), FRotator::ZeroRotator, FVector(1.0f), true, false);
 	}
 
 	if (FireEffect)
@@ -41,6 +42,7 @@ AFirePlaceItem::CheckFireEffect()
 		{
 			if (!FireEffect->IsActive())
 			{
+				UE_LOG(LogTemp, Warning, TEXT("Fire place on"));
 				FireEffect->Activate();
 				SetActorTickEnabled(true);
 			}
@@ -49,7 +51,9 @@ AFirePlaceItem::CheckFireEffect()
 		{
 			if (FireEffect->IsActive())
 			{
+				UE_LOG(LogTemp, Warning, TEXT("Fire place off"));
 				FireEffect->Deactivate();
+				FireEffect = nullptr;
 				SetActorTickEnabled(false);
 			}
 		}
@@ -93,20 +97,26 @@ AFirePlaceItem::HeatItems(float DeltaSeconds)
 void
 AFirePlaceItem::CheckFuel(float DeltaSeconds)
 {
-	FuelLeftSeconds -= DeltaSeconds;
 	if (FuelLeftSeconds <= 0.0f)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("Fire place checking for more fuel"));
 		for (auto& slot : Inventory->Slots)
 		{
 			if (slot.Count > 0 && slot.Item.UsableFor.Contains(EItemUtility::SolidFuel))
 			{
+				UE_LOG(LogTemp, Warning, TEXT("Fire place consuming %s as fuel"), *slot.Item.Id);
 				slot.Count = slot.Count - 1;
 				FuelLeftSeconds = 20 * 60.0f; // TODO: Get this from the fuel item
 				return;
 			}
 		}
-	}
 
-	CurrentState = 0;
-	CheckFireEffect();
+		UE_LOG(LogTemp, Warning, TEXT("Fire place out of fuel"));
+		CurrentState = 0;
+		CheckFireEffect();
+	}
+	else
+	{
+		FuelLeftSeconds -= DeltaSeconds;
+	}
 }

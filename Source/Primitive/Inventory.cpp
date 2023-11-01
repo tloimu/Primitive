@@ -105,7 +105,10 @@ UInventory::GetSlotAt(int Index)
 	if (Index >= 0 && Index < Slots.Num())
 		return Slots[Index];
 	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Accessing invalid inventory slot index %d"), Index);
 		return NoneSlot;
+	}
 }
 
 const FItemStruct*

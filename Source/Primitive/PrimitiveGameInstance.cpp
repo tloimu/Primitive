@@ -441,9 +441,11 @@ UPrimitiveGameInstance::SaveGame(const FString& inPath)
 					{
 						FSavedInventorySlot savedSlot;
 						savedSlot.id = slot.Item.Id;
+						savedSlot.slot = slot.Index;
 						savedSlot.count = slot.Count;
 						savedSlot.health = 1.0f;
 						savedItem.slots.Add(savedSlot);
+						UE_LOG(LogTemp, Warning, TEXT("  - saving item slot %d of %s"), slot.Index, *slot.Item.Id);
 					}
 				}
 			}
