@@ -82,8 +82,13 @@ FItemSlot::ChangeCountBy(int inCount)
 void
 FItemSlot::NotifyChange() const
 {
-	if (Inventory && Inventory->InventoryListener)
-		Inventory->InventoryListener->SlotChanged(*this);
+	if (Inventory)
+	{
+		for (auto listener : Inventory->InventoryListeners)
+		{
+			listener->SlotChanged(*this);
+		}
+	}
 }
 
 
@@ -98,6 +103,19 @@ UInventory::UInventory(): UObject(), MaxSlots(1)
 UInventory::UInventory(const FObjectInitializer& ObjectInitializer): UObject(ObjectInitializer), MaxSlots(1)
 {
 }
+
+void
+UInventory::AddInventoryListener(IInventoryListener& Listener)
+{
+	InventoryListeners.Add(&Listener);
+}
+
+void
+UInventory::RemoveInventoryListener(IInventoryListener& Listener)
+{
+	InventoryListeners.Remove(&Listener);
+}
+
 
 FItemSlot&
 UInventory::GetSlotAt(int Index)
@@ -273,8 +291,10 @@ UInventory::SetMaxSlots(int Count)
 		Slots.Add(empty);
 	}
 
-	if (InventoryListener)
-		InventoryListener->MaxSlotsChanged(Count);
+	for (auto listener : InventoryListeners)
+	{
+		listener->MaxSlotsChanged(Count);
+	}
 	return true;
 }
 
@@ -301,10 +321,10 @@ UInventory::Organize()
 
 	Slots = newSlots;
 
-	if (InventoryListener)
+	for (auto listener : InventoryListeners)
 	{
 		for (int i = 0; i < Slots.Num(); i++)
-			InventoryListener->SlotChanged(Slots[i]);
+			listener->SlotChanged(Slots[i]);
 	}
 
 }
@@ -354,7 +374,6 @@ UInventory::SplitSlot(int Index)
 }
 
 
-
 void
 UInventory::DropItemsFromSlot(FItemSlot &slot, int inCount)
 {
@@ -368,9 +387,38 @@ UInventory::DropItemsFromSlot(FItemSlot &slot, int inCount)
 	slot.ChangeCountBy(-count).NotifyChange();
 }
 
+
 void
 UInventory::DropItem(const FItemStruct& inItem)
 {
 	if (InventoryOwner)
 		InventoryOwner->DropItem(inItem);
+}
+
+bool
+UInventory::HasItemOfUtility(EItemUtility Utility)
+{
+	for (auto& slot : Slots)
+	{
+		if (slot.Count > 0 && slot.Item.UsableFor.Contains(Utility))
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+bool
+UInventory::ConsumeItemOfUtility(EItemUtility Utility, FItemStruct& outItem)
+{
+	for (auto& slot : Slots)
+	{
+		if (slot.Count > 0 && slot.Item.UsableFor.Contains(Utility))
+		{
+			outItem = slot.Item;
+			slot.ChangeCountBy(-1).NotifyChange();
+			return true;
+		}
+	}
+	return false;
 }

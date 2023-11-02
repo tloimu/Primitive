@@ -15,9 +15,9 @@ void
 UInventoryWidget::Setup(UInventory* inInventory, UInventory* inEquippedItems)
 {
 	Inventory = inInventory;
-	Inventory->InventoryListener = this;
+	Inventory->AddInventoryListener(*this);
 	EquippedItems = inEquippedItems;
-	EquippedItems->InventoryListener = this;
+	EquippedItems->AddInventoryListener(*this);
 
 	SetupEquippedSlots();
 }
@@ -344,7 +344,7 @@ UInventoryWidget::SetContainer(AInteractableActor *inContainer)
 		auto inv = inContainer->Inventory;
 		if (inv != ContainerInventory)
 		{
-			inv->InventoryListener = this;
+			inv->AddInventoryListener(*this);
 			for (auto& slot : ContainerSlots)
 				ContainerSlotRemoved(slot);
 			ContainerSlots.Empty();
@@ -363,7 +363,7 @@ UInventoryWidget::SetContainer(AInteractableActor *inContainer)
 	{
 		if (ContainerInventory)
 		{
-			ContainerInventory->InventoryListener = nullptr;
+			ContainerInventory->RemoveInventoryListener(*this);
 			for (auto& slot : ContainerSlots)
 				ContainerSlotRemoved(slot);
 			ContainerSlots.Empty();

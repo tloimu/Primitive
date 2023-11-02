@@ -108,9 +108,10 @@ UCrafter::StartCrafting(const FCraftRecipie& inRecipie, TArray<UInventory*> inIn
 		slot.Key->Count -= slot.Value;
 		if (slot.Key->Count == 0)
 			slot.Key->Item = FItemStruct();
-		if (slot.Key->Inventory && slot.Key->Inventory->InventoryListener)
+		if (slot.Key->Inventory)
 		{
-			slot.Key->Inventory->InventoryListener->SlotChanged(*slot.Key);
+			for (auto listener : slot.Key->Inventory->InventoryListeners)
+				listener->SlotChanged(*slot.Key);
 		}
 	}
 

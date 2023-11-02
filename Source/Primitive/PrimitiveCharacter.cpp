@@ -1306,12 +1306,13 @@ APrimitiveCharacter::HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, 
 		PlaySoundHarvest();
 		for (auto& part : inFoliageComponent.BreaksIntoItems)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("  - break foliage into %d of %s"), part.Count, *part.ItemId);
 			auto item = FindItem(part.ItemId);
 			if (item)
 			{
 				for (int i = 0; i < part.Count; i++)
 				{
-					trans.AddToTranslation(FVector(20.0f, 20.f, 20.0f)); // Some staggering - ???? TODO: Replace with transformation in FoliageResource
+					trans.AddToTranslation(FVector(0.0f, 0.0f, 35.0f)); // Some staggering - ???? TODO: Replace with transformation in FoliageResource
 					auto loc = trans.GetLocation();
 					auto rot = trans.GetRotation().Rotator();
 					UE_LOG(LogTemp, Warning, TEXT("  - break foliage into %s at (%f, %f, %f)"), *item->ItemClass->GetName(), loc.X, loc.Y, loc.Z);
@@ -1319,6 +1320,7 @@ APrimitiveCharacter::HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, 
 					check(itemActor);
 					itemActor->Item.Quality = part.Quality;
 				}
+				trans.AddToTranslation(FVector(0, 200.0f, -part.Count * 35.0f)); // Some staggering - ???? TODO: Replace with transformation in FoliageResource
 			}
 		}
 	}

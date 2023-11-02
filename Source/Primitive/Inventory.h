@@ -76,8 +76,8 @@ public:
 
 	FItemSlot* GetSelectedSlot();
 
-	void DropItemsFromSlot(FItemSlot &inSlot, int inCount);
-	void DropItem(const FItemStruct& inItem);
+	void DropItemsFromSlot(FItemSlot &inSlot, int inCount); // ???? TODO: Not a task for <UInventory> class
+	void DropItem(const FItemStruct& inItem); // ???? TODO: Not a task for <UInventory> class
 
 	const FItemStruct* FindItem(const FString& inId) const;
 	int CountItemsOf(const FString& inId) const;
@@ -89,8 +89,14 @@ public:
 	UPROPERTY(BlueprintReadWrite) TSet<EItemForm> SlotCapability;
 	UPROPERTY(BlueprintReadWrite) TSet<EItemUtility> SlotUtility;
 
-	IInventoryListener *InventoryListener = nullptr;
+	void AddInventoryListener(IInventoryListener& Listener);
+	void RemoveInventoryListener(IInventoryListener& Listener);
+
+	TSet<IInventoryListener*> InventoryListeners;
 	IInventoryOwner* InventoryOwner = nullptr;
 
 	FItemSlot NoneSlot;
+
+	bool HasItemOfUtility(EItemUtility Utility);
+	bool ConsumeItemOfUtility(EItemUtility Utility, FItemStruct& outItem);
 };
