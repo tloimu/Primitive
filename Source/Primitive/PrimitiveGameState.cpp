@@ -11,6 +11,10 @@ APrimitiveGameState::APrimitiveGameState()
 	PrimaryActorTick.bCanEverTick = true;
 
 	SetActorTickInterval(0.3f);
+
+	NightfallSeconds = 18 * 3600 + 20 * 60;
+	MorningSeconds = 5 * 3600 + 40 * 60;
+	MiddaySeconds = 12 * 3600;
 }
 
 void
@@ -65,6 +69,22 @@ APrimitiveGameState::CheckSunlight(float DeltaSeconds)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("APrimitiveGameState::Hour = %d"), FMath::TruncToInt((ClockInSecs + clockAdvance) / (60 * 60.0f)));
 			}
+
+			if (ClockInSecs < NightfallSeconds && ClockInSecs + clockAdvance >= NightfallSeconds)
+			{
+				OnNightfall();
+			}
+
+			if (ClockInSecs < MorningSeconds && ClockInSecs + clockAdvance >= MorningSeconds)
+			{
+				OnMorning();
+			}
+
+			if (ClockInSecs < MiddaySeconds && ClockInSecs + clockAdvance >= MiddaySeconds)
+			{
+				OnMidday();
+			}
+
 			ClockInSecs += clockAdvance;
 			if (ClockInSecs > 24 * 60 * 60.0f)
 			{
@@ -89,6 +109,43 @@ APrimitiveGameState::CheckSunlight(float DeltaSeconds)
 		LastCheckOfDayTimeSince = 0.0f;
 	}
 }
+
+void
+APrimitiveGameState::PlaySound(USoundCue* inDefaultSound, USoundCue* inOverrideSound) const
+{
+	auto sound = inOverrideSound ? inOverrideSound : inDefaultSound;
+	if (sound)
+	{
+		UGameplayStatics::PlaySound2D(GetWorld(), sound);
+	}
+}
+
+
+void
+APrimitiveGameState::OnMorning()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Morning"));
+
+	PlaySound(MorningSound);
+
+}
+
+void
+APrimitiveGameState::OnMidday()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Midday"));
+
+	PlaySound(MiddaySound);
+}
+
+void
+APrimitiveGameState::OnNightfall()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Nightfall"));
+
+	PlaySound(NightfallSound);
+}
+
 
 void
 APrimitiveGameState::CheckWeather(float DeltaSeconds)

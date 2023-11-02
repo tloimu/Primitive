@@ -149,6 +149,9 @@ public:
 	UPROPERTY(EditAnywhere) USoundCue* EquipItemSound = nullptr;
 	UPROPERTY(EditAnywhere) USoundCue* UnequipItemSound = nullptr;
 	UPROPERTY(EditAnywhere) USoundCue* HarvestSound = nullptr;
+	UPROPERTY(EditAnywhere) USoundCue* ToggleInventorySound = nullptr;
+	UPROPERTY(EditAnywhere) USoundCue* OpenWoodDoorSound = nullptr;
+	UPROPERTY(EditAnywhere) USoundCue* CloseWoodDoorSound = nullptr;
 
 	// Sounds
 	void PlaySound(USoundCue *inDefaultSound, USoundCue *inOverrideSound = nullptr) const;
@@ -161,6 +164,7 @@ public:
 	void PlaySoundOpenDoor(const FItemStruct& inItem) const;
 	void PlaySoundCloseDoor(const FItemStruct& inItem) const;
 	void PlaySoundHarvest() const;
+	void PlaySoundToggleInventory(bool OpenInventory) const;
 
 	// Inventory
 	const FItemStruct* FindItem(const FString& Id) const override;

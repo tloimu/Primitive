@@ -4,6 +4,7 @@
 #include "FirePlaceItem.h"
 #include "NiagaraFunctionLibrary.h"
 #include "NiagaraSystem.h"
+#include "Kismet/GameplayStatics.h"
 
 AFirePlaceItem::AFirePlaceItem(const FObjectInitializer& Initializer)
 {
@@ -17,6 +18,8 @@ void
 AFirePlaceItem::BeginPlay()
 {
 	Super::BeginPlay();
+
+	SetupSounds();
 
 	for (auto c : GetComponents())
 	{
@@ -34,6 +37,21 @@ AFirePlaceItem::BeginPlay()
 }
 
 void
+AFirePlaceItem::SetupSounds()
+{
+	if (FireSound)
+	{
+		FireSoundComponent = UGameplayStatics::SpawnSoundAttached(FireSound, GetRootComponent());
+		FireSoundComponent->bStopWhenOwnerDestroyed = true;
+		FireSoundComponent->Deactivate();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Fire place missing FireSound"));
+	}
+}
+
+void
 AFirePlaceItem::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
@@ -41,6 +59,18 @@ AFirePlaceItem::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (Inventory)
 	{
 		Inventory->RemoveInventoryListener(*this);
+	}
+
+	if (FireEffect && FireEffect->IsActive())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Fire place off"));
+		FireEffect->Deactivate();
+		FireEffect = nullptr;
+	}
+
+	if (FireSoundComponent)
+	{
+		FireSoundComponent->Deactivate();
 	}
 }
 
@@ -77,6 +107,23 @@ AFirePlaceItem::CheckFireEffect()
 				FireEffect->Activate();
 				SetActorTickEnabled(true);
 			}
+
+			if (FireSoundComponent)
+			{
+				FireSoundComponent->Activate(true);
+			}
+			else
+			{
+				// ???? FIX: For some reason, the FireSoundComponent goes randomly (rarely) missing and needs to be recreated
+				UE_LOG(LogTemp, Error, TEXT("Fire place missing FireSound Component"));
+				SetupSounds();
+				if (FireSoundComponent)
+					FireSoundComponent->Activate(true);
+				else
+				{
+					UE_LOG(LogTemp, Error, TEXT("Fire place STILL missing FireSound Component"));
+				}
+			}
 		}
 		else
 		{
@@ -85,6 +132,14 @@ AFirePlaceItem::CheckFireEffect()
 				UE_LOG(LogTemp, Warning, TEXT("Fire place off"));
 				FireEffect->Deactivate();
 				FireEffect = nullptr;
+				if (FireSoundComponent)
+				{
+					FireSoundComponent->Deactivate();
+				}
+				else
+				{
+					UE_LOG(LogTemp, Error, TEXT("Fire place missing FireSound Component"));
+				}
 				SetActorTickEnabled(false);
 			}
 		}

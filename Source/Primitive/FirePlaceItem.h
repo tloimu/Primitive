@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "InteractableActor.h"
 #include "NiagaraComponent.h"
+#include "Components/AudioComponent.h"
+#include "Sound/SoundCue.h"
 #include "FirePlaceItem.generated.h"
 
 
@@ -30,11 +32,14 @@ public:
 	UPROPERTY() UNiagaraComponent * FireEffect = nullptr;
 	UPROPERTY(EditAnywhere, Category = "Fire Place Item") FString FireWoodMeshName;
 	UPROPERTY() UStaticMeshComponent* FireWoodMesh = nullptr;
+	UPROPERTY(EditAnywhere, Category = "Fire Place Item") USoundCue* FireSound = nullptr;
+	UPROPERTY(EditAnywhere, Category = "Fire Place Item") UAudioComponent* FireSoundComponent = nullptr;
 
 	void Tick(float DeltaSeconds) override;
 
 	void OnLoaded() override;
 
+	void SetupSounds();
 	void CheckFireEffect();
 	void HeatItems(float DeltaSeconds);
 	void CheckFuel(float DeltaSeconds);

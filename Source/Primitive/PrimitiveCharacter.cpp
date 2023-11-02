@@ -306,6 +306,11 @@ APrimitiveCharacter::CheckEnvironment()
 				HUDWidget->SetTerrainHeight(th);
 				HUDWidget->SetHealth(99.0f);
 				HUDWidget->SetStamina(92.0f);
+				auto gs = Cast<APrimitiveGameState>(GetWorld()->GetGameState());
+				if (gs)
+				{
+					HUDWidget->SetClock(gs->ClockInSecs);
+				}
 			}
 		}
 		else
@@ -638,13 +643,13 @@ APrimitiveCharacter::PlaySoundPickItem(const FItemStruct& inItem) const
 void
 APrimitiveCharacter::PlaySoundOpenDoor(const FItemStruct& inItem) const
 {
-	PlaySound(PickItemSound);
+	PlaySound(OpenWoodDoorSound);
 }
 
 void
 APrimitiveCharacter::PlaySoundCloseDoor(const FItemStruct& inItem) const
 {
-	PlaySound(PickItemSound);
+	PlaySound(CloseWoodDoorSound);
 }
 
 void
@@ -652,6 +657,13 @@ APrimitiveCharacter::PlaySoundHarvest() const
 {
 	PlaySound(HarvestSound);
 }
+
+void
+APrimitiveCharacter::PlaySoundToggleInventory(bool OpenInventory) const
+{
+	PlaySound(ToggleInventorySound);
+}
+
 
 // Sounds
 // ---------------------------------------------
@@ -1073,6 +1085,7 @@ APrimitiveCharacter::ToggleInventoryUI()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Toggle Inventory OFF"));
 		ShowingInventory = false;
+		PlaySoundToggleInventory(false);
 		if (InventoryWidget)
 		{
 			InventoryWidget->SetContainer(nullptr);
@@ -1090,12 +1103,17 @@ APrimitiveCharacter::ToggleInventoryUI()
 		if (ShowingCrafter)
 			ToggleCrafterUI();
 		ShowingInventory = true;
+		PlaySoundToggleInventory(true);
 		if (CurrentPlacedItem)
 		{
 			CancelPlaceItem();
 		}
 		if (InventoryWidget != nullptr)
 		{
+			if (CurrentInteractable && CurrentInteractable->Inventory)
+			{
+				InventoryWidget->SetContainer(CurrentInteractable);
+			}
 			InventoryWidget->SetVisibility(ESlateVisibility::Visible);
 			if (pc)
 			{

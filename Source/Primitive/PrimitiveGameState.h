@@ -6,6 +6,7 @@
 #include "GameFramework/GameState.h"
 #include "Runtime/Engine/Classes/Engine/DirectionalLight.h"
 #include "Runtime/Engine/Classes/Engine/SkyLight.h"
+#include "Sound/SoundCue.h"
 #include "PrimitiveGameState.generated.h"
 
 /**
@@ -49,6 +50,18 @@ public:
 
 	void CheckSunlight(float DeltaSeconds);
 	void CheckWeather(float DeltaSeconds);
+
+	UPROPERTY(EditAnywhere) USoundCue* MorningSound = nullptr;
+	UPROPERTY(EditAnywhere) USoundCue* MiddaySound = nullptr;
+	UPROPERTY(EditAnywhere) USoundCue* NightfallSound = nullptr;
+
+	float NightfallSeconds, MorningSeconds, MiddaySeconds;
+
+	void OnMorning();
+	void OnMidday();
+	void OnNightfall();
+
+	void PlaySound(USoundCue* inDefaultSound, USoundCue* inOverrideSound = nullptr) const;
 
 	UFUNCTION(Exec, Category = ExecFunctions) void prisethour(int hour);
 };
