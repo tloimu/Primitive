@@ -322,6 +322,8 @@ protected:
 	FTimerHandle CommittedActionTimerHandle;
 	bool CommittedToAction = false;
 
+	bool StartingPlaceSet = false;
+
 public:
 	/** Returns CameraBoom subobject **/
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }

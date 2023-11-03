@@ -1,6 +1,8 @@
 set UE_DIR=D:\EpicGames\UE_5.2
 set UE_EDITOR=%UE_DIR%\Engine\Binaries\Win64\UnrealEditor.exe
 set UE_BUILD=%UE_DIR%\Engine\Build\BatchFiles\Build.bat
+set UE_EDITOR_CMD=%UE_DIR%\Engine\Binaries\Win64\UnrealEditor-Cmd.exe
+set UE_UAT=%UE_DIR%/Engine/Build/BatchFiles/RunUAT.bat
 
 set PROJECT_DIR=%~dp0
 set PROJECT_DIR=%PROJECT_DIR:~0,-1%

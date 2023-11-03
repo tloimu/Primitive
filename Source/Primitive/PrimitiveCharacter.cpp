@@ -228,7 +228,19 @@ APrimitiveCharacter::SetupCrafterUI(APlayerController* pc)
 void
 APrimitiveCharacter::EnsureNotUnderGround()
 {
-	// ???? TODO: move the player on top of the terrain if under ground at startup
+	auto WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
+	if (WorldGenInstance)
+	{
+		if (WorldGenInstance->VoxelSize > 1.0f)
+		{
+			FIntVector l(GetActorLocation() / WorldGenInstance->VoxelSize);
+			auto th = WorldGenInstance->GetTerrainHeight(l.X, l.Y, l.Z);
+			FVector up = GetActorLocation();
+			up.Z += FMath::Max(0.0f, th) * WorldGenInstance->VoxelSize + 2000.0f;
+			UE_LOG(LogTemp, Warning, TEXT("Placed up %f cm"), up.Z);
+			SetActorLocation(up);
+		}
+	}
 }
 
 const FItemStruct*
@@ -281,6 +293,12 @@ void APrimitiveCharacter::Tick(float DeltaSeconds)
 void
 APrimitiveCharacter::CheckEnvironment()
 {
+	if (!StartingPlaceSet)
+	{
+		EnsureNotUnderGround();
+		StartingPlaceSet = true;
+	}
+
 	auto WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
 	if (WorldGenInstance)
 	{
@@ -288,7 +306,7 @@ APrimitiveCharacter::CheckEnvironment()
 		{
 			FIntVector l(GetActorLocation() / WorldGenInstance->VoxelSize);
 			auto th = WorldGenInstance->GetTerrainHeight(l.X, l.Y, l.Z);
-			if (l.Z < th - 50.0f)
+			if (l.Z < th - 30.0f)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("Jumped UP %f"), WorldGenInstance->VoxelSize);
 				FVector up = GetActorLocation();

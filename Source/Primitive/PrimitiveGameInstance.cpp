@@ -22,7 +22,6 @@
 const FString DefaultSaveGameName("DefaultGameSave");
 const FString QuickSaveGameName("GameSaveSlot0");
 
-
 void
 UPrimitiveGameInstance::Init()
 {

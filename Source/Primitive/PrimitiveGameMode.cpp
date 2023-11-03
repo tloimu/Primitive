@@ -17,7 +17,6 @@ APrimitiveGameMode::APrimitiveGameMode() : AGameModeBase()
 	{
 		DefaultPawnClass = PlayerPawnBPClass.Class;
 	}
-
 	OmaUtil::UseTabNavigationInWidgets(false);
 }
 

@@ -10,8 +10,15 @@ void
 OmaUtil::UseTabNavigationInWidgets(bool DoUse)
 {
 	// Disabling prevent Widgets (like Inventory) to consume Tab-key events
-	FNavigationConfig& NavigationConfig = *FSlateApplication::Get().GetNavigationConfig();
-	NavigationConfig.bTabNavigation = DoUse;
+	if (FSlateApplication::IsInitialized())
+	{
+		FNavigationConfig& NavigationConfig = *FSlateApplication::Get().GetNavigationConfig();
+		NavigationConfig.bTabNavigation = DoUse;
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("OmaUtils: SlateApplication not initialized"));
+	}
 }
 
 bool
