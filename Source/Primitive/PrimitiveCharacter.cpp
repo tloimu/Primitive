@@ -306,7 +306,7 @@ APrimitiveCharacter::CheckEnvironment()
 		{
 			FIntVector l(GetActorLocation() / WorldGenInstance->VoxelSize);
 			auto th = WorldGenInstance->GetTerrainHeight(l.X, l.Y, l.Z);
-			if (l.Z < th - 30.0f)
+			if (l.Z < th - 10.0f)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("Jumped UP %f"), WorldGenInstance->VoxelSize);
 				FVector up = GetActorLocation();
@@ -629,7 +629,7 @@ APrimitiveCharacter::PlaySoundCrafting(const FItemStruct& inItem) const
 }
 
 void
-APrimitiveCharacter::PlaySoundHit(const FItemStruct* inItem, const UFoliageResource* inResource) const
+APrimitiveCharacter::PlaySoundHit(const FItemStruct* inItem, const UHISMFoliage* inResource) const
 {
 	PlaySound(HitItemSound);
 }
@@ -879,10 +879,11 @@ APrimitiveCharacter::CommitToHitAction()
 {
 	CommittedToAction = true;
 	auto HitActionDuration = 1.5f;
-	auto fa = Cast<AInstancedFoliageActor>(CurrentTarget);
-	auto co = Cast<UFoliageResource>(CurrentTargetComponent);
+	auto hfa = Cast<AHISMFoliageActor>(CurrentTarget);
+	auto fa = Cast<AActor>(CurrentTarget);
+	auto co = Cast<UHISMFoliage>(CurrentTargetComponent);
 	int32 i = CurrentTargetInstanceId;
-	if (fa && co)
+	if (hfa && fa && co)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Commit to Hit %s instance %ld"), *CurrentTargetComponent->GetName(), CurrentTargetInstanceId);
 		PlaySoundHit(nullptr, co);
@@ -892,7 +893,7 @@ APrimitiveCharacter::CommitToHitAction()
 }
 
 void
-APrimitiveCharacter::HitExecute(AInstancedFoliageActor *inFoliageActor, UFoliageResource *inResourceComponent, int32 inInstanceId)
+APrimitiveCharacter::HitExecute(AActor* inFoliageActor, UHISMFoliage *inResourceComponent, int32 inInstanceId)
 {
 	CommittedToAction = false;
 	HitFoliageInstance(*inFoliageActor, *inResourceComponent, inInstanceId);
@@ -1328,7 +1329,7 @@ APrimitiveCharacter::GetQuickSaveName() const
 
 
 void
-APrimitiveCharacter::HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, UFoliageResource& inFoliageComponent, int32 inInstanceId)
+APrimitiveCharacter::HitFoliageInstance(AActor& inFoliageActor, UHISMFoliage& inFoliageComponent, int32 inInstanceId)
 {
 	auto atrans = GetActorTransform();
 	auto aloc = atrans.GetLocation();
@@ -1645,6 +1646,7 @@ APrimitiveCharacter::prihelp()
 	UE_LOG(LogTemp, Warning, TEXT("pridestroyallitems - Delete all items"));
 	UE_LOG(LogTemp, Warning, TEXT("pridestroyallresources - Delete all foliage"));
 	UE_LOG(LogTemp, Warning, TEXT("pridestroyall - Delete all items and foliage"));
+	UE_LOG(LogTemp, Warning, TEXT("primoveup <Meters> - Move character given meters up"));
 	UE_LOG(LogTemp, Warning, TEXT("prisethour <int> - Set the hour of the day"));
 }
 
@@ -1665,6 +1667,15 @@ APrimitiveCharacter::pridestroyall()
 {
 	CheatDestroyAll(true, true);
 }
+
+void
+APrimitiveCharacter::primoveup(int meters)
+{
+	FVector o;
+	o.Z = meters * 100.0f;
+	AddActorWorldOffset(o);
+}
+
 
 void
 APrimitiveCharacter::CheatDestroyAll(bool inItems, bool inResources)

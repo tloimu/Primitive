@@ -69,6 +69,7 @@ public:
 protected:
 
 	TArray<UInstancedStaticMeshComponent*> GetFoliageComponents();
+	TArray<UHierarchicalInstancedStaticMeshComponent*> GetHismFoliageComponents();
 };
 
 extern const FString DefaultSaveGameName;

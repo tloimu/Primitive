@@ -13,7 +13,8 @@
 #include "Inventory.h"
 #include "Craftable.h"
 #include "MapWidget.h"
-#include "FoliageResource.h"
+#include "HISMFoliageActor.h"
+#include "HISMFoliage.h"
 #include "PrimitiveCharacter.generated.h"
 
 struct ContainedMaterial
@@ -156,7 +157,7 @@ public:
 	// Sounds
 	void PlaySound(USoundCue *inDefaultSound, USoundCue *inOverrideSound = nullptr) const;
 	void PlaySoundCrafting(const FItemStruct& inItem) const override;
-	void PlaySoundHit(const FItemStruct *inItem, const UFoliageResource *inResource) const;
+	void PlaySoundHit(const FItemStruct *inItem, const UHISMFoliage *inResource) const;
 	void PlaySoundEquip(const FItemStruct& inItem) const;
 	void PlaySoundUnequip(const FItemStruct& inItem) const;
 	void PlaySoundDropItem(const FItemStruct& inItem) const;
@@ -240,7 +241,7 @@ protected:
 	void GetItemDropPosition(FVector& outLocation, FRotator& outRotation, FVector &outThrowTowards) const;
 
 	TArray<ContainedMaterial> CollectMaterialsFrom(const FVector& Location);
-	void HitFoliageInstance(AInstancedFoliageActor& inFoliageActor, UFoliageResource& inFoliageComponent, int32 inInstanceId);
+	void HitFoliageInstance(AActor& inFoliageActor, UHISMFoliage& inFoliageComponent, int32 inInstanceId);
 
 	void InteractDoor(AInteractableActor& inDoor);
 
@@ -318,11 +319,9 @@ protected:
 	void CheckCrafting(float DeltaSeconds);
 
 	void CommitToHitAction();
-	void HitExecute(AInstancedFoliageActor* inFoliageActor, UFoliageResource* inResourceComponent, int32 inInstanceId);
+	void HitExecute(AActor* inFoliageActor, UHISMFoliage* inResourceComponent, int32 inInstanceId);
 	FTimerHandle CommittedActionTimerHandle;
 	bool CommittedToAction = false;
-
-	bool StartingPlaceSet = false;
 
 public:
 	/** Returns CameraBoom subobject **/
@@ -337,9 +336,12 @@ public:
 	UFUNCTION(Exec, Category = ExecFunctions) void pridestroyallitems();
 	UFUNCTION(Exec, Category = ExecFunctions) void pridestroyallresources();
 	UFUNCTION(Exec, Category = ExecFunctions) void pridestroyall();
+	UFUNCTION(Exec, Category = ExecFunctions) void primoveup(int meters);
 	UFUNCTION(Exec, Category = ExecFunctions) void prihelp();
 	void CheatAddItems(const FString& Id, int Count);
 	void CheatDestroyAll(bool inItems, bool inResources);
+
+	bool StartingPlaceSet = false;
 };
 
 extern FName GAME_TAG_DOOR;

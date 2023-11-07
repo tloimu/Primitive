@@ -333,7 +333,7 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 			}
 		}
 	}
-	else if (x % 40 == 0 && y % 40 == 0)
+	else if (x % 5 == 0 && y % 5 == 0)
 	{
 		if (trees > 0.0f && TemperatureNoise.GetPerlin_2D(X, Y, 2.0f) * 2.0f < trees)
 		{
@@ -364,12 +364,9 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 }
 
 void
-FWorldGenOneInstance::GenerateFoilage(AInstancedFoliageActor& foliageActor)
+FWorldGenOneInstance::GenerateFoilage(TArray<UInstancedStaticMeshComponent*>& components)
 {
 	OmaUtil::MsTimer timer;
-
-	TArray<UInstancedStaticMeshComponent*> components;
-	foliageActor.GetComponents<UInstancedStaticMeshComponent>(components);
 
 	UInstancedStaticMeshComponent* meshComponent = nullptr;
 	if (components.IsEmpty())

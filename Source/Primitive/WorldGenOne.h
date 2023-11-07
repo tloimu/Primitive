@@ -99,7 +99,7 @@ public:
 
 	static TSharedPtr<FWorldGenOneInstance> sGeneratorInstance; // ???? DIRTY!
 
-	void GenerateFoilage(AInstancedFoliageActor& foliageActor);
+	void GenerateFoilage(TArray<UInstancedStaticMeshComponent*>& components);
 
 	float VoxelSize = 20.0f;
 	int32 WorldSize = 1;

@@ -9,6 +9,7 @@
 #include "PrimitiveCharacter.h"
 #include "ItemStruct.h"
 #include "OmaUtils.h"
+#include "HISMFoliageActor.h"
 
 #include <Voxel/Public/VoxelWorldInterface.h>
 #include <Voxel/Public/VoxelWorld.h>
@@ -79,6 +80,20 @@ UPrimitiveGameInstance::GetFoliageComponents()
 	return components;
 }
 
+TArray<UHierarchicalInstancedStaticMeshComponent*>
+UPrimitiveGameInstance::GetHismFoliageComponents()
+{
+	TArray<UHierarchicalInstancedStaticMeshComponent*> components;
+	TActorIterator<AHISMFoliageActor> foliageIterator2(GetWorld());
+	while (foliageIterator2)
+	{
+		foliageIterator2->GetComponents<UHierarchicalInstancedStaticMeshComponent>(components);
+		UE_LOG(LogTemp, Warning, TEXT("===> FoliageActor: %s, components %d"), *(foliageIterator2->GetName()), components.Num());
+		++foliageIterator2;
+	}
+	return components;
+}
+
 void
 UPrimitiveGameInstance::GenerateWorld()
 {
@@ -98,32 +113,28 @@ UPrimitiveGameInstance::GenerateFoilage()
 	UE_LOG(LogTemp, Warning, TEXT("Generate Foliage"));
 	DestroyAllItemsAndResources(false, true);
 
-	for (auto& c : GetFoliageComponents())
+	auto components = GetHismFoliageComponents();
+	for (auto& c : components)
 	{
 		auto cs = c->InstanceStartCullDistance;
 		auto ce = c->InstanceEndCullDistance;
 		UE_LOG(LogTemp, Warning, TEXT("Component: %s, cull %d .. %d, instances %ld"), *c->GetName(), cs, ce, c->GetInstanceCount());
 	}
 
-	TActorIterator<AInstancedFoliageActor> foliageIterator(GetWorld());
-	if (foliageIterator)
+	auto WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
+	if (WorldGenInstance)
 	{
-		AInstancedFoliageActor* foliageActor = *foliageIterator;
-		auto WorldGenInstance = FWorldGenOneInstance::sGeneratorInstance;
-
-		if (WorldGenInstance)
+		if (DoGenerateFoliage)
 		{
-			if (DoGenerateFoliage)
-				WorldGenInstance->GenerateFoilage(*foliageActor);
-		}
-		else
-		{
-			UE_LOG(LogTemp, Error, TEXT("No World Generator Instance found"));
+			TArray<UInstancedStaticMeshComponent*> components2;
+			for (auto c : components)
+				components2.Push(c);
+			WorldGenInstance->GenerateFoilage(components2);
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("No foilage actor found"));
+		UE_LOG(LogTemp, Error, TEXT("No World Generator Instance found"));
 	}
 }
 
@@ -189,7 +200,7 @@ UPrimitiveGameInstance::LoadGame(const FString& inPath)
 
 			// Load resources
 			TArray<TArray<FTransform> > NewInstancesPerComponent;
-			auto foliageComponents = GetFoliageComponents();
+			auto foliageComponents = GetHismFoliageComponents();
 			for (auto& c : foliageComponents)
 			{
 				NewInstancesPerComponent.AddDefaulted();
@@ -468,7 +479,7 @@ UPrimitiveGameInstance::SaveGame(const FString& inPath)
 
 	int32 ci = 0;
 	uint32 icount = 0;
-	for (auto& c : GetFoliageComponents())
+	for (auto& c : GetHismFoliageComponents())
 	{
 		FSavedResource saved;
 		saved.id = ci;
