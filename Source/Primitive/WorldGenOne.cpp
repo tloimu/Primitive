@@ -4,7 +4,7 @@
 #include "FastNoise/VoxelFastNoise.inl"
 #include "Runtime/Foliage/Public/InstancedFoliageActor.h"
 #include "VoxelMaterialBuilder.h"
-#include "OmaUtils.h"
+#include "OmaUtil.h"
 
 float
 Curve::GetValueAt(float inAt) const

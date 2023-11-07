@@ -8,7 +8,7 @@
 #include "InteractableActor.h"
 #include "PrimitiveCharacter.h"
 #include "ItemStruct.h"
-#include "OmaUtils.h"
+#include "OmaUtil.h"
 #include "HISMFoliageActor.h"
 
 #include <Voxel/Public/VoxelWorldInterface.h>

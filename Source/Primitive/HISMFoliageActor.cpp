@@ -2,7 +2,7 @@
 
 
 #include "HISMFoliageActor.h"
-#include "HISMFoliage.h"
+#include "FoliageResource.h"
 
 // Sets default values
 AHISMFoliageActor::AHISMFoliageActor()

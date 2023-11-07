@@ -2,7 +2,7 @@
 #include "PrimitiveCharacter.h"
 #include "ItemDatabase.h"
 #include "Blueprint/WidgetTree.h"
-#include "OmaUtils.h"
+#include "OmaUtil.h"
 
 UCrafterWidget::UCrafterWidget(const FObjectInitializer& ObjectInitializer) : UUserWidget(ObjectInitializer)
 {

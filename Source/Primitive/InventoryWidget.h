@@ -2,10 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "ItemContainer.h"
 #include "ItemStruct.h"
 #include "InventorySlot.h"
 #include "Inventory.h"
+#include "InteractableActor.h"
 #include "InventoryWidget.generated.h"
 
 UCLASS(MinimalAPI, Blueprintable)

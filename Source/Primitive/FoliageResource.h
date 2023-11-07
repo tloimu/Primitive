@@ -3,10 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Components/InstancedStaticMeshComponent.h"
+#include "Components/HierarchicalInstancedStaticMeshComponent.h"
 #include "ItemStruct.h"
 #include "FoliageResource.generated.h"
-
 
 
 USTRUCT(BlueprintType)
@@ -21,17 +20,12 @@ struct FResourceItems
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) float Quality;
 };
 
-
 UCLASS()
-class PRIMITIVE_API UFoliageResource : public UInstancedStaticMeshComponent
+class PRIMITIVE_API UHISMFoliage : public UHierarchicalInstancedStaticMeshComponent
 {
 	GENERATED_BODY()
-	
+
 public:
-
-	UFoliageResource() : UInstancedStaticMeshComponent(), HitPoints(0) {}
-	UFoliageResource(const FObjectInitializer& ObjectInitializer) : UInstancedStaticMeshComponent(ObjectInitializer), HitPoints(0) {}
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) TArray<FResourceItems>	BreaksIntoItems;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int HitPoints;
 };

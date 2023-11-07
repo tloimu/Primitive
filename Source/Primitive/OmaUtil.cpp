@@ -1,4 +1,4 @@
-#include "OmaUtils.h"
+#include "OmaUtil.h"
 #include "PrimitiveGameInstance.h"
 #include <GameFramework/Actor.h>
 #include <Components/BoxComponent.h>

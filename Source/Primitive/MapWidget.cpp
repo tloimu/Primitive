@@ -5,7 +5,7 @@
 #include "WorldGenOne.h"
 #include "ImageUtils.h"
 #include "Components/Image.h"
-#include "OmaUtils.h"
+#include "OmaUtil.h"
 
 void
 UMapWidget::Setup()

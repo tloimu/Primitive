@@ -2,7 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "ItemContainer.h"
 #include "ItemStruct.h"
 #include "CrafterSlot.h"
 #include "Inventory.h"

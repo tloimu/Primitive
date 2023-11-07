@@ -5,7 +5,7 @@
 #include "PrimitiveGameInstance.h"
 #include "CoreFwd.h"
 #include "UObject/ConstructorHelpers.h"
-#include "OmaUtils.h"
+#include "OmaUtil.h"
 
 APrimitiveGameMode::APrimitiveGameMode() : AGameModeBase()
 {

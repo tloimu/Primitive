@@ -20,7 +20,7 @@
 #include "CrafterSlot.h"
 #include "WorldGenOne.h"
 #include "PrimitiveGameMode.h"
-#include "OmaUtils.h"
+#include "OmaUtil.h"
 #include "BuildingSnapBox.h"
 #include "PrimitiveGameState.h"
 #include "PrimitiveGameInstance.h"

@@ -14,7 +14,7 @@
 #include "Craftable.h"
 #include "MapWidget.h"
 #include "HISMFoliageActor.h"
-#include "HISMFoliage.h"
+#include "FoliageResource.h"
 #include "PrimitiveCharacter.generated.h"
 
 struct ContainedMaterial
