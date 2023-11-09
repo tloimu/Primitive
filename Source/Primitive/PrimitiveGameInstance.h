@@ -61,8 +61,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Generator")
 	int32 MaxFoliageRange = 20000;
 
-	void GenerateWorld();
-	void GenerateFoilage();
+	void GenerateTerrain();
+	void GenerateFoliage();
 
 	UPROPERTY(BlueprintReadOnly) class AVoxelWorld* VoxelWorld = nullptr;
 

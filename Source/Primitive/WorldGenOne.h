@@ -99,7 +99,7 @@ public:
 
 	static TSharedPtr<FWorldGenOneInstance> sGeneratorInstance; // ???? DIRTY!
 
-	void GenerateFoilage(TArray<UInstancedStaticMeshComponent*>& components);
+	void GenerateFoliage(TArray<UInstancedStaticMeshComponent*>& components);
 
 	float VoxelSize = 20.0f;
 	int32 WorldSize = 1;
@@ -127,6 +127,8 @@ public:
 	Curve CurveIslands;
 	Curve CurveLowlands;
 	Curve CurveSwamps;
+
+	float TreeSize(float T, float M) const;
 
 private:
 	FVoxelFastNoise Noise, WaterNoise, TemperatureNoise, MoistureNoise;

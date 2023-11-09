@@ -1632,8 +1632,8 @@ APrimitiveCharacter::priresetmap()
 	if (gi)
 	{
 		CheatDestroyAll(false, true);
-		gi->GenerateWorld();
-		gi->GenerateFoilage();
+		gi->GenerateTerrain();
+		gi->GenerateFoliage();
 	}
 }
 void

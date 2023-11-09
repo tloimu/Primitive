@@ -95,7 +95,7 @@ UPrimitiveGameInstance::GetHismFoliageComponents()
 }
 
 void
-UPrimitiveGameInstance::GenerateWorld()
+UPrimitiveGameInstance::GenerateTerrain()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Generate Voxel World"));
 	if (VoxelWorld)
@@ -108,7 +108,7 @@ UPrimitiveGameInstance::GenerateWorld()
 }
 
 void
-UPrimitiveGameInstance::GenerateFoilage()
+UPrimitiveGameInstance::GenerateFoliage()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Generate Foliage"));
 	DestroyAllItemsAndResources(false, true);
@@ -129,7 +129,7 @@ UPrimitiveGameInstance::GenerateFoilage()
 			TArray<UInstancedStaticMeshComponent*> components2;
 			for (auto c : components)
 				components2.Push(c);
-			WorldGenInstance->GenerateFoilage(components2);
+			WorldGenInstance->GenerateFoliage(components2);
 		}
 	}
 	else
@@ -309,8 +309,8 @@ UPrimitiveGameInstance::SetupGame()
 	}
 	else
 	{
-		GenerateWorld();
-		GenerateFoilage();
+		GenerateTerrain();
+		GenerateFoliage();
 	}
 }
 

@@ -165,7 +165,7 @@ float
 FWorldGenOneInstance::GetTemperature(v_flt X, v_flt Y, v_flt Z) const
 {
 	float Klat = GetLatitude(Y);
-	float Theight = Z > 0.0f ? TemperatureHeightCoeff * (Z * VoxelSize / 100) : 0.0f;
+	float Theight = Z > 0.0f ? TemperatureHeightCoeff * (Z * VoxelSize / 100.0f) : 0.0f;
 
 	float Tnoise = (TemperatureNoise.GetPerlin_2D(X, Y, TemperatureVariationFreq))* TemperatureVariation;
 	float T = EquatorTemperature - (Klat * (EquatorTemperature - PolarTemperature)) + Tnoise - Theight;
@@ -200,11 +200,11 @@ FWorldGenOneInstance::GetValueImpl(v_flt X, v_flt Y, v_flt Z, int32 LOD, const F
 {
 	float Height = GetTerrainHeight(X, Y, Z);
 
-	if (Z == 0) // Water Level
+	if (Z <= 1.0l && Z > - 2.0l) // Water Level
 	{
 		// Sea ice
 		if (GetTemperature(X, Y, Z) < -10.0f)
-			return -1;
+			return -1.0l;
 	}
 
 	// Positive value -> empty voxel
@@ -213,7 +213,7 @@ FWorldGenOneInstance::GetValueImpl(v_flt X, v_flt Y, v_flt Z, int32 LOD, const F
 	float Value = Z - Height;
 
 	// The voxel value is clamped between -1 and 1. That can result in a bad gradient/normal. To solve that we divide it
-	Value /= 5;
+	Value /= 5.0l;
 
 	return Value;
 }
@@ -229,7 +229,7 @@ FWorldGenOneInstance::GetMaterialImpl(v_flt X, v_flt Y, v_flt Z, int32 LOD, cons
 	float Height = GetTerrainHeight(X, Y, Z);
 
 	const int32 underWaterMaterial = 7;
-	if (Z < -1.0f) // Water Level
+	if (Z < -2.0l) // Water Level
 	{
 		Builder.AddMultiIndex(underWaterMaterial, 1.0f);
 	}
@@ -274,6 +274,13 @@ FWorldGenOneInstance::GetMaterialImpl(v_flt X, v_flt Y, v_flt Z, int32 LOD, cons
 	return Builder.Build();
 }
 
+float
+FWorldGenOneInstance::TreeSize(float T, float M) const
+{
+	// Treeline is at about 6.5C (yearly average) +/-1.0C
+	// Moisture positively correlates with tree size
+	return (T - 6.5f) / 20.0f + (M - 60.0f) / 200.0f;
+}
 
 int32
 FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRotation, FVector& outScale, FVector& outOffset) const
@@ -281,7 +288,7 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 	int32 x = (int32)X;
 	int32 y = (int32)Y;
 
-	if (x % 20 != 0 || y % 20 != 0)
+	if (x % 10 != 0 || y % 10 != 0)
 		return ID_None;
 
 	auto T = GetTemperature(X, Y, Z);
@@ -296,10 +303,14 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 	outRotation.Yaw = 0.0f;
 	float z = 0.0f;
 
-	outOffset.X = FMath::RandHelper(20 * VoxelSize) - 10 * VoxelSize;
-	outOffset.Y = FMath::RandHelper(20 * VoxelSize) - 10 * VoxelSize;
-	X += outOffset.X / VoxelSize;
-	Y += outOffset.Y / VoxelSize;
+	float ox = FMath::FRandRange(-30.0f, 30.0f);
+	float oy = FMath::FRandRange(-30.0f, 30.0f);
+	outOffset.X = ox * VoxelSize;
+	outOffset.Y = oy * VoxelSize;
+	X += ox;
+	Y += oy;
+	float scale = FMath::FRandRange(0.5f, 1.5f);
+
 	auto rocks = (WaterNoise.GetPerlin_2D(X, Y, 0.001f) + WaterNoise.GetPerlin_2D(X, Y, 0.02f));
 	auto trees = (TemperatureNoise.GetPerlin_2D(X, Y, 0.001f) + TemperatureNoise.GetPerlin_2D(X, Y, 0.02f));
 
@@ -309,31 +320,37 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 		{
 			z = GetNearLowestTerrainHeight(X, Y);
 			type = ID_Rock1;
-			outOffset.Z = -FMath::RandHelper(200);
-			outRotation.Pitch = FMath::RandHelper(360);
-			outRotation.Roll = FMath::RandHelper(360);
+			outOffset.Z = FMath::FRandRange(-200.0f, 0.0f);
+			outRotation.Pitch = FMath::FRandRange(0.0f, 360.0f);
+			outRotation.Roll = FMath::FRandRange(0.0f, 360.0f);
 		}
 	}
 	else if (trees > 0.0f && (x % 60 == 0 && y % 60 == 0))
 	{
-		if (TemperatureNoise.GetPerlin_2D(X, Y, 10.0f) * 2.0f < trees)
+		float s = TreeSize(T, M);
+		if (s > 0.3f)
 		{
-			z = GetNearLowestTerrainHeight(X, Y);
-			if (z > 1.0f) // Above Water Level
+			if (TemperatureNoise.GetPerlin_2D(X, Y, 10.0f) * 2.0f < trees)
 			{
-				if (T > 0.0f && M > 10.0f)
+				z = GetNearLowestTerrainHeight(X, Y);
+				if (z > 1.0f) // Above Water Level
 				{
-					if (M > 70.0f)
-						type = ID_Tree2;
-					else if (M > 55.0f)
-						type = ID_Tree1;
-					else
-						type = ID_Tree3;
+					if (T > 6.5f && M > 10.0f)
+					{
+						if (M > 70.0f)
+							type = ID_Tree1;
+						else if (M > 55.0f)
+							type = ID_Tree2;
+						else
+							type = ID_Tree3;
+
+						scale = scale * s;
+					}
 				}
 			}
 		}
 	}
-	else if (x % 5 == 0 && y % 5 == 0)
+	else if (x % 10 == 0 && y % 10 == 0)
 	{
 		if (trees > 0.0f && TemperatureNoise.GetPerlin_2D(X, Y, 2.0f) * 2.0f < trees)
 		{
@@ -345,17 +362,17 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 				else
 					type = ID_Grass1;
 			}
+			else
+			{
+				// TODO: Underwater flora
+			}
 		}
 	}
 
 	if (type != ID_None)
 	{
-		outRotation.Yaw = FMath::RandHelper(360);
-		float scale = FMath::RandHelper(100) * 0.01f;
-
-		outScale.X = 0.5f + scale;
-		outScale.Y = 0.5f + scale;
-		outScale.Z = 0.5f + scale;
+		outRotation.Yaw = FMath::FRandRange(0.0f, 360.0f);
+		outScale = outScale.One() * scale;
 
 		outOffset.Z += z * VoxelSize;
 	}
@@ -364,7 +381,7 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 }
 
 void
-FWorldGenOneInstance::GenerateFoilage(TArray<UInstancedStaticMeshComponent*>& components)
+FWorldGenOneInstance::GenerateFoliage(TArray<UInstancedStaticMeshComponent*>& components)
 {
 	OmaUtil::MsTimer timer;
 
@@ -426,7 +443,7 @@ FWorldGenOneInstance::GenerateFoilage(TArray<UInstancedStaticMeshComponent*>& co
 		if (MaxFoliageRange > 0)
 			worldSize = MaxFoliageRange;
 		bool skipAdding = false;
-		FRotator rotation(0, 0, 0);
+		FRotator rotation;
 		FVector scale;
 		FVector offset;
 		for (int32 x = -worldSize / 2; x < worldSize / 2; x = x + 1)
