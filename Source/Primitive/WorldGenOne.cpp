@@ -319,7 +319,10 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 		if (T > -15.0f && WaterNoise.GetPerlin_2D(X, Y, 10.0f) * 3.5f < rocks)
 		{
 			z = GetNearLowestTerrainHeight(X, Y);
-			type = ID_Rock1;
+			if (FMath::RandRange(0.0f, 1.0f) > 0.5f)
+				type = ID_Rock1;
+			else
+				type = ID_Rock2;
 			outOffset.Z = FMath::FRandRange(-200.0f, 0.0f);
 			outRotation.Pitch = FMath::FRandRange(0.0f, 360.0f);
 			outRotation.Roll = FMath::FRandRange(0.0f, 360.0f);
@@ -337,7 +340,9 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 				{
 					if (T > 6.5f && M > 10.0f)
 					{
-						if (M > 70.0f)
+						if (T < 20.0f)
+							type = ID_Tree1_Mod;
+						else if (M > 70.0f)
 							type = ID_Tree1;
 						else if (M > 55.0f)
 							type = ID_Tree2;
@@ -352,7 +357,7 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 	}
 	else if (x % 10 == 0 && y % 10 == 0)
 	{
-		if (trees > 0.0f && TemperatureNoise.GetPerlin_2D(X, Y, 2.0f) * 2.0f < trees)
+		if (trees > 0.0f && trees < 0.3f)
 		{
 			z = GetTerrainHeight(X, Y, Z);
 			if (z > 1.0f) // Above Water Level
@@ -361,6 +366,14 @@ FWorldGenOneInstance::GetFoilageType(v_flt X, v_flt Y, v_flt Z, FRotator& outRot
 					type = ID_Grass2;
 				else
 					type = ID_Grass1;
+				if (T > 8.0f)
+				{
+					float plants = FMath::RandRange(0.0f, 1.0f);
+					if (plants > 0.95f)
+						type = ID_Plant1;
+					else if (plants > 0.9f)
+						type = ID_Plant2;
+				}
 			}
 			else
 			{
@@ -403,18 +416,26 @@ FWorldGenOneInstance::GenerateFoliage(TArray<UInstancedStaticMeshComponent*>& co
 		UE_LOG(LogTemp, Warning, TEXT("Component %d: %s, cull %d .. %d"), ci, *c->GetName(), cs, ce);
 		// ???? TODO: Make foliage component ID discovery smarter and more configurable
 		auto name = c->GetName();
-		if (name.Contains("Rock"))
+		if (name.Contains("Rock1"))
 			ID_Rock1 = ci;
+		else if (name.Contains("Rock2"))
+			ID_Rock2 = ci;
 		else if (name.Contains("Tree1"))
 			ID_Tree1 = ci;
 		else if (name.Contains("Tree2"))
 			ID_Tree2 = ci;
 		else if (name.Contains("Tree3"))
 			ID_Tree3 = ci;
+		else if (name.Contains("Tree1_Mod"))
+			ID_Tree1_Mod = ci;
 		else if (name.Contains("Grass1"))
 			ID_Grass1 = ci;
 		else if (name.Contains("Grass2"))
 			ID_Grass2 = ci;
+		else if (name.Contains("Plant1"))
+			ID_Plant1 = ci;
+		else if (name.Contains("Plant2"))
+			ID_Plant2 = ci;
 		ci++;
 	}
 

@@ -118,10 +118,14 @@ public:
 	int32 ID_None = -1;
 	int32 ID_Grass1 = 0;
 	int32 ID_Grass2 = 1;
+	int32 ID_Plant1 = -1;
+	int32 ID_Plant2 = -1;
 	int32 ID_Rock1 = 2;
+	int32 ID_Rock2 = -1;
 	int32 ID_Tree1 = 3; // Mid-sized tree
 	int32 ID_Tree2 = 4; // Big tree
 	int32 ID_Tree3 = 5; // Small tree
+	int32 ID_Tree1_Mod = -1; // Moderate climate, large tree
 
 	Curve CurveMountains;
 	Curve CurveIslands;

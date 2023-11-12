@@ -1,1 +1,2 @@
-rmdir /S /Q Binaries Intermediate DerivedDataCache Saved
+rmdir /S /Q Binaries Intermediate DerivedDataCache Saved Build .vs
+
