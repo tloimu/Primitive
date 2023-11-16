@@ -17,8 +17,11 @@ class PRIMITIVE_API AAnimalController : public AAIController
 public:
 
 	void BeginPlay() override;
+	void Tick(float DeltaSeconds) override;
 
 	UFUNCTION() void StartNextPatrolLeg();
+	UFUNCTION() void StartNextFleeLeg();
+	UFUNCTION() void StartNextApproachLeg();
 
 	void OnCurrentMoveToLegCompleted(struct FAIRequestID RequestID, const struct FPathFollowingResult& Result);
 
@@ -28,9 +31,12 @@ public:
 
 protected:
 
+	UPROPERTY() class UAnimalMovementComponent* AnimalMovement;
 	UPROPERTY() class AAnimalCharacter* Animal;
 
-	AActor* CurrentTargetActor = nullptr;
+	UPROPERTY() AActor* CurrentTargetActor = nullptr;
+	bool IsFleeing = false;
+	bool IsAttacking = false;
 	FVector PatrolToLocation;
 
 	class UNavigationSystemV1* NavSystem = nullptr;

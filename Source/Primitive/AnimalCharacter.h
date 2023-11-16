@@ -15,24 +15,13 @@ class PRIMITIVE_API AAnimalCharacter : public ACharacter
 public:
 	AAnimalCharacter(const FObjectInitializer &ObjectInitializer);
 
-	void MoveBySlowlyWalking();
-	void MoveByTrotting();
-	void MoveByRunning();
-	void MoveByTopSpeed();
-
-	void SetVelocity(double Speed);
-
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
 	AAnimalController* mController = nullptr;
 
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Movement) class UAnimalMovementComponent* AnimalMovement;
 
-	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaTime) override;
 };

@@ -8,6 +8,7 @@
 #include "GameFrameWork/CharacterMovementComponent.h"
 #include "AnimalController.h"
 #include "AnimalCharacter.h"
+#include "AnimalMovementComponent.h"
 
 
 void
@@ -18,10 +19,23 @@ AAnimalController::BeginPlay()
     CurrentTargetActor = nullptr;
     NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(this);
     Animal = GetPawn<AAnimalCharacter>();
+    if (Animal)
+    {
+        AnimalMovement = Cast<UAnimalMovementComponent>(Animal->GetMovementComponent());
+    }
     GetPathFollowingComponent()->OnRequestFinished.AddUObject(this, &AAnimalController::OnCurrentMoveToLegCompleted);
 
     PlanNextMove();
 }
+
+void
+AAnimalController::Tick(float DeltaSeconds)
+{
+    Super::Tick(DeltaSeconds);
+
+    // ???? TODO: e.g. when chasing, make necessary turns and attack decisions when close enough
+}
+
 
 void
 AAnimalController::OnCurrentMoveToLegCompleted(struct FAIRequestID RequestID, const struct FPathFollowingResult& Result)
@@ -38,10 +52,35 @@ AAnimalController::PlanNextMove()
     if (CurrentTargetActor)
     {
         // ???? TODO: Chase or attack target actor
+        if (IsFleeing)
+            StartNextFleeLeg();
+        else if (IsAttacking)
+            StartNextApproachLeg();
     }
     else
     {
         StartNextPatrolLeg();
+    }
+}
+void
+AAnimalController::StartNextFleeLeg()
+{
+    UE_LOG(LogTemp, Warning, TEXT("Animal [%p]: StartNextFleeLeg"), this);
+    if (AnimalMovement)
+    {
+        StartNextPatrolLeg();    // ???? TODO:
+        AnimalMovement->SetAnimalMovementMode(EAnimalMovementMode::Sprint);
+    }
+}
+
+void
+AAnimalController::StartNextApproachLeg()
+{
+    UE_LOG(LogTemp, Warning, TEXT("Animal [%p]: StartNextApproachLeg"), this);
+    if (AnimalMovement)
+    {
+        StartNextPatrolLeg();    // ???? TODO:
+        AnimalMovement->SetAnimalMovementMode(EAnimalMovementMode::Sprint);
     }
 }
 
@@ -51,19 +90,22 @@ AAnimalController::StartNextPatrolLeg()
     if (NavSystem)
     {
         FVector loc;
-        if (NavSystem->K2_GetRandomReachablePointInRadius(GetWorld(), GetPawn()->GetActorLocation(), loc, PatrolRange))
+        FVector forward = GetPawn()->GetActorForwardVector();
+        forward.Z = 0.0f;
+        FVector fromLoc = GetPawn()->GetActorLocation() + forward * (PatrolRange + 200.0f);
+        if (NavSystem->K2_GetRandomLocationInNavigableRadius(GetWorld(), fromLoc, loc, PatrolRange))
         {
             if (PatrolToLocation != loc)
             {
                 PatrolToLocation = loc;
                 MoveToLocation(PatrolToLocation, 150.0f);
-                if (Animal)
+                if (AnimalMovement)
                 {
-                    auto mode = FMath::RandRange(0, 0);
+                    auto mode = FMath::RandRange(0, 1);
                     if (mode == 0)
-                        Animal->MoveBySlowlyWalking();
+                        AnimalMovement->SetAnimalMovementMode(EAnimalMovementMode::Walk);
                     else
-                        Animal->MoveByTrotting();
+                        AnimalMovement->SetAnimalMovementMode(EAnimalMovementMode::Trot);
                 }
                 UE_LOG(LogTemp, Warning, TEXT("Animal: Moving to [%f, %f, %f]"), PatrolToLocation.X, PatrolToLocation.Y, PatrolToLocation.Z);
             }

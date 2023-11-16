@@ -22,8 +22,6 @@ UAnimalAnimInstance::NativeInitializeAnimation()
 	}
 }
 
-float D = 0.0f;
-
 void
 UAnimalAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
@@ -35,16 +33,5 @@ UAnimalAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		tr.Normalize();
 		TurnRateYaw = tr.Yaw / DeltaSeconds;
 		LastKnownDirection = currentDir;
-	}
-
-	D += DeltaSeconds;
-	if (D > 0.2f)
-	{
-		D = 0.0f;
-		if (GEngine)
-		{
-			FString text = FString::Printf(TEXT("Speed: %f, Turn: %f"), Speed, TurnRateYaw);
-			GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Yellow, text);
-		}
 	}
 }
