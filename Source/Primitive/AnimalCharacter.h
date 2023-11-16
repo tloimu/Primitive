@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "AnimalController.h"
 #include "AnimalCharacter.generated.h"
 
 UCLASS()
@@ -12,12 +13,20 @@ class PRIMITIVE_API AAnimalCharacter : public ACharacter
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
-	AAnimalCharacter();
+	AAnimalCharacter(const FObjectInitializer &ObjectInitializer);
+
+	void MoveBySlowlyWalking();
+	void MoveByTrotting();
+	void MoveByRunning();
+	void MoveByTopSpeed();
+
+	void SetVelocity(double Speed);
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	AAnimalController* mController = nullptr;
 
 public:	
 	// Called every frame
