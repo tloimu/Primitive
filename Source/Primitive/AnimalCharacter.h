@@ -15,6 +15,10 @@ class PRIMITIVE_API AAnimalCharacter : public ACharacter
 public:
 	AAnimalCharacter(const FObjectInitializer &ObjectInitializer);
 
+	UPROPERTY(EditAnywhere) class UShapeComponent* BeingDetectionRangeCollision;
+	UPROPERTY(EditAnywhere) class UShapeComponent* BeingAttackRangeCollision;
+	UPROPERTY(EditAnywhere) class UShapeComponent* DamageCollision;
+
 protected:
 	AAnimalController* mController = nullptr;
 
@@ -24,4 +28,31 @@ protected:
 
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
+
+	// Detection, chase and attack
+
+	UFUNCTION()
+	void OnBeingDetectedOverlapBegin(class UPrimitiveComponent* OverlappedComp,
+		class AActor* OtherActor, class UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void OnBeingDetectedOverlapEnd(class UPrimitiveComponent* OverlappedComp,
+		class AActor* OtherActor, class UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex);
+
+	UFUNCTION()
+	void OnBeingAttackOverlapBegin(class UPrimitiveComponent* OverlappedComp,
+		class AActor* OtherActor, class UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void OnBeingAttackOverlapEnd(class UPrimitiveComponent* OverlappedComp,
+		class AActor* OtherActor, class UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex);
+
+	UFUNCTION()
+	void OnDealDamageOverlapBegin(class UPrimitiveComponent* OverlappedComp,
+		class AActor* OtherActor, class UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 };
