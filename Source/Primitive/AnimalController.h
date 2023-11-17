@@ -31,8 +31,8 @@ public:
 
 protected:
 
-	UPROPERTY() class UAnimalMovementComponent* AnimalMovement;
-	UPROPERTY() class AAnimalCharacter* Animal;
+	UPROPERTY() class UAnimalMovementComponent* AnimalMovement = nullptr;
+	UPROPERTY() class AAnimalCharacter* Animal = nullptr;
 
 	UPROPERTY() AActor* CurrentTargetActor = nullptr;
 	bool IsFleeing = false;

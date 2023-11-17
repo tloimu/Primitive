@@ -22,6 +22,10 @@ AAnimalController::BeginPlay()
     if (Animal)
     {
         AnimalMovement = Cast<UAnimalMovementComponent>(Animal->GetMovementComponent());
+        if (!AnimalMovement)
+        {
+            UE_LOG(LogTemp, Error, TEXT("Animal [%p]: No AnimalMovement found at BeginPlay"), this);
+        }
     }
     GetPathFollowingComponent()->OnRequestFinished.AddUObject(this, &AAnimalController::OnCurrentMoveToLegCompleted);
 
