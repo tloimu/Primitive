@@ -1,6 +1,6 @@
 # Primitive
 
-This is my study project on Unreal Engine 5. It tries to become an exploration/survival game.
+This is my study project on Unreal Engine 5. The primary purpose is to study UE5 and how to make any 3D first/third person game with it. Most of the work here is first focused on studying how to make the basic mechanisms common to most exploration/survival/builder games around like terrain, player movement and interaction with environment, multiplayer techniques etc. The [plan](docs/plan.md) contains more exhaustive list and possible directions of actual gameplay that may come later.
 
 Recent state of the game has the following main features implemented at least at basic or rudimentary level:
 
@@ -9,7 +9,7 @@ Recent state of the game has the following main features implemented at least at
 - some foliage
 - the world has varying temperature and moisture levels contributing to local terrain features and flora
 - swimmable water at sea level
-- third person and first person cameras with zoom in/out
+- first and third person cameras with zoom in/out
 - day-night cycle
 - player inventory
 - containers like boxes where player can store items
@@ -17,6 +17,9 @@ Recent state of the game has the following main features implemented at least at
 - constructing buildings
 - map view (rudimentary, now mostly meant for visually checking the generated terrain)
 - sounds from some player actions
+- fire place with fire casting lighting effects
+- rudimentary world map view
+- animals that migrate and can detect and attack player
 
 Some pictures of the scenery and UI
 
@@ -25,7 +28,7 @@ Some pictures of the scenery and UI
 ![Inventory UI](docs/inventory.png)
 
 
-## Implementation Details
+## Implementation Decisions
 
 Almost all features are written in C++ with some blueprint support here and there.
 
